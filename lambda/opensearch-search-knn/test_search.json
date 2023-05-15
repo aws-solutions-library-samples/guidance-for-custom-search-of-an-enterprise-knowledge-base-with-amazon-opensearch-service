@@ -1,0 +1,7 @@
+{
+    "queryStringParameters": {
+      "ind": "kingdee_sku_material",
+      "q": "厨具",
+      "knn": "0"
+    }
+}

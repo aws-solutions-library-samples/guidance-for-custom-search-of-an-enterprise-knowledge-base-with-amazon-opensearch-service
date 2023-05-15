@@ -1,0 +1,17 @@
+{
+    "dynamodb": {
+      "table_name": "FeedbackRecordsKingdeeSkuMaterial",
+      "before_day": 300,
+      "region": "us-east-1"
+    },
+    "opensearch": {
+      "host": "",
+      "index_name": "kingdee_sku_material",
+      "region": "us-east-1",
+      "username": "",
+      "password": "",
+      "feature_set_name": "kingdee_features_fname_fmodel",
+      "feature_set": "[\"fname\", \"fmodel\"]",
+      "model_name": "model-my_kingdee_features_fname_fmodel_xgboost_model_test_001"
+    }
+  }
