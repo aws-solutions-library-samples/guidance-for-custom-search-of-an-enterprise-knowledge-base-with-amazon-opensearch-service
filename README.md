@@ -32,7 +32,7 @@ cd ./deployment
 2. Run the first two cell to deploy
 3. Run the following cell to validate
 
-Tips 1: The LLM model endpoint still needs some time to download the model artifacts after the endpoint is in service status. You could check the downloading status in CloudWatch logs of the endpoint. \n
+Tips 1: The LLM model endpoint still needs some time to download the model artifacts after the endpoint is in service status. You could check the downloading status in CloudWatch logs of the endpoint.  
 Tips 2: The Embedding and LLM models's deployment could be doing, simultaneously.
 
 **Data Preprocessing and Data ingestion :** 
@@ -40,12 +40,12 @@ Tips 2: The Embedding and LLM models's deployment could be doing, simultaneously
 1.	You must make sure the embedding model was deployed successfully.
 2.	Upload your testing data files (docx formation) to Sagemaker Notebook
 3.	Open Script-Doc.ipynb, and run the first two cell
-4.	In hyperparameter part, input the following parameter and run the cell: \n
-    a.	index_name: The name of your index (database) in OpenSearch \n
-    b.	folder_path: The original data file folder path \n
-        folder_path \n
-            ---file1.docx \n
-            ---file2.docx \n
+4.	In hyperparameter part, input the following parameter and run the cell:  
+    a.	index_name: The name of your index (database) in OpenSearch  
+    b.	folder_path: The original data file folder path  
+        folder_path  
+            ---file1.docx  
+            ---file2.docx  
 5.	Run the following cell
 
 **Validation :** 
