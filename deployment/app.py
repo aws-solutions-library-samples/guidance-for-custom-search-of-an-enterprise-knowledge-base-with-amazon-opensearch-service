@@ -13,10 +13,10 @@ AWS_ENV = cdk.Environment(account=ACCOUNT, region=REGION)
 env=AWS_ENV
 print(env)
 app = cdk.App()
-opsstack = OpenSearchStack(app, "OpenSearchStack", env=env)
-lambdastack = LambdaStack(app, "LambdaStack",ops_endpoint=opsstack.search_domain_endpoint, env=env)
+opsstack = OpenSearchStack(app, "OpenSearchStack", env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
+lambdastack = LambdaStack(app, "LambdaStack",ops_endpoint=opsstack.search_domain_endpoint, env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
 lambdastack.add_dependency(opsstack)
-notebookstack = NotebookStack(app, "NotebookStack",ops_endpoint=opsstack.search_domain_endpoint, env=env)
+notebookstack = NotebookStack(app, "NotebookStack",ops_endpoint=opsstack.search_domain_endpoint, env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
 notebookstack.add_dependency(opsstack)
 
 # SmartSearchStack(app, "smartsearch")
