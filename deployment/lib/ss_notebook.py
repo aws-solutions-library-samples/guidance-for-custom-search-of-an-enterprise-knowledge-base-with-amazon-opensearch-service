@@ -160,12 +160,23 @@ class NotebookStack(cdk.Stack):
         )
 
     def createNotebookInstanceByCDK(self):
-        
+        notebook_lifecycle = _sagemaker.CfnNotebookInstanceLifecycleConfig(
+            self, f'SmartSearch-LifeCycleConfig',
+            notebook_instance_lifecycle_config_name='ss-config',
+            on_create=[_sagemaker.CfnNotebookInstanceLifecycleConfig.NotebookInstanceLifecycleHookProperty(
+                content=cdk.Fn.base64(f"""
+                    #!/bin/bash
+                    cd home/ec2-user/SageMaker
+                    git clone -b jupyter --single-branch https://github.com/aws-solutions-library-samples/guidance-for-custom-search-of-an-enterprise-knowledge-base-on-aws.git
+                """)
+            )]
+        )
         cfn_notebook_instance = _sagemaker.CfnNotebookInstance(self,"SmartSearchNotebook",
         notebook_instance_name="SmartSearchNotebook",
         role_arn=self.notebook_job_role.role_arn,
         instance_type="ml.m5.xlarge",
-        default_code_repository="-b jupyter --single-branch https://github.com/aws-solutions-library-samples/guidance-for-custom-search-of-an-enterprise-knowledge-base-on-aws.git",
+        lifecycle_config_name='ss-config',
+        # default_code_repository="https://github.com/aws-solutions-library-samples/guidance-for-custom-search-of-an-enterprise-knowledge-base-on-aws.git",
         volume_size_in_gb=30)
 
 
