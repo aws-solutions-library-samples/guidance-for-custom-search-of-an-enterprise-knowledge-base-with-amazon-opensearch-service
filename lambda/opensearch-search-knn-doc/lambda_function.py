@@ -6,8 +6,8 @@ from collections import defaultdict
 from requests_aws4auth import AWS4Auth
 import os
 
-KNN_ENDPOINT_NAME = 'huggingface-inference-text2vec-base-chinese-v1'
-GTM_ENDPOINT_NAME = 'pytorch-inference-chatglm-v1'
+KNN_ENDPOINT_NAME = 'huggingface-inference-eb'
+GTM_ENDPOINT_NAME = 'pytorch-inference-llm-v1'
 host =  os.environ.get('host') 
 
 # retrieve secret manager value by key using boto3                                             
@@ -67,6 +67,7 @@ def get_answer(question, context):
      """
   prompt_template += question
   payload = {"ask": prompt_template}
+
 
   query_response = query_endpoint_with_json_payload(json.dumps(payload).encode('utf-8'))
   generated_texts = parse_response_texts(query_response)

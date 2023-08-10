@@ -19,14 +19,16 @@ from sagemaker.deserializers import JSONDeserializer
 from sagemaker.pytorch.model import PyTorchModel
 
 
-# region = os.environ["CDK_DEFAULT_REGION"]
 region = os.getenv('AWS_REGION', '')
 
 class NotebookStack(cdk.Stack):
-    def __init__(self, scope: Construct, construct_id: str,ops_endpoint: str, **kwargs):
+    def __init__(self, scope: Construct, construct_id: str,search_engine_key: str, **kwargs):
         super().__init__(scope, construct_id, **kwargs)
-        # get value from opensearch stack       
-        host_url =  "https://"+ops_endpoint+"/"
+        # get value from opensearch stack
+        if self.node.try_get_context("search_engine_opensearch"):   
+            host_url =  "https://"+search_engine_key+"/"
+        else:
+            host_url = search_engine_key
         # pass host to secret manager for notebook
         host_url_secret = aws_secretsmanager.Secret(self, "OpenSearchHostURLSecret",
             generate_secret_string=aws_secretsmanager.SecretStringGenerator(
@@ -35,6 +37,16 @@ class NotebookStack(cdk.Stack):
         ),
         secret_name = "opensearch-host-url"
         )
+        #get index from context
+        index_name = self.node.try_get_context("index")
+        #generate secret of index name for notebook
+        index_name_secret = aws_secretsmanager.Secret(self, "OpenSearchIndexNameSecret", 
+            generate_secret_string=aws_secretsmanager.SecretStringGenerator(
+            secret_string_template=json.dumps({"index": index_name}),
+            generate_string_key="indexkey",
+        ),
+        secret_name = "opensearch-index-name"
+        )                                                      
         # set role for sagemaker notebook       
         self.notebook_job_role =  _iam.Role(
             self,'SmartSearchNotebookRole',
@@ -47,7 +59,7 @@ class NotebookStack(cdk.Stack):
         self.notebook_job_role.add_managed_policy(_iam.ManagedPolicy.from_aws_managed_policy_name('AmazonDynamoDBFullAccess'))
 
         # notebookDeployment is more flexible , while using function is more faster with fixed value
-        if self.node.try_get_context("notebookDeployment"):
+        if self.node.try_get_context("notebook_deployment"):
             print('Deploying SageMaker via Notebook...')
             self.createNotebookInstanceByCDK()         
         else: 
@@ -153,7 +165,7 @@ class NotebookStack(cdk.Stack):
         notebook_instance_name="SmartSearchNotebook",
         role_arn=self.notebook_job_role.role_arn,
         instance_type="ml.m5.xlarge",
-        default_code_repository="https://github.com/outsider7/isearchjupyter.git",
+        default_code_repository="-b jupyter --single-branch https://github.com/aws-solutions-library-samples/guidance-for-custom-search-of-an-enterprise-knowledge-base-on-aws.git",
         volume_size_in_gb=30)
 
 
