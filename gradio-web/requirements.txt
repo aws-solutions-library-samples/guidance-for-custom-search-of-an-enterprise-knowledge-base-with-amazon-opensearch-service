@@ -1,4 +1,6 @@
 gradio
 requests
 fastapi==0.99.0
-
+pydantic==1.7.4
+markupsafe
+streamlit

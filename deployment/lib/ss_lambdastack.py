@@ -38,6 +38,13 @@ class LambdaStack(Stack):
         # get CloudFormation parameter
 
         func_selection = self.node.try_get_context("selection")
+        
+        self.langchain_processor_qa_layer = _lambda.LayerVersion(
+          self, 'QALambdaLayer',
+          code=_lambda.Code.from_asset('../lambda/langchain_processor_layer'),
+          compatible_runtimes=[_lambda.Runtime.PYTHON_3_9],
+          description='QA Library'
+        )
 
         print("These functions are slected( configuration is in cdk.json context 'selection'):  ", func_selection)
         # role and policy (smartsearch knn doc,opensearch-search-knn,knn_faq),all three function using same policy.
@@ -119,6 +126,7 @@ class LambdaStack(Stack):
 
         if 'langchain_processor_qa' in func_selection:
             langchain_qa_func = self.create_langchain_qa_func(search_engine_key=search_engine_key)
+            self.create_file_upload_prerequisites(api, search_engine_key)
 
         # api gateway resource
         api = apigw.RestApi(self, 'smartsearch-api',
@@ -326,6 +334,7 @@ class LambdaStack(Stack):
             function_name=function_name_qa,
             runtime=_lambda.Runtime.PYTHON_3_9,
             role=langchain_processor_role,
+            layers=[self.langchain_processor_qa_layer],
             code=_lambda.Code.from_asset('../lambda/' + function_name_qa),
             handler='lambda_function' + '.lambda_handler',
             memory_size=256,
@@ -501,12 +510,15 @@ class LambdaStack(Stack):
         data_load_role.add_managed_policy(
             _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonS3FullAccess")
         )
+        
+        
 
         data_load_function = _lambda.Function(
             self, function_name,
             function_name=function_name,
             runtime=_lambda.Runtime.PYTHON_3_9,
             role=data_load_role,
+            layers=[self.langchain_processor_qa_layer],
             code=_lambda.Code.from_asset('../lambda/' + function_name),
             handler='lambda_function' + '.lambda_handler',
             timeout=Duration.minutes(10),

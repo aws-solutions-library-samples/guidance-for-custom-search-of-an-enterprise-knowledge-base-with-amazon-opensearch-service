@@ -74,6 +74,10 @@ def lambda_handler(event, context):
             host = event['queryStringParameters']['kendra_index_id']
     print("host:",host)
   
+    model_type = 'normal'
+    if "model_type" in event['queryStringParameters'].keys():
+        model_type = event['queryStringParameters']['model_type']
+  
     response = {
         "statusCode": 200,
         "headers": {
@@ -94,7 +98,8 @@ def lambda_handler(event, context):
                          llm_embedding_name,
                          temperature,
                          language,
-                         search_engine
+                         search_engine,
+                         model_type
                          )
             
         query = "hello"
@@ -123,10 +128,16 @@ def lambda_handler(event, context):
                 prompt_template = CHINESE_CHAT_PROMPT_TEMPLATE
             elif language == "english":
                 prompt_template = ENGLISH_CHAT_PROMPT_TEMPLATE
+                if model_type == 'llama2':    
+                    prompt_template = EN_CHAT_PROMPT_LLAMA2
             if "prompt" in event['queryStringParameters'].keys():
                 prompt_template = event['queryStringParameters']['prompt']            
             
-            result = search_qa.get_chat(query,language,prompt_template,table_name,session_id)
+            if model_type == 'normal':
+                result = search_qa.get_chat(query,language,prompt_template,table_name,session_id)
+            elif model_type == 'llama2':
+                result = search_qa.get_answer_from_chat_llama2(query,prompt_template,table_name,session_id)
+            
             print('chat result:',result)
             
             response['body'] = json.dumps(
@@ -155,6 +166,9 @@ def lambda_handler(event, context):
             elif language == "english":
                 prompt_template = ENGLISH_PROMPT_TEMPLATE
                 condense_question_prompt = EN_CONDENSE_QUESTION_PROMPT
+                if model_type == 'llama2':    
+                    prompt_template = EN_CHAT_PROMPT_LLAMA2
+                    condense_question_prompt = EN_CONDENSE_PROMPT_LLAMA2
             if "prompt" in event['queryStringParameters'].keys():
                 prompt_template = event['queryStringParameters']['prompt']
                 
@@ -162,14 +176,22 @@ def lambda_handler(event, context):
             if "top_k" in event['queryStringParameters'].keys():
                 top_k = int(event['queryStringParameters']['top_k'])
                 
-                
-            result = search_qa.get_answer_from_conversational(query,
-                                        session_id,
-                                        table_name,
-                                        prompt_template=prompt_template,
-                                        condense_question_prompt=condense_question_prompt,
-                                        top_k=top_k
-                                        )    
+            if model_type == 'normal':
+                result = search_qa.get_answer_from_conversational(query,
+                                            session_id,
+                                            table_name,
+                                            prompt_template=prompt_template,
+                                            condense_question_prompt=condense_question_prompt,
+                                            top_k=top_k
+                                            )    
+            elif model_type == 'llama2':                            
+                result = search_qa.get_answer_from_conversational_llama2(query,
+                                            session_id,
+                                            table_name,
+                                            prompt_template=prompt_template,
+                                            condense_question_prompt=condense_question_prompt,
+                                            top_k=top_k
+                                            )
             print('result:',result)
             
             answer = result['answer']
