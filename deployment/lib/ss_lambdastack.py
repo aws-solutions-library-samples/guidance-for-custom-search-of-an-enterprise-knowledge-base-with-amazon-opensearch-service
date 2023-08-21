@@ -126,8 +126,7 @@ class LambdaStack(Stack):
 
         if 'langchain_processor_qa' in func_selection:
             langchain_qa_func = self.create_langchain_qa_func(search_engine_key=search_engine_key)
-            self.create_file_upload_prerequisites(api, search_engine_key)
-
+            
         # api gateway resource
         api = apigw.RestApi(self, 'smartsearch-api',
                             # default_cors_preflight_options=apigw.CorsOptions(

@@ -212,7 +212,7 @@ def lambda_handler(event, context):
             query_answer_score = -1
             if "cal_query_answer_score" in event['queryStringParameters'].keys():
                 cal_query_answer_score = event['queryStringParameters']['cal_query_answer_score']
-            if cal_query_answer_score == 'true':
+            if cal_query_answer_score == 'true' and search_engine == "opensearch":
                 query_answer_score = search_qa.get_qa_relation_score(query,answer)
             print('1.query_answer_score:',query_answer_score)
                 
@@ -221,7 +221,7 @@ def lambda_handler(event, context):
             answer_docs_scores = []
             if "cal_answer_docs_score" in event['queryStringParameters'].keys():
                 cal_answer_docs_score = event['queryStringParameters']['cal_answer_docs_score']
-            if cal_answer_docs_score == 'true':
+            if cal_answer_docs_score == 'true' and search_engine == "opensearch":
                 cal_answer = answer
                 if language.find("chinese")>=0 and len(answer) > 150:
                     cal_answer = answer[:150]
@@ -238,12 +238,11 @@ def lambda_handler(event, context):
             cal_docs_list_overlap_score = "false"
             if "cal_docs_list_overlap_score" in event['queryStringParameters'].keys():
                 cal_docs_list_overlap_score = event['queryStringParameters']['cal_docs_list_overlap_score']
-            if cal_docs_list_overlap_score == 'true':       
+            if cal_docs_list_overlap_score == 'true' and search_engine == "opensearch":       
                 find_answer_top_k = 3
                 answer_relate_docs = search_qa.get_retriever(find_answer_top_k).get_relevant_documents(answer)
                 print('answer_relate_docs:',answer_relate_docs)
-                if search_engine == "opensearch":
-                    answer_relate_docs = [doc[0] for doc in answer_relate_docs]
+                answer_relate_docs = [doc[0] for doc in answer_relate_docs]
 
                 find_index = []
                 for answer_relate_doc in answer_relate_docs:
