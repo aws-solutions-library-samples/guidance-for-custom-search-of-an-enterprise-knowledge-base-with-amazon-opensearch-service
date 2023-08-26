@@ -5,7 +5,7 @@ import urllib.parse
 import boto3
 from datetime import datetime
 import time
-from smart_search import SmartSearchQA
+from smart_search_dataload import SmartSearchDataload
 
 EMBEDDING_ENDPOINT_NAME = os.environ.get('embedding_endpoint_name')
 host =  os.environ.get('host')
@@ -36,8 +36,8 @@ def lambda_handler(event, context):
     print("password:",password)
     
     try:
-        search_qa = SmartSearchQA()
-        search_qa.init_cfg(index,
+        dataload = SmartSearchDataload()
+        dataload.init_cfg(index,
                          username,
                          password,
                          host,
@@ -66,7 +66,7 @@ def lambda_handler(event, context):
             print("finish download file")
         
             now1 = datetime.now()#begin time
-            loaded_files = search_qa.init_knowledge_vector(local_file,bulk_size)
+            loaded_files = dataload.init_knowledge_vector(local_file,bulk_size)
             now2 = datetime.now()#endtime
             print("File import takes time:",now2-now1)
             print("Complete the import of the following documents:", str(loaded_files))
