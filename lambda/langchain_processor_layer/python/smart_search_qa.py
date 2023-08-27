@@ -17,6 +17,7 @@ from langchain.memory.chat_message_histories import DynamoDBChatMessageHistory
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.utils import enforce_stop_tokens
 from langchain import LLMChain
+from langchain.llms import AmazonAPIGatewayBedrock
 import json
 from typing import Dict, List, Tuple, Optional,Any
 from tqdm import tqdm
@@ -37,10 +38,7 @@ def init_embeddings(endpoint_name,region_name,language: str = "chinese"):
 
         def transform_output(self, output: bytes) -> List[List[float]]:
             response_json = json.loads(output.read().decode("utf-8"))
-            if language.find("chinese")>=0:
-                return response_json[0][0]
-            elif language == "english":
-                return response_json["vectors"]
+            return response_json[0][0]
 
     content_handler = ContentHandler()
 
@@ -286,6 +284,7 @@ def init_model_llama2(endpoint_name,region_name,temperature):
 def string_processor(string):
     return string.replace('\n','').replace('"','').replace('“','').replace('”','').strip()
 
+
 class SmartSearchQA:
     
     def init_cfg(self,
@@ -300,14 +299,25 @@ class SmartSearchQA:
                  temperature: float = 0.01,
                  language: str = "chinese",
                  search_engine: str = "opensearch",
-                 model_type:str = "normal"
+                 model_type:str = "normal",
+                 bedrock_api_url:str = "",
+                 bedrock_model_id:str="anthropic.claude-v2",
+                 bedrock_max_tokens:int=500
                 ):
         self.language = language
         self.search_engine = search_engine
-        if model_type == "normal":
-            self.llm = init_model(llm_endpoint_name,region,temperature)
-        elif model_type == "llama2":
+        if model_type == "llama2":
             self.llm = init_model_llama2(llm_endpoint_name,region,temperature)
+        elif model_type == "bedrock":
+            self.llm = AmazonAPIGatewayBedrock(api_url=bedrock_api_url)
+            parameters={
+                "modelId":bedrock_model_id,
+                "max_tokens":bedrock_max_tokens,
+                "temperature":temperature
+            }
+            self.llm.model_kwargs = parameters
+        else:
+            self.llm = init_model(llm_endpoint_name,region,temperature)
         
         if self.search_engine == "opensearch":
             self.embeddings = init_embeddings(embedding_endpoint_name,region,self.language)
@@ -373,7 +383,7 @@ class SmartSearchQA:
         
         return result
 
-    def get_chat(self,query,language,prompt_template,table_name,session_id):
+    def get_chat(self,query,language,prompt_template,table_name,session_id,model_type):
             
         prompt = PromptTemplate(
             input_variables=["history", "human_input"], 
@@ -400,15 +410,21 @@ class SmartSearchQA:
             
         output = chat_chain.predict(human_input=query)
         
-        if language == 'english':
-            print('English chat init output:',output)
-            output = output.split('Answer:',1)[-1]
-            tem_output_list = output.split('\n')
-            for tem_output in tem_output_list:
-                if len(tem_output) > 0:
-                    output = tem_output
-                    break
-            print('English chat fix output:',output)
+        if model_type == "bedrock":
+            if language == 'chinese':
+                output = output.split('\n\n人类输入')[0].strip()
+            elif language == 'english':
+                output = output.split('\n\nuser')[0].strip()
+        
+        # if language == 'english':
+        #     print('English chat init output:',output)
+        #     output = output.split('Answer:',1)[-1]
+        #     tem_output_list = output.split('\n')
+        #     for tem_output in tem_output_list:
+        #         if len(tem_output) > 0:
+        #             output = tem_output
+        #             break
+        #     print('English chat fix output:',output)
         
         if len(session_id) > 0:
             update_session_info(table_name, session_id, query, output, "chat")
@@ -465,8 +481,11 @@ class SmartSearchQA:
         result = chain({"question": query, "chat_history": history})
         
         answer=result['answer']
-        if language == "english":
-            answer = answer.split('Answer:')[-1]
+        
+        answer=answer.split('\n\nhuman')[0].split('\n\n用户')[0].split('\n\nquestion')[0].split('\n\n\ufeffquestion')[0].split('\n\nQuestion')[0].strip()
+        
+        # if language == "english":
+        #     answer = answer.split('Answer:')[-1]
         
         if len(session_id) > 0:
             new_query=result['generated_question']

@@ -112,6 +112,8 @@ class BaseConversationalRetrievalChain(Chain):
             new_question = self.question_generator.run(
                 question=question, chat_history=chat_history_str, callbacks=callbacks
             )
+            new_question = new_question.split('\n\nhuman')[0].split('\n\n用户')[0].split('\n\nquestion')[0].split('\n\nQuestion')[0].strip()
+            print('new_question:',new_question)
         else:
             new_question = question
         accepts_run_manager = (
@@ -127,7 +129,30 @@ class BaseConversationalRetrievalChain(Chain):
         
         #add only_docs        
         if len(docs) > 0 and isinstance (docs[0],tuple):
-            only_docs = [doc[0] for doc in docs]
+            
+            ori_only_docs = [doc[0] for doc in docs]
+            scores = [doc[1] for doc in docs]
+            sentences = [doc[2] for doc in docs]
+            
+            new_docs_with_scores = []
+            page_contents = []
+            for i in range(len(ori_only_docs)):
+                page_content = ori_only_docs[i].page_content
+                if len(page_contents) > 0:
+                    find_flag = False
+                    for content in page_contents:
+                        if content == page_content:
+                            find_flag = True
+                            break
+                    if not find_flag:
+                        page_contents.append(page_content)
+                        new_docs_with_scores.append((ori_only_docs[i],scores[i],sentences[i]))
+                else:
+                    page_contents.append(page_content)
+                    new_docs_with_scores.append((ori_only_docs[i],scores[i],sentences[i]))
+                
+            only_docs = [doc[0] for doc in new_docs_with_scores]
+            docs = new_docs_with_scores
         else:
             only_docs = docs
         
@@ -289,7 +314,7 @@ class ChatVectorDBChain(BaseConversationalRetrievalChain):
     """Chain for chatting with a vector database."""
 
     vectorstore: VectorStore = Field(alias="vectorstore")
-    top_k_docs_for_context: int = 4
+    top_k_docs_for_context: int = 20
     search_kwargs: dict = Field(default_factory=dict)
 
     @property

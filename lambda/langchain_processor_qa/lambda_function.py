@@ -78,6 +78,19 @@ def lambda_handler(event, context):
     if "model_type" in event['queryStringParameters'].keys():
         model_type = event['queryStringParameters']['model_type']
   
+    bedrock_api_url = ''
+    if "bedrock_api_url" in event['queryStringParameters'].keys():
+        bedrock_api_url = event['queryStringParameters']['bedrock_api_url']
+  
+    bedrock_model_id = 'anthropic.claude-v2'
+    if "bedrock_model_id" in event['queryStringParameters'].keys():
+        bedrock_model_id = event['queryStringParameters']['bedrock_model_id']
+
+    bedrock_max_tokens = 500
+    if "bedrock_max_tokens" in event['queryStringParameters'].keys():
+        bedrock_max_tokens = int(event['queryStringParameters']['bedrock_max_tokens'])
+  
+  
     response = {
         "statusCode": 200,
         "headers": {
@@ -99,7 +112,10 @@ def lambda_handler(event, context):
                          temperature,
                          language,
                          search_engine,
-                         model_type
+                         model_type,
+                         bedrock_api_url,
+                         bedrock_model_id,
+                         bedrock_max_tokens
                          )
             
         query = "hello"
@@ -133,10 +149,11 @@ def lambda_handler(event, context):
             if "prompt" in event['queryStringParameters'].keys():
                 prompt_template = event['queryStringParameters']['prompt']            
             
-            if model_type == 'normal':
-                result = search_qa.get_chat(query,language,prompt_template,table_name,session_id)
-            elif model_type == 'llama2':
+            if model_type == 'llama2':
                 result = search_qa.get_answer_from_chat_llama2(query,prompt_template,table_name,session_id)
+            else:
+                result = search_qa.get_chat(query,language,prompt_template,table_name,session_id,model_type)
+            
             
             print('chat result:',result)
             
@@ -175,16 +192,9 @@ def lambda_handler(event, context):
             top_k = TOP_K
             if "top_k" in event['queryStringParameters'].keys():
                 top_k = int(event['queryStringParameters']['top_k'])
-                
-            if model_type == 'normal':
-                result = search_qa.get_answer_from_conversational(query,
-                                            session_id,
-                                            table_name,
-                                            prompt_template=prompt_template,
-                                            condense_question_prompt=condense_question_prompt,
-                                            top_k=top_k
-                                            )    
-            elif model_type == 'llama2':                            
+            print('top_k:',top_k)
+            
+            if model_type == 'llama2':                            
                 result = search_qa.get_answer_from_conversational_llama2(query,
                                             session_id,
                                             table_name,
@@ -192,11 +202,23 @@ def lambda_handler(event, context):
                                             condense_question_prompt=condense_question_prompt,
                                             top_k=top_k
                                             )
+            else:
+                result = search_qa.get_answer_from_conversational(query,
+                            session_id,
+                            table_name,
+                            prompt_template=prompt_template,
+                            condense_question_prompt=condense_question_prompt,
+                            top_k=top_k
+                            )
+                    
             print('result:',result)
             
             answer = result['answer']
-            if language == "english":
-                answer = answer.split('Answer:')[-1]
+            if model_type == "bedrock":
+                answer=answer.split('\n\nhuman')[0].split('\n\n用户')[0].split('\n\nquestion')[0].split('\n\n\ufeffquestion')[0].split('\n\nQuestion')[0].strip()
+
+            # if language == "english":
+            #     answer = answer.split('Answer:')[-1]
             print('answer:',answer)
             
             source_documents = result['source_documents']
@@ -213,6 +235,8 @@ def lambda_handler(event, context):
             if "cal_query_answer_score" in event['queryStringParameters'].keys():
                 cal_query_answer_score = event['queryStringParameters']['cal_query_answer_score']
             if cal_query_answer_score == 'true' and search_engine == "opensearch":
+                if language.find("chinese")>=0 and len(answer) > 350:
+                    answer = answer[:350]
                 query_answer_score = search_qa.get_qa_relation_score(query,answer)
             print('1.query_answer_score:',query_answer_score)
                 

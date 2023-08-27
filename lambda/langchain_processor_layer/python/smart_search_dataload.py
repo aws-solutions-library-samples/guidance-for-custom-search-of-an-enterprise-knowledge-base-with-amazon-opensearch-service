@@ -50,7 +50,7 @@ def load_file(filepath,language,chunk_size: int=500, chunk_overlap: int=50):
         else:
             textsplitter = ChineseTextSplitter()
     elif language == "english":
-        text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+        textsplitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
             chunk_size=chunk_size, chunk_overlap=chunk_overlap
         )
         
@@ -71,10 +71,8 @@ def init_embeddings(endpoint_name,region_name,language: str = "chinese"):
 
         def transform_output(self, output: bytes) -> List[List[float]]:
             response_json = json.loads(output.read().decode("utf-8"))
-            if language.find("chinese")>=0:
-                return response_json[0][0]
-            elif language == "english":
-                return response_json["vectors"]
+            return response_json[0][0]
+
 
     content_handler = ContentHandler()
 

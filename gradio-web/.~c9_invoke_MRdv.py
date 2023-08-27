@@ -4,15 +4,15 @@ import gradio as gr
 from datetime import datetime
 
 #Fill in your correct configuration
-invoke_url = ''
-bedrock_url = ''
+invoke_url = 'https://pocflul6r4.execute-api.us-west-1.amazonaws.com/prod'
+bedrock_url = 'https://bx2kc13ys3.execute-api.us-east-1.amazonaws.com/prod/bedrock?'
 
 chinese_index = 'smart_search_qa_test'
-english_index = ''
+english_index = 'smart_search_qa_test_0826_en_3'
 
 cn_embedding_endpoint = 'huggingface-inference-eb'
 cn_llm_endpoint = 'pytorch-inference-llm-v1'
-en_embedding_endpoint = ''
+en_embedding_endpoint = 'huggingface-inference-eb-bge-en'
 en_llm_endpoint = ''
 
 
