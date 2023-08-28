@@ -225,10 +225,8 @@ class SagemakerEndpointEmbeddings(BaseModel, Embeddings):
                         text_append = ",".join([t for t in texts[i: i + append_num]])
                         text_result.append(text_append)
                 
-                if language.find("chinese")>=0:
-                    results.append(response[0])
-                else:
-                    results.extend(response)
+                results.append(response[0])
+                
                 metadatas_result.append(metadatas[i: i+_chunk_size][0])
                                 
             except Exception as e:
