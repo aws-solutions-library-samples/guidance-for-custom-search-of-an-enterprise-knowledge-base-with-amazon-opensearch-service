@@ -3,3 +3,5 @@ constructs>=10.0.0,<11.0.0
 sagemaker
 requests==2.31.0
 gradio==3.41.2
+fastapi==0.103.0
+pydantic==2.3.0
