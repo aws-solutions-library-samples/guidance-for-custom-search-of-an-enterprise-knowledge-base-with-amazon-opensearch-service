@@ -1,6 +1,2 @@
-gradio
-requests
-fastapi==0.99.0
-pydantic==1.7.4
-markupsafe
-streamlit
+requests==2.31.0
+gradio==3.41.2
