@@ -18,7 +18,9 @@ More Details can be found in [Builder Space](https://builderspace.proto.sa.aws.d
 
 2023.08.27: Add the bge chinese and english embbeding model deployment scripts
 
-2023.08.18: Add the function to call llama2
+2023.08.18: Add the streamlit webpage for multiple rounds of conversation demo
+
+2023.08.15: Add the function to call llama2, llama2 model can be deployed in SageMaker jumpstart 
 
 2023.08.07: Add the baichuan 7B LLM deployment scripts
 
