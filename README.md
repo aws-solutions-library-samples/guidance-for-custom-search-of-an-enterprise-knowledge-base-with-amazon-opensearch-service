@@ -8,20 +8,19 @@ More Details can be found in [Builder Space](https://builderspace.proto.sa.aws.d
 
 ## Deployment Guide
 
-**Deployment :** 
 
 * Follow the deployment guide in doc/README.md 
 
 
 
 ## Update
-2023.08.27 Add the function to call Bedrock LLM(claude and titan) api
+2023.08.27: Add the function to call Bedrock LLM(claude and titan) api
 
-2023.08.27 Add the bge chinese and english embbeding model deployment scripts
+2023.08.27: Add the bge chinese and english embbeding model deployment scripts
 
-2023.08.18 Add the function to call llama2
+2023.08.18: Add the function to call llama2
 
-2023.08.07 Add the baichuan LLM deployment scripts
+2023.08.07: Add the baichuan 7B LLM deployment scripts
 
 
 ## Security
