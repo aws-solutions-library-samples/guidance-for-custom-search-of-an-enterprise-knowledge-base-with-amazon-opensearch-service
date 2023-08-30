@@ -60,6 +60,7 @@ class BotStack(Stack):
             actions=[
                 'lexv2:*' ,
                 's3:AmazonS3FullAccess',
+                'polly:SynthesizeSpeech'
                 ],
             resources=['*'] # Customize it according to your use case
         )
@@ -72,6 +73,11 @@ class BotStack(Stack):
     
         #define lambda function, knn role is not defined by guideline
         self.ai_bot_qa_lambda = self.define_lambda_function('llm_bot_qa',bot_lambda_role,timeout= 60)
+        language = self.node.try_get_context("language")
+        model_type = self.node.try_get_context("model_type")
+
+        self.ai_bot_qa_lambda.add_environment("language", language)
+        self.ai_bot_qa_lambda.add_environment("model_type", model_type)
 
         #define Lex configuration
         code_hook_specification=lex.CfnBot.CodeHookSpecificationProperty(

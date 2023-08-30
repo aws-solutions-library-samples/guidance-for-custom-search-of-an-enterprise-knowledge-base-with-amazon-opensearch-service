@@ -1,13 +1,7 @@
 aws-cdk-lib==2.62.2
 constructs>=10.0.0,<11.0.0
 sagemaker
-<<<<<<< HEAD
-gradio
-requests
-fastapi==0.99.0
-=======
 requests==2.31.0
 gradio==3.41.2
 fastapi==0.103.0
 pydantic==2.3.0
->>>>>>> 860aa05c0813a6faa5fc8fe5adf96bc0d3c08bf8

@@ -56,7 +56,8 @@
     "index": "smart_search_qa_test",
     "embedding_endpoint_name": "huggingface-inference-eb",
     "llm_embedding_name": "pytorch-inference-llm-v1",
-    "language": "chinese"
+    "language": "chinese",
+    "model_type":"other"
   }
 }
 
