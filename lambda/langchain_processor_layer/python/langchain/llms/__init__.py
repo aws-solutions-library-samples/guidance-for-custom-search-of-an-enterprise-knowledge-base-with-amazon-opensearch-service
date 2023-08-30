@@ -4,6 +4,7 @@ from typing import Dict, Type
 from langchain.llms.ai21 import AI21
 from langchain.llms.aleph_alpha import AlephAlpha
 from langchain.llms.amazon_api_gateway import AmazonAPIGateway
+from langchain.llms.amazon_api_gateway_bedrock import AmazonAPIGatewayBedrock
 from langchain.llms.anthropic import Anthropic
 from langchain.llms.anyscale import Anyscale
 from langchain.llms.aviary import Aviary
@@ -56,6 +57,7 @@ __all__ = [
     "AI21",
     "AlephAlpha",
     "AmazonAPIGateway",
+    "AmazonAPIGatewayBedrock",
     "Anthropic",
     "Anyscale",
     "Aviary",
@@ -111,6 +113,7 @@ type_to_cls_dict: Dict[str, Type[BaseLLM]] = {
     "ai21": AI21,
     "aleph_alpha": AlephAlpha,
     "amazon_api_gateway": AmazonAPIGateway,
+    "amazon_api_gateway_bedrock": AmazonAPIGatewayBedrock,
     "amazon_bedrock": Bedrock,
     "anthropic": Anthropic,
     "anyscale": Anyscale,

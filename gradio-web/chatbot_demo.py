@@ -8,11 +8,16 @@ import boto3
 import pandas as pd
 
 
-invoke_url = "https://rrlwyuy0o7.execute-api.us-west-1.amazonaws.com/prod"
+invoke_url = ''
 api = invoke_url + '/langchain_processor_qa?query='
 
 chinese_index = "smart_search_qa_test"
 english_index = "smart_search_qa_test_en"
+
+cn_embedding_endpoint = 'huggingface-inference-eb'
+cn_llm_endpoint = 'pytorch-inference-llm-v1'
+en_embedding_endpoint = ''
+en_llm_endpoint = ''
 
 # App title
 st.set_page_config(page_title="aws intelligent recommendation solution")
@@ -20,7 +25,7 @@ st.set_page_config(page_title="aws intelligent recommendation solution")
 with st.sidebar:
     st.title('AWS Intelligent Q&A Solution Guide')
     st.subheader('Models and parameters')
-    language = st.radio("Choose a language",('chinese', 'english'))
+    language = st.radio("Choose a language",('chinese', 'chinese-tc', 'english'))
     task = st.radio("Choose a task",('chat', 'qa'))
     
 
@@ -34,6 +39,9 @@ if "messages" not in st.session_state.keys():
         st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
     elif language == 'chinese':
         st.session_state.messages = [{"role": "assistant", "content": "您好，请问有什么可以帮助您吗?"}]
+    elif language == 'chinese-tc':
+        st.session_state.messages = [{"role": "assistant", "content": "您好，請問有什麽可以幫助您嗎?"}]
+        
     now = datetime.now()
     timestamp = datetime.timestamp(now)
     st.session_state.sessionId = 'qa'+str(timestamp)
@@ -48,6 +56,8 @@ def clear_chat_history():
         st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
     elif language == 'chinese':
         st.session_state.messages = [{"role": "assistant", "content": "您好，请问有什么可以帮助您吗?"}]
+    elif language == 'chinese-tc':
+        st.session_state.messages = [{"role": "assistant", "content": "您好，請問有什麽可以幫助您嗎?"}]
 
     now = datetime.now()
     timestamp = datetime.timestamp(now)
@@ -64,16 +74,19 @@ def generate_response(prompt):
     url += ('&top_k=1')
     if language == "english":
         url += '&language=english'
-        url += ('&embedding_endpoint_name=huggingface-inference-eb-en')
-        url += ('&llm_embedding_name=pytorch-inference-llm-v1-en')
+        url += ('&embedding_endpoint_name='+en_embedding_endpoint)
+        url += ('&llm_embedding_name='+en_llm_endpoint)
         url += ('&index='+english_index)
     elif language == "chinese":
         url += '&language=chinese'
-        url += ('&embedding_endpoint_name=huggingface-inference-eb')
-        url += ('&llm_embedding_name=pytorch-inference-llm-v1')
+        url += ('&embedding_endpoint_name='+cn_embedding_endpoint)
+        url += ('&llm_embedding_name='+cn_llm_endpoint)
         url += ('&index='+chinese_index)
+    elif language == "chinese-tc":
+        url += '&language=chinese-tc'
+        url += ('&embedding_endpoint_name='+cn_embedding_endpoint)
+        url += ('&llm_embedding_name='+cn_llm_endpoint)
  
-
     print('url:',url)
     response = requests.get(url)
     result = response.text

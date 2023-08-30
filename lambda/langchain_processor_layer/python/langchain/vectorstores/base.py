@@ -409,6 +409,7 @@ class VectorStoreRetriever(BaseRetriever, BaseModel):
     def _get_relevant_documents(
         self, query: str, *, run_manager: Optional[CallbackManagerForRetrieverRun]
     ) -> List[Document]:
+        
         if self.search_type == "similarity":
             docs = self.vectorstore.similarity_search(query, **self.search_kwargs)
         elif self.search_type == "similarity_score_threshold":
