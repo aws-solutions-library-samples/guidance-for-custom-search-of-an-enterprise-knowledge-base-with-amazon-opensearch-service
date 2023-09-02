@@ -312,7 +312,11 @@ def lambda_handler(event, context):
                 for i in range(len(source_docs)):
                     source = {}
                     source["_id"] = i
-                    source["_score"] = query_docs_scores[i] if search_engine == "opensearch" else 1
+                    if language.find("chinese")>=0: 
+                        source["_score"] = float(query_docs_scores[i])*100 if search_engine == "opensearch" else 1
+                    else:
+                        source["_score"] = query_docs_scores[i] if search_engine == "opensearch" else 1
+                    
                     try:
                         source["title"] = os.path.split(source_docs[i].metadata['source'])[-1]
                     except KeyError:
@@ -348,7 +352,11 @@ def lambda_handler(event, context):
                         print("KeyError found")                    
                     source["paragraph"] =source_docs[i].page_content.replace("\n","")
                     source["sentence"] = sentences[i] if search_engine == "opensearch" else source_docs[i].page_content.replace("\n","")
-                    source["score"] = query_docs_scores[i] if search_engine == "opensearch" else 1
+                    if language.find("chinese")>=0: 
+                        source["score"] = float(query_docs_scores[i])*100 if search_engine == "opensearch" else 1
+                    else:
+                        source["score"] = query_docs_scores[i] if search_engine == "opensearch" else 1
+
                     source_list.append(source)
             
                 query_docs_score = query_docs_scores[0] if search_engine == "opensearch" and len(query_docs_scores) > 0 else -1
