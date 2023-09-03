@@ -221,9 +221,10 @@ class SagemakerEndpointEmbeddings(BaseModel, Embeddings):
                     elif language == "chinese":
                         append_num = (texts_length - i) if i + append_num > texts_length else append_num
                         text_append = ",".join([t for t in texts[i: i + append_num]])
-                        text_result.append(text_append)
-  
-                if language == 'chinese':
+                        text_result.append(text_append) 
+
+#                 results.append(response[0])
+                if language.find("chinese")>=0:
                     results.append(response[0])
                 else:
                     results.extend(response)

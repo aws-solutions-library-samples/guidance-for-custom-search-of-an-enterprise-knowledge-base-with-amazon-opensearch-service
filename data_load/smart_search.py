@@ -75,12 +75,11 @@ def init_embeddings(endpoint_name,region_name,language: str = "chinese"):
 
         def transform_output(self, output: bytes) -> List[List[float]]:
             response_json = json.loads(output.read().decode("utf-8"))
-            if language == "chinese":
+            if language.find("chinese")>=0:
                 return response_json[0][0]
-#                 return response_json[0][0][0]
-            elif language == "english":
-                return response_json["vectors"]
-#                 return response_json["vectors"][0]
+            else:
+                return response_json
+
 
     content_handler = ContentHandler()
 
@@ -231,6 +230,10 @@ class SmartSearchQA:
                         metadata = dict(metadatas[i])
                         row = int(metadata['row'])
                         title=''
+                        if self.language == "english" and text.find('title') >= 0 and text.find('content') >= 0:
+                            title = text.split('title:')[1].split('content:')[0].strip()
+                        if self.language == "chinese" and text.find('标题') >= 0 and text.find('内容') >= 0:
+                            title = text.split('标题:')[1].split('内容:')[0].strip()
 
                         if i == 0:
                             pre_metadata = metadata
