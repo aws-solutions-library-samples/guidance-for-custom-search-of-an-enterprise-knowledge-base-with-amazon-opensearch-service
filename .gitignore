@@ -1,0 +1,7 @@
+*.DS_Store
+deployment/cdk.out
+deployment/node_module
+deployment/lib/__pycache__
+search-web-knn/node_modules
+*.pyc
+.idea/

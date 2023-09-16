@@ -8,10 +8,14 @@ If there's no npm, install via nvm:
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
 ```
 Note the v0.39.3 is just an example, download your preferred version.Then close and reopen terminal, then
+
+```
+nvm install v16.15.1
+```
+or
 ```
 nvm install node
 ```
-
 
 
 1. Change directory to ./deployment folder
@@ -35,7 +39,7 @@ pip install -r requirements.txt
 
 export your account configuration to the environment
 ```
-export AWS_ACCOUNT_ID =XXXXXXXXXXXX
+export AWS_ACCOUNT_ID=XXXXXXXXXXXX
 export AWS_REGION=xx-xx-x
 export AWS_ACCESS_KEY_ID=XXXXXX
 export AWS_SECRET_ACCESS_KEY=XXXXXXX
@@ -46,16 +50,34 @@ cdk bootstrap aws://[your-account-id]/[your-region]
 you can install the required dependencies.
 
 
-4. Deploy stacks Settings
-Configurate which function need to be deployed , pls open cdk.json in the deployment folder path, and modify the "selection" value
+4. Deploy stacks Settings in cdk.json
+(1) Configurate which function need to be deployed , pls open cdk.json in the deployment folder path, and modify the "selection" value according to your needs
 Default is set as below:
 ```
-    "selection":["knn","knn_faq","feedback","post_selection","xgb_train","knn_doc"]
+    "selection":["knn_faq","feedback","post_selection","xgb_train","knn_doc"]
 ```
-and you can also choose to deploy SageMaker endpoint by notebook or by python function.  pls open cdk.json in the deployment folder path, and modify the " "notebookDeployment"" value . Default is set as below:
+(2) You can also choose to deploy SageMaker endpoint by notebook or by python function.  pls open cdk.json in the deployment folder path, and modify the " "notebookDeployment"" value . Default is set as below:
 ```
     "notebookDeployment":true
 ```
+(3) And also you can customize the DynamoDB table name in "table_name", and replace the default value.
+
+(4) There are extension function as well for the solution. For example, if you want to deploy Amazon Lex bot powered by LLM, please change "nobot" to "bot" in "extension" field of "cdk.json" 
+To configure a web UI for Lex bot, please create CloudFormation template in  "Getting Started" session in https://github.com/aws-samples/aws-lex-web-ui
+
+Amazon Lex supported region:
+Africa (Cape Town)
+Europe (London)
+Europe (Ireland)
+Asia Pacific (Seoul)
+Asia Pacific (Tokyo)
+Canada (Central)
+Asia Pacific (Singapore)
+Asia Pacific (Sydney)
+Europe (Frankfurt)
+US East (N. Virginia)
+US West (Oregon)
+
 
 5. Below command will validate the environment and generate CloudFormation.json 
 ```
@@ -68,11 +90,8 @@ cdk deploy --all
 6. The CDK deployment will provide 3 CloudFormation stacks with relevant resouces like Lambda, API Gateway, OpenSearch instance and SageMaker notebook etc.
 
 7. Login with Secret Manager account and password in OpenSearch. Finish the settings with manual part inside
-8. Open Sagemaker Jyputerlab instance and the repositories will be automatically downloaded into the environment, play with relevant notebook scripts to deploy Sagemaker endpoint.
-9. Test your Lambda function. Be sure to insert yourFunction after the last slash in the address:
-```
-$ curl <INSERT-ENDPOINT-ADDRESS-HERE>/yourFunction
-```
+8. Open Sagemaker Jyputerlab instance and the repositories will be automatically downloaded into the environment, play with relevant notebook scripts to deploy Sagemaker endpoint.For notebook setup, please refer the guideline named with "DeployGuide-LLM&Search-V2.pdf" in the root directory
+
 ### Clean Up
 When you don't need the environment and want to clean it up, run:
 

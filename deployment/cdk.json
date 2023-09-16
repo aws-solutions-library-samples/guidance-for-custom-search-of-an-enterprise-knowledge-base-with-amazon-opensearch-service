@@ -26,12 +26,37 @@
     "@aws-cdk/core:checkSecretUsage": true,
     "@aws-cdk/aws-iam:minimizePolicies": true,
     "@aws-cdk/core:validateSnapshotRemovalPolicy": true,
-    "@aws-cdk/customresources:installLatestAwsSdkDefault":false,
+    "@aws-cdk/customresources:installLatestAwsSdkDefault": false,
     "@aws-cdk/core:target-partitions": [
       "aws",
       "aws-cn"
     ],
-    "selection":["knn","knn_faq","feedback","post_selection","xgb_train","knn_doc"],
-    "notebookDeployment":true
+    "vpc_deployment": false,
+    "vpc_name": "smart_search-vpc",
+    "subnet_name": "smart_search-subnet-private1-us-east-1a",
+    "subnet_id": "subnet-1234",
+    "zone_id": "use1-az4",
+    "selection": [
+      "knn_faq",
+      "feedback",
+      "post_selection",
+      "xgb_train",
+      "knn_doc",
+      "langchain_processor_qa"
+    ],
+    "extension": [
+      "nobot"   
+    ],
+    "notebook_deployment": true,
+    "search_engine_opensearch":true,
+    "search_engine_kendra":false,
+    "execution_role_name": "custom-role-document-ai-upload-to-s3",
+    "table_name": "FeedbackRecordsSEWCFAQ",
+    "apigateway_name": "intelligent-search-file-management",
+    "index": "smart_search_qa_test",
+    "embedding_endpoint_name": "huggingface-inference-eb",
+    "llm_embedding_name": "pytorch-inference-llm-v1",
+    "language": "chinese"
   }
 }
+
