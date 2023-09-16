@@ -223,7 +223,7 @@ class SagemakerEndpointEmbeddings(BaseModel, Embeddings):
                         text_append = ",".join([t for t in texts[i: i + append_num]])
                         text_result.append(text_append)
                 
-                results.append(response[0])
+                results.append(response)
                 metadatas_result.append(metadatas[i: i+_chunk_size][0])
                                 
             except Exception as e:
