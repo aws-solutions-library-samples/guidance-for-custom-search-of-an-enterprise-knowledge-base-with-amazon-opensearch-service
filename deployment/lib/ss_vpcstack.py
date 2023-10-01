@@ -22,7 +22,7 @@ class VpcStack(Stack):
     # for example,
     # cdk -c vpc_name=your-existing-vpc syth
     vpc_name = self.node.try_get_context('vpc_name')
-    if vpc_name != "null":
+    if vpc_name != "undefined":
         vpc = aws_ec2.Vpc.from_lookup(self, 'ExistingVPC', vpc_name=vpc_name)
     else:
         vpc = aws_ec2.Vpc(self, "smart_search-vpc",

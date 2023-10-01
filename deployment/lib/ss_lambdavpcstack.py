@@ -44,8 +44,7 @@ class LambdaVPCStack(Stack):
             private_subnet = aws_ec2.Subnet.from_subnet_attributes(self,subnet_name, availability_zone = zone_id, subnet_id = subnet_id)
             vpc_subnets_selection = aws_ec2.SubnetSelection(subnets = [private_subnet])
         else: 
-            private_subnet = vpc.select_subnets(subnet_name='Private')
-            vpc_subnets_selection = aws_ec2.SubnetSelection(subnets = [private_subnet])
+            vpc_subnets_selection = aws_ec2.SubnetSelection(subnet_type=aws_ec2.SubnetType.PRIVATE_WITH_EGRESS)
         # End of VPC deployment  
 
 
