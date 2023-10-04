@@ -75,10 +75,7 @@ def init_embeddings(endpoint_name,region_name,language: str = "chinese"):
 
         def transform_output(self, output: bytes) -> List[List[float]]:
             response_json = json.loads(output.read().decode("utf-8"))
-            if language.find("chinese")>=0:
-                return response_json[0][0]
-            else:
-                return response_json
+            return response_json
 
 
     content_handler = ContentHandler()
