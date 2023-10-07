@@ -167,7 +167,7 @@ class NotebookStack(cdk.Stack):
                 content=cdk.Fn.base64(f"""
                     #!/bin/bash
                     cd home/ec2-user/SageMaker
-                    git clone -b jupyter --single-branch https://github.com/aws-solutions-library-samples/guidance-for-custom-search-of-an-enterprise-knowledge-base-on-aws.git
+                    git clone -b jupyter_v3 --single-branch https://github.com/aws-solutions-library-samples/guidance-for-custom-search-of-an-enterprise-knowledge-base-on-aws.git
                     chmod -R 777 ./
 
                 """)
