@@ -7,13 +7,16 @@ from datetime import datetime
 invoke_url = ''
 bedrock_url = ''
 
-chinese_index = 'smart_search_qa_test'
+chinese_index = ''
 english_index = ''
 
-cn_embedding_endpoint = 'huggingface-inference-eb'
-cn_llm_endpoint = 'pytorch-inference-llm-v1'
+cn_embedding_endpoint = ''
+cn_llm_endpoint = ''
+
 en_embedding_endpoint = ''
 en_llm_endpoint = ''
+
+llama2_llm_endpoint = ''
 
 
 #Modify the default prompt as needed
@@ -43,12 +46,62 @@ english_summarize_prompt="""Based on the call records between the visitor and th
 
 The summary is:"""
 
+claude_chat_prompt_cn="""
+Human: 请根据 {history}，回答：{human_input}
+
+Assistant:
+"""
+
+claude_chat_prompt_cn_tc="""
+Human: 請根據 {history}，使用繁體中文回答：{human_input}
+
+Assistant:
+"""
+
+claude_chat_prompt_english="""
+Human: Based on {history}, answer the question：{human_input}
+
+Assistant:
+"""
+
+
+
+claude_rag_prompt_cn = """
+Human: 基于以下已知信息，简洁和专业的来回答用户的问题，如果无法从中得到答案，请说 "根据已知信息无法回答该问题" 或 "没有提供足够的相关信息"，不允许在答案中添加编造成分，答案请使用中文。
+    
+            问题: {question}
+            =========
+            {context}
+            =========
+            Assistant:
+"""
+
+claude_rag_prompt_cn_tc = """
+Human: 基於以下已知信息，簡潔和專業的來回答用戶的問題，如果無法從中得到答案，請說 "根據已知信息無法回答該問題" 或 "沒有提供足夠的相關信息"，不允許在答案中添加編造成分，答案請使用繁體中文回答
+    
+            問題: {question}
+            =========
+            {context}
+            =========
+            Assistant:
+"""
+
+claude_rag_prompt_english = """
+Human: Use the following pieces of context to answer the question at the end. If you don't know the answer, just say that you don't know, don't try to make up an answer.
+{context}
+
+Question: {question}
+Assistant:
+"""       
 
 
 api = invoke_url + '/langchain_processor_qa?query='
 
 def get_answer(task_type,question,session_id,language,model_type,prompt,search_engine,index,top_k,temperature,score_type_checklist):
     
+    question=question.replace('AWS','亚马逊云科技').replace('aws','亚马逊云科技').replace('Aws','亚马逊云科技')
+    print('question:',question)
+
     if len(question) > 0:
         url = api + question
     else:
@@ -64,7 +117,10 @@ def get_answer(task_type,question,session_id,language,model_type,prompt,search_e
     if language == "english":
         url += '&language=english'
         url += ('&embedding_endpoint_name='+en_embedding_endpoint)
-        url += ('&llm_embedding_name='+en_llm_endpoint)
+        if model_type == "llama2(english)":
+            url += ('&llm_embedding_name='+llama2_llm_endpoint)
+        else:
+            url += ('&llm_embedding_name='+en_llm_endpoint)
     elif language == "chinese":
         url += '&language=chinese'
         url += ('&embedding_endpoint_name='+cn_embedding_endpoint)
@@ -91,6 +147,21 @@ def get_answer(task_type,question,session_id,language,model_type,prompt,search_e
 
     if len(prompt) > 0:
         url += ('&prompt='+prompt)
+    elif model_type == "claude2":
+        if task_type == "Knowledge base Q&A":
+            if language == "english":
+                url += ('&prompt='+claude_rag_prompt_english)
+            elif language == "chinese":
+                url += ('&prompt='+claude_rag_prompt_cn)
+            elif language == "chinese-tc":
+                url += ('&prompt='+claude_rag_prompt_cn_tc)
+        else:
+            if language == "english":
+                url += ('&prompt='+claude_chat_prompt_english)
+            elif language == "chinese":
+                url += ('&prompt='+claude_chat_prompt_cn)
+            elif language == "chinese-tc":
+                url += ('&prompt='+claude_chat_prompt_cn_tc)
 
     if search_engine == "OpenSearch":
         url += ('&search_engine=opensearch')
@@ -101,6 +172,7 @@ def get_answer(task_type,question,session_id,language,model_type,prompt,search_e
                 url += ('&index='+chinese_index)
             elif language == "english" and len(english_index) >0:
                 url += ('&index='+english_index)
+
     elif search_engine == "Kendra":
         url += ('&search_engine=kendra')
         if len(index) > 0:
@@ -185,7 +257,7 @@ def get_answer(task_type,question,session_id,language,model_type,prompt,search_e
     return answer,confidence,source_str,url,request_time
     
     
-def get_summarize(texts,language,prompt):
+def get_summarize(texts,language,model_type,prompt):
 
     url = api + texts
     url += '&task=summarize'
@@ -200,7 +272,12 @@ def get_summarize(texts,language,prompt):
         url += ('&embedding_endpoint_name='+cn_embedding_endpoint)
         url += ('&llm_embedding_name='+cn_llm_endpoint)
 
-    
+    if model_type == "claude2":
+        url += ('&model_type=bedrock')
+        url += ('&bedrock_api_url='+bedrock_url)
+        url += ('&bedrock_model_id=anthropic.claude-v2')
+
+
     if len(prompt) > 0:
         url += ('&prompt='+prompt)
     else:
@@ -243,6 +320,8 @@ with demo:
                     qa_prompt_textbox = gr.Textbox(label="Prompt( must include {context} and {question} )",placeholder=chinese_prompt,lines=2)
                     qa_search_engine_radio = gr.Radio(["OpenSearch","Kendra"],value="OpenSearch",label="Search engine")
                     qa_index_textbox = gr.Textbox(label="OpenSearch index OR Kendra index id")
+                    # qa_em_ep_textbox = gr.Textbox(label="Embedding Endpoint")
+                    
                     qa_top_k_slider = gr.Slider(label="Top_k of source text to LLM",value=1, minimum=1, maximum=20, step=1)
                     qa_temperature_slider = gr.Slider(label="Temperature parameter of LLM",value=0.01, minimum=0.01, maximum=1, step=0.01)
                     score_type_checklist = gr.CheckboxGroup(["query_answer_score", "answer_docs_score","docs_list_overlap_score"],value=["query_answer_score"],label="Confidence score type")
@@ -257,12 +336,13 @@ with demo:
                     text_input = gr.Textbox(label="Input texts",lines=4)
                     summarize_button = gr.Button("Summit")
                     sm_language_radio = gr.Radio(["chinese", "english"],value="chinese",label="Language")
+                    sm_model_type_radio = gr.Radio(["claude2","other"],value="other",label="Model type")
                     sm_prompt_textbox = gr.Textbox(label="Prompt",lines=4, placeholder=chinses_summarize_prompt)
                 with gr.Column():
                     text_output = gr.Textbox()
             
     qa_button.click(get_answer, inputs=[qa_task_radio,query_textbox,session_id_textbox,qa_language_radio,qa_model_type_radio,qa_prompt_textbox,qa_search_engine_radio,qa_index_textbox,qa_top_k_slider,qa_temperature_slider,score_type_checklist], outputs=qa_output)
-    summarize_button.click(get_summarize, inputs=[text_input,sm_language_radio,sm_prompt_textbox], outputs=text_output)
+    summarize_button.click(get_summarize, inputs=[text_input,sm_language_radio,sm_model_type_radio,sm_prompt_textbox], outputs=text_output)
 
 # demo.launch()
 demo.launch(share=True)
