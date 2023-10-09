@@ -269,12 +269,12 @@ class LLamaContentHandler(LLMContentHandler):
         
 def init_model_llama2(endpoint_name,region_name,temperature):
     try:
-        parameters={}
+        parameters={"max_new_tokens": 512, "top_p": 0.9, "temperature": temperature}
         content_handler = LLamaContentHandler(parameters)
         llm=SagemakerEndpoint(
                     endpoint_name=endpoint_name, 
                     region_name=region_name, 
-                    model_kwargs={"parameters": {"max_new_tokens": 512, "top_p": 0.9, "temperature": temperature}},
+                    model_kwargs={"parameters": parameters},
                     content_handler=content_handler,
         )
         return llm
