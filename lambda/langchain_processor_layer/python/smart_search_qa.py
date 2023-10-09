@@ -256,7 +256,7 @@ class LLamaContentHandler(LLMContentHandler):
                 inputs += '{"role": "assistant", "content":"'+ answer + '"},'
         
         inputs += '{"role": "user", "content":"'+ query + '"}'
-        payload = '{"inputs": [['+ inputs+']],"parameters":'+str(self.parameters)+' }'
+        payload = '{"inputs": [['+ inputs+']],"parameters":{"max_new_tokens": 512, "top_p": 0.9, "temperature": 0.01} }'
         print('payload:',payload)
         return payload
         
