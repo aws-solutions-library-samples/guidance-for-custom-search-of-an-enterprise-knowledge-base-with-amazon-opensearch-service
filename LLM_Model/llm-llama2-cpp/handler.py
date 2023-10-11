@@ -49,7 +49,7 @@ def handler(event, context):
     print('event: ', event)
 
     try:
-        prompt = event['prompt']
+        prompt = event['ask']
         prompt = str(prompt)
         print('Prompt: ', prompt)
 
@@ -67,8 +67,11 @@ def handler(event, context):
 
         start = time.time()
 
-        response = llm(prompt)
-
+        # response = llm(prompt)
+        response = json.dumps(
+        {
+            'answer': llm(prompt)
+        })
         # response = output['choices'][0]['text']
 
         print('Response: ', response)
