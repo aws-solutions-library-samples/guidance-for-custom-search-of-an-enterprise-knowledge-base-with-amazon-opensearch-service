@@ -228,7 +228,7 @@ with demo:
                     score_type_checklist = gr.CheckboxGroup(["query_answer_score", "answer_docs_score","docs_list_overlap_score"],value=["query_answer_score"],label="Confidence score type")
 
                 with gr.Column():
-                    qa_output = [gr.outputs.Textbox(label="Answer"), gr.outputs.Textbox(label="Confidence"), gr.outputs.Textbox(label="Source"), gr.outputs.Textbox(label="Url"), gr.outputs.Textbox(label="Request time")]
+                    qa_output = [gr.components.Textbox(label="Answer"), gr.components.Textbox(label="Confidence"), gr.components.Textbox(label="Source"), gr.components.Textbox(label="Url"), gr.components.Textbox(label="Request time")]
                                 
 
         with gr.TabItem("Summarize"):
