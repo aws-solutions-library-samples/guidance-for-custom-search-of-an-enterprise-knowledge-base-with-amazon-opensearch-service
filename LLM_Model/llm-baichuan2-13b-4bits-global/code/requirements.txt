@@ -2,7 +2,7 @@ diffusers
 ftfy
 spacy
 boto3
-sagemaker==2.183.0
+sagemaker
 nvgpu
 sentencepiece
 protobuf>=3.19.5,<3.20.1
