@@ -18,17 +18,17 @@ WORKDIR ${FUNCTION_DIR}
 #ADD Python file
 ADD requirements.txt ${FUNCTION_DIR}
 RUN pip3 install -r ${FUNCTION_DIR}/requirements.txt
-RUN LLAMA_CUBLAS=1 pip install llama-cpp-python
-RUN pip3 install ctransformers[cuda]>=0.2.24
+RUN CMAKE_ARGS="-DLLAMA_CUBLAS=on" pip install llama-cpp-python
+
 #ADD model
 RUN mkdir -p ${FUNCTION_DIR}/model
 
 # ----- Select 7B or 13B Model-----
-# ADD llama-2-7b-chat.ggmlv3.q4_K_M.bin ${FUNCTION_DIR}/model
-# ENV MODEL_PATH="${FUNCTION_DIR}/model/llama-2-7b-chat.ggmlv3.q4_K_M.bin"
+ADD llama-2-7b-chat.Q4_0.gguf ${FUNCTION_DIR}/model
+ENV MODEL_PATH="${FUNCTION_DIR}/model/llama-2-7b-chat.Q4_0.gguf"
 
-ADD firefly-llama2-13b-v1.2.Q2_K.gguf ${FUNCTION_DIR}/model
-ENV MODEL_PATH="${FUNCTION_DIR}/model/firefly-llama2-13b-v1.2.Q2_K.gguf"
+# ADD llama-2-13b-chat.Q4_0.gguf ${FUNCTION_DIR}/model
+# ENV MODEL_PATH="${FUNCTION_DIR}/model/llama-2-13b-chat.Q4_0.gguf"
 
 # ---------------------------------
 

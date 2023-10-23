@@ -3,20 +3,20 @@ import boto3
 import os
 from os import environ
 import time
-# from llama_cpp import Llama
+from llama_cpp import Llama
 
 
-def find_first_bin_file(root_path):
+def find_first_gguf_file(root_path):
     for root, dirs, files in os.walk(root_path):
         for file in files:
-            if file.endswith('.bin'):
+            if file.endswith('.gguf'):
                 return os.path.join(root, file)
     return None
 
 
 if "MODEL_PATH" not in environ.keys() or environ["MODEL_PATH"] is None:
     check_path = "/opt/program/model"
-    bin_file_path = find_first_bin_file(check_path)
+    bin_file_path = find_first_gguf_file(check_path)
     if bin_file_path:
         environ["MODEL_PATH"] = bin_file_path
     else:
@@ -32,13 +32,8 @@ n_ctx = int(environ['CONTEXT_SIZE'])
 print('Loading Model...')
 print('Model Path: ', model_path)
 print('Maximum context size: ', n_ctx)
-os.system('ls ')
 
-# model = Llama(model_path=model_path, n_ctx=n_ctx, n_gpu_layers=100, use_mlock=True)
-
-from ctransformers import AutoModelForCausalLM
-llm = AutoModelForCausalLM.from_pretrained(model_path, model_type="llama", gpu_layers=50)
-
+model = Llama(model_path=model_path, n_ctx=n_ctx, n_gpu_layers=100, use_mlock=True)
 
 print('Load Model Done...')
 
@@ -67,14 +62,18 @@ def handler(event, context):
 
         start = time.time()
 
-        # response = llm(prompt)
-        response = json.dumps(
-        {
-            'answer': llm(prompt)
-        })
-        # response = output['choices'][0]['text']
+        output = model(prompt, max_tokens=max_tokens, temperature=temperature)
 
-        print('Response: ', response)
+        result = output['choices'][0]['text']
+
+        print('Result: ', result)
+
+        response = json.dumps({
+            'answer': result
+        })
+        
+
+
         timecost = '{:.3f}'.format(time.time() - start)
         print('Time Cost: ', timecost)
         
@@ -83,9 +82,8 @@ def handler(event, context):
             'body': response,
             'timecost': timecost
         }
-    except Exception as e:
-        print(e)
+    except:
         return {
             'statusCode': 400,
-            'body': e
+            'body': 'Error'
         }
