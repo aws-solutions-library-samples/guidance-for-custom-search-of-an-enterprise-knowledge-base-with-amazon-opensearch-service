@@ -24,11 +24,11 @@ RUN CMAKE_ARGS="-DLLAMA_CUBLAS=on" pip install llama-cpp-python
 RUN mkdir -p ${FUNCTION_DIR}/model
 
 # ----- Select 7B or 13B Model-----
-ADD llama-2-7b-chat.Q4_0.gguf ${FUNCTION_DIR}/model
-ENV MODEL_PATH="${FUNCTION_DIR}/model/llama-2-7b-chat.Q4_0.gguf"
+# ADD llama-2-7b-chat.Q4_0.gguf ${FUNCTION_DIR}/model
+# ENV MODEL_PATH="${FUNCTION_DIR}/model/llama-2-7b-chat.Q4_0.gguf"
 
-# ADD llama-2-13b-chat.Q4_0.gguf ${FUNCTION_DIR}/model
-# ENV MODEL_PATH="${FUNCTION_DIR}/model/llama-2-13b-chat.Q4_0.gguf"
+ADD llama-2-13b-chat.Q4_0.gguf ${FUNCTION_DIR}/model
+ENV MODEL_PATH="${FUNCTION_DIR}/model/llama-2-13b-chat.Q4_0.gguf"
 
 # ---------------------------------
 

@@ -24,7 +24,7 @@ if "MODEL_PATH" not in environ.keys() or environ["MODEL_PATH"] is None:
         exit(1)
 
 if "CONTEXT_SIZE" not in environ.keys() or environ["CONTEXT_SIZE"] is None:
-    environ["CONTEXT_SIZE"] = '512'
+    environ["CONTEXT_SIZE"] = '2048'
 
 model_path = environ['MODEL_PATH']
 n_ctx = int(environ['CONTEXT_SIZE'])
@@ -49,7 +49,7 @@ def handler(event, context):
         print('Prompt: ', prompt)
 
         if 'max_tokens' not in event.keys():
-            event['max_tokens'] = '512'
+            event['max_tokens'] = '2048'
         
         if 'temperature' not in event.keys():
             event['temperature'] = '0.8'
