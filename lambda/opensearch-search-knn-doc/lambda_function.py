@@ -19,7 +19,9 @@ password = data.get('password')
 num_output = 10
 
 awsauth = (username, password)
-
+domain_name = os.environ.get('domain_name')
+region = os.environ.get('region')
+stage = 'prod'
 
 source_includes = ["title","sentence","paragraph","sentence_id","paragraph_id"]
 runtime= boto3.client('runtime.sagemaker')
@@ -121,16 +123,19 @@ def split_sentences(q):
 
 # Lambda execution starts here
 def lambda_handler(event, context):
-    index = event['queryStringParameters']['ind']
-    print('index', index)
-    if event['queryStringParameters']['knn'] == "1":
-      print (event['queryStringParameters']['q'])
-      r = search_using_knn(event['queryStringParameters']['q'], event['queryStringParameters']['ind'], 
+    # index = evt_body['ind']
+    # print('index', index)
+    # print('debug',event)
+    evt_body = json.loads(event['body'])
+    index = evt_body['ind']
+    if evt_body['knn'] == "1":
+      print (evt_body['q'])
+      r = search_using_knn(evt_body['q'], evt_body['ind'], 
                           source_includes, num_output, 10)
     else:
-      q = event['queryStringParameters']['q']
+      q = evt_body['q']
       # q = split_sentences(q)
-      if 'ml' not in event['queryStringParameters']:
+      if 'ml' not in evt_body:
         query = {
           "size": num_output,
             "_source": {
@@ -138,7 +143,7 @@ def lambda_handler(event, context):
               },
           'query': {
             "multi_match": {
-              "query": event['queryStringParameters']['q'],
+              "query": evt_body['q'],
               "fields": fields
             }
           }
@@ -151,7 +156,7 @@ def lambda_handler(event, context):
               },
           "query": {
             "multi_match": {
-              "query": event['queryStringParameters']['q'],
+              "query": evt_body['q'],
               "fields": fields
             }
           },
@@ -160,9 +165,9 @@ def lambda_handler(event, context):
               "rescore_query": {
                 "sltr": {
                   "params": {
-                    "keywords": event['queryStringParameters']['q']
+                    "keywords": evt_body['q']
                   },
-                  "model": event['queryStringParameters']['ml']
+                  "model": evt_body['ml']
                 }
               }
             }
@@ -176,7 +181,7 @@ def lambda_handler(event, context):
     content = get_results(json.loads(r))
     print(content[:2000])
     
-    suggestion_answer = get_answer(event['queryStringParameters']['q'], content[:2000])
+    suggestion_answer = get_answer(evt_body['q'], content[:2000])
     
 
     print(suggestion_answer)
@@ -194,4 +199,11 @@ def lambda_handler(event, context):
         'datetime':time.time(),
         'suggestion_answer': suggestion_answer
       })
-    return response
+    # return response
+    print('api_gw post')
+    connectionId = event.get('requestContext',{}).get('connectionId')
+    apigw_management = boto3.client('apigatewaymanagementapi',
+                                    endpoint_url=F"https://{domain_name}.execute-api.{region}.amazonaws.com/{stage}")
+    api_res = apigw_management.post_to_connection(ConnectionId=connectionId,
+                                                         Data=response['body'])
+    print('api_res',api_res)
