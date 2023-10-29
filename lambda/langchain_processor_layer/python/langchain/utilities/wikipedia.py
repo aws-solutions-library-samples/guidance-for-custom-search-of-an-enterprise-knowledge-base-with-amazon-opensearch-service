@@ -2,8 +2,7 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Extra, root_validator
-
+from langchain.pydantic_v1 import BaseModel, root_validator
 from langchain.schema import Document
 
 logger = logging.getLogger(__name__)
@@ -26,11 +25,6 @@ class WikipediaAPIWrapper(BaseModel):
     lang: str = "en"
     load_all_available_meta: bool = False
     doc_content_chars_max: int = 4000
-
-    class Config:
-        """Configuration for this pydantic object."""
-
-        extra = Extra.forbid
 
     @root_validator()
     def validate_environment(cls, values: Dict) -> Dict:

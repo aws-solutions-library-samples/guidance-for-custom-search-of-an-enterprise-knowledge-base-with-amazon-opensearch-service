@@ -1,8 +1,7 @@
 from typing import Any, Dict, List, Tuple
 
-from pydantic import root_validator
-
 from langchain.prompts.chat import BaseChatPromptTemplate
+from langchain.pydantic_v1 import root_validator
 from langchain.schema import BasePromptTemplate, PromptValue
 
 
@@ -11,7 +10,7 @@ def _get_inputs(inputs: dict, input_variables: List[str]) -> dict:
 
 
 class PipelinePromptTemplate(BasePromptTemplate):
-    """A prompt template for composing multiple prompts together.
+    """A prompt template for composing multiple prompt templates together.
 
     This can be useful when you want to reuse parts of prompts.
     A PipelinePrompt consists of two main parts:
@@ -24,7 +23,9 @@ class PipelinePromptTemplate(BasePromptTemplate):
     """
 
     final_prompt: BasePromptTemplate
+    """The final prompt that is returned."""
     pipeline_prompts: List[Tuple[str, BasePromptTemplate]]
+    """A list of tuples, consisting of a string (`name`) and a Prompt Template."""
 
     @root_validator(pre=True)
     def get_input_variables(cls, values: Dict) -> Dict:

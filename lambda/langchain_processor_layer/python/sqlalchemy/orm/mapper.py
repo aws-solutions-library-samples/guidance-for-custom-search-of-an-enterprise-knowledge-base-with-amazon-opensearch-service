@@ -786,7 +786,7 @@ class Mapper(
 
         # interim - polymorphic_on is further refined in
         # _configure_polymorphic_setter
-        self.polymorphic_on = (  # type: ignore
+        self.polymorphic_on = (
             coercions.expect(  # type: ignore
                 roles.ColumnArgumentOrKeyRole,
                 polymorphic_on,
@@ -964,8 +964,8 @@ class Mapper(
     version_id_generator: Optional[Union[Literal[False], Callable[[Any], Any]]]
 
     local_table: FromClause
-    """The immediate :class:`_expression.FromClause` which this
-    :class:`_orm.Mapper` refers towards.
+    """The immediate :class:`_expression.FromClause` to which this
+    :class:`_orm.Mapper` refers.
 
     Typically is an instance of :class:`_schema.Table`, may be any
     :class:`.FromClause`.
@@ -1400,7 +1400,7 @@ class Mapper(
             self.with_polymorphic = None
 
         if self.with_polymorphic and self.with_polymorphic[1] is not None:
-            self.with_polymorphic = (  # type: ignore
+            self.with_polymorphic = (
                 self.with_polymorphic[0],
                 coercions.expect(
                     roles.StrictFromClauseRole,
@@ -1504,7 +1504,7 @@ class Mapper(
         manager = instrumentation.register_class(
             self.class_,
             mapper=self,
-            expired_attribute_loader=util.partial(  # type: ignore
+            expired_attribute_loader=util.partial(
                 loading.load_scalar_attributes, self
             ),
             # finalize flag means instrument the __init__ method
@@ -1610,7 +1610,7 @@ class Mapper(
                 if isinstance(c, str)
                 else c
                 for c in (
-                    coercions.expect(  # type: ignore
+                    coercions.expect(
                         roles.DDLConstraintColumnRole,
                         coerce_pk,
                         argname="primary_key",
@@ -2931,10 +2931,11 @@ class Mapper(
         adapter = self._polymorphic_adapter
 
         return [
-            adapter.columns[prop.columns[0]] if adapter else prop.columns[0]
+            adapter.columns[c] if adapter else c
             for prop in poly_properties
             if isinstance(prop, properties.ColumnProperty)
             and prop._renders_in_subqueries
+            for c in prop.columns
         ]
 
     def _columns_plus_keys(self, polymorphic_mappers=()):
@@ -4096,7 +4097,7 @@ class _OptGetColumnsNotAvailable(Exception):
     pass
 
 
-def configure_mappers():
+def configure_mappers() -> None:
     """Initialize the inter-mapper relationships of all mappers that
     have been constructed thus far across all :class:`_orm.registry`
     collections.

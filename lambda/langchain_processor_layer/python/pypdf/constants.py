@@ -224,6 +224,7 @@ class ImageAttributes:
     BITS_PER_COMPONENT = "/BitsPerComponent"  # integer, required
     COLOR_SPACE = "/ColorSpace"  # name, required
     DECODE = "/Decode"  # array, optional
+    INTENT = "/Intent"  # string, optional
     INTERPOLATE = "/Interpolate"  # boolean, optional
     IMAGE_MASK = "/ImageMask"  # boolean, optional
     MASK = "/Mask"  # 1-bit image mask stream
@@ -543,7 +544,7 @@ class PageLabelStyle:
 
 
 class AnnotationFlag(IntFlag):
-    """See 12.5.3 "Anntation Flags"."""
+    """See 12.5.3 "Annotation Flags"."""
 
     INVISIBLE = 1
     HIDDEN = 2

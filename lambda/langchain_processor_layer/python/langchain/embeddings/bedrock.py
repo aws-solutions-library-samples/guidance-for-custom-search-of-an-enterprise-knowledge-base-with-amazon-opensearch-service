@@ -1,14 +1,15 @@
+import asyncio
 import json
 import os
+from functools import partial
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Extra, root_validator
-
-from langchain.embeddings.base import Embeddings
+from langchain.pydantic_v1 import BaseModel, Extra, root_validator
+from langchain.schema.embeddings import Embeddings
 
 
 class BedrockEmbeddings(BaseModel, Embeddings):
-    """Embeddings provider to invoke Bedrock embedding models.
+    """Bedrock embedding models.
 
     To authenticate, the AWS client uses the following methods to
     automatically load credentials:
@@ -29,7 +30,7 @@ class BedrockEmbeddings(BaseModel, Embeddings):
             
             region_name ="us-east-1"
             credentials_profile_name = "default"
-            model_id = "amazon.titan-e1t-medium"
+            model_id = "amazon.titan-embed-text-v1"
 
             be = BedrockEmbeddings(
                 credentials_profile_name=credentials_profile_name,
@@ -39,7 +40,7 @@ class BedrockEmbeddings(BaseModel, Embeddings):
     """
 
     client: Any  #: :meta private:
-
+    """Bedrock client."""
     region_name: Optional[str] = None
     """The aws region e.g., `us-west-2`. Fallsback to AWS_DEFAULT_REGION env variable
     or region specified in ~/.aws/config in case it is not provided here.
@@ -53,12 +54,15 @@ class BedrockEmbeddings(BaseModel, Embeddings):
     See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html
     """
 
-    model_id: str = "amazon.titan-e1t-medium"
-    """Id of the model to call, e.g., amazon.titan-e1t-medium, this is
+    model_id: str = "amazon.titan-embed-text-v1"
+    """Id of the model to call, e.g., amazon.titan-embed-text-v1, this is
     equivalent to the modelId property in the list-foundation-models api"""
 
     model_kwargs: Optional[Dict] = None
-    """Key word arguments to pass to the model."""
+    """Keyword arguments to pass to the model."""
+
+    endpoint_url: Optional[str] = None
+    """Needed if you don't want to default to us-east-1 endpoint"""
 
     class Config:
         """Configuration for this pydantic object."""
@@ -85,7 +89,10 @@ class BedrockEmbeddings(BaseModel, Embeddings):
             if values["region_name"]:
                 client_params["region_name"] = values["region_name"]
 
-            values["client"] = session.client("bedrock", **client_params)
+            if values["endpoint_url"]:
+                client_params["endpoint_url"] = values["endpoint_url"]
+
+            values["client"] = session.client("bedrock-runtime", **client_params)
 
         except ImportError:
             raise ModuleNotFoundError(
@@ -107,38 +114,26 @@ class BedrockEmbeddings(BaseModel, Embeddings):
         text = text.replace(os.linesep, " ")
         _model_kwargs = self.model_kwargs or {}
 
-        input_body = {**_model_kwargs}
-        input_body["inputText"] = text
+        input_body = {**_model_kwargs, "inputText": text}
         body = json.dumps(input_body)
-        content_type = "application/json"
-        accepts = "application/json"
 
-        embeddings = []
         try:
             response = self.client.invoke_model(
                 body=body,
                 modelId=self.model_id,
-                accept=accepts,
-                contentType=content_type,
+                accept="application/json",
+                contentType="application/json",
             )
             response_body = json.loads(response.get("body").read())
-            embeddings = response_body.get("embedding")
+            return response_body.get("embedding")
         except Exception as e:
             raise ValueError(f"Error raised by inference endpoint: {e}")
 
-        return embeddings
-
-    def embed_documents(
-        self, texts: List[str], chunk_size: int = 1
-    ) -> List[List[float]]:
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """Compute doc embeddings using a Bedrock model.
 
         Args:
-            texts: The list of texts to embed.
-            chunk_size: Bedrock currently only allows single string
-                inputs, so chunk size is always 1. This input is here
-                only for compatibility with the embeddings interface.
-
+            texts: The list of texts to embed
 
         Returns:
             List of embeddings, one for each text.
@@ -159,3 +154,31 @@ class BedrockEmbeddings(BaseModel, Embeddings):
             Embeddings for the text.
         """
         return self._embedding_func(text)
+
+    async def aembed_query(self, text: str) -> List[float]:
+        """Asynchronous compute query embeddings using a Bedrock model.
+
+        Args:
+            text: The text to embed.
+
+        Returns:
+            Embeddings for the text.
+        """
+
+        return await asyncio.get_running_loop().run_in_executor(
+            None, partial(self.embed_query, text)
+        )
+
+    async def aembed_documents(self, texts: List[str]) -> List[List[float]]:
+        """Asynchronous compute doc embeddings using a Bedrock model.
+
+        Args:
+            texts: The list of texts to embed
+
+        Returns:
+            List of embeddings, one for each text.
+        """
+
+        result = await asyncio.gather(*[self.aembed_query(text) for text in texts])
+
+        return list(result)

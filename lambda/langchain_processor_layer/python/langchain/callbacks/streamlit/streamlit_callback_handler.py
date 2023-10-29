@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional
 
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.callbacks.streamlit.mutable_expander import MutableExpander
@@ -27,6 +27,8 @@ EXCEPTION_EMOJI = "⚠️"
 
 
 class LLMThoughtState(Enum):
+    """Enumerator of the LLMThought state."""
+
     # The LLM is thinking about what to do next. We don't know which tool we'll run.
     THINKING = "THINKING"
     # The LLM has decided to run a tool. We don't have results from the tool yet.
@@ -36,6 +38,8 @@ class LLMThoughtState(Enum):
 
 
 class ToolRecord(NamedTuple):
+    """The tool record as a NamedTuple."""
+
     name: str
     input_str: str
 
@@ -100,6 +104,8 @@ class LLMThoughtLabeler:
 
 
 class LLMThought:
+    """A thought in the LLM's thought stream."""
+
     def __init__(
         self,
         parent_container: DeltaGenerator,
@@ -107,6 +113,14 @@ class LLMThought:
         expanded: bool,
         collapse_on_complete: bool,
     ):
+        """Initialize the LLMThought.
+
+        Args:
+            parent_container: The container we're writing into.
+            labeler: The labeler to use for this thought.
+            expanded: Whether the thought should be expanded by default.
+            collapse_on_complete: Whether the thought should be collapsed.
+        """
         self._container = MutableExpander(
             parent_container=parent_container,
             label=labeler.get_initial_label(),
@@ -149,9 +163,7 @@ class LLMThought:
         # data is redundant
         self._reset_llm_token_stream()
 
-    def on_llm_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> None:
+    def on_llm_error(self, error: BaseException, **kwargs: Any) -> None:
         self._container.markdown("**LLM encountered an error...**")
         self._container.exception(error)
 
@@ -177,9 +189,7 @@ class LLMThought:
     ) -> None:
         self._container.markdown(f"**{output}**")
 
-    def on_tool_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> None:
+    def on_tool_error(self, error: BaseException, **kwargs: Any) -> None:
         self._container.markdown("**Tool encountered an error...**")
         self._container.exception(error)
 
@@ -213,6 +223,8 @@ class LLMThought:
 
 
 class StreamlitCallbackHandler(BaseCallbackHandler):
+    """A callback handler that writes to a Streamlit app."""
+
     def __init__(
         self,
         parent_container: DeltaGenerator,
@@ -337,9 +349,7 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         self._require_current_thought().on_llm_end(response, **kwargs)
         self._prune_old_thought_containers()
 
-    def on_llm_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> None:
+    def on_llm_error(self, error: BaseException, **kwargs: Any) -> None:
         self._require_current_thought().on_llm_error(error, **kwargs)
         self._prune_old_thought_containers()
 
@@ -362,9 +372,7 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         )
         self._complete_current_thought()
 
-    def on_tool_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> None:
+    def on_tool_error(self, error: BaseException, **kwargs: Any) -> None:
         self._require_current_thought().on_tool_error(error, **kwargs)
         self._prune_old_thought_containers()
 
@@ -385,9 +393,7 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
     def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> None:
         pass
 
-    def on_chain_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> None:
+    def on_chain_error(self, error: BaseException, **kwargs: Any) -> None:
         pass
 
     def on_agent_action(

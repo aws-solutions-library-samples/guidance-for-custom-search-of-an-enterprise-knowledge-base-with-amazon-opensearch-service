@@ -1,7 +1,8 @@
+import math
 import sys
 from dataclasses import dataclass
 from datetime import timezone
-from typing import TYPE_CHECKING, Any, Callable, Iterator, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Iterator, Optional, SupportsFloat, SupportsIndex, TypeVar, Union
 
 if sys.version_info < (3, 8):
     from typing_extensions import Protocol, runtime_checkable
@@ -41,10 +42,18 @@ __all__ = (
     'LowerCase',
     'UpperCase',
     'IsDigits',
+    'IsFinite',
+    'IsNotFinite',
+    'IsNan',
+    'IsNotNan',
+    'IsInfinite',
+    'IsNotInfinite',
+    'doc',
+    'DocInfo',
     '__version__',
 )
 
-__version__ = '0.5.0'
+__version__ = '0.6.0'
 
 
 T = TypeVar('T')
@@ -311,9 +320,77 @@ class Predicate(BaseMetadata):
     func: Callable[[Any], bool]
 
 
-StrType = TypeVar("StrType", bound=str)
+@dataclass
+class Not:
+    func: Callable[[Any], bool]
 
-LowerCase = Annotated[StrType, Predicate(str.islower)]
-UpperCase = Annotated[StrType, Predicate(str.isupper)]
-IsDigits = Annotated[StrType, Predicate(str.isdigit)]
-IsAscii = Annotated[StrType, Predicate(str.isascii)]
+    def __call__(self, __v: Any) -> bool:
+        return not self.func(__v)
+
+
+_StrType = TypeVar("_StrType", bound=str)
+
+LowerCase = Annotated[_StrType, Predicate(str.islower)]
+"""
+Return True if the string is a lowercase string, False otherwise.
+
+A string is lowercase if all cased characters in the string are lowercase and there is at least one cased character in the string.
+"""  # noqa: E501
+UpperCase = Annotated[_StrType, Predicate(str.isupper)]
+"""
+Return True if the string is an uppercase string, False otherwise.
+
+A string is uppercase if all cased characters in the string are uppercase and there is at least one cased character in the string.
+"""  # noqa: E501
+IsDigits = Annotated[_StrType, Predicate(str.isdigit)]
+"""
+Return True if the string is a digit string, False otherwise.
+
+A string is a digit string if all characters in the string are digits and there is at least one character in the string.
+"""  # noqa: E501
+IsAscii = Annotated[_StrType, Predicate(str.isascii)]
+"""
+Return True if all characters in the string are ASCII, False otherwise.
+
+ASCII characters have code points in the range U+0000-U+007F. Empty string is ASCII too.
+"""
+
+_NumericType = TypeVar('_NumericType', bound=Union[SupportsFloat, SupportsIndex])
+IsFinite = Annotated[_NumericType, Predicate(math.isfinite)]
+"""Return True if x is neither an infinity nor a NaN, and False otherwise."""
+IsNotFinite = Annotated[_NumericType, Predicate(Not(math.isfinite))]
+"""Return True if x is one of infinity or NaN, and False otherwise"""
+IsNan = Annotated[_NumericType, Predicate(math.isnan)]
+"""Return True if x is a NaN (not a number), and False otherwise."""
+IsNotNan = Annotated[_NumericType, Predicate(Not(math.isnan))]
+"""Return True if x is anything but NaN (not a number), and False otherwise."""
+IsInfinite = Annotated[_NumericType, Predicate(math.isinf)]
+"""Return True if x is a positive or negative infinity, and False otherwise."""
+IsNotInfinite = Annotated[_NumericType, Predicate(Not(math.isinf))]
+"""Return True if x is neither a positive or negative infinity, and False otherwise."""
+
+try:
+    from typing_extensions import DocInfo, doc  # type: ignore [attr-defined]
+except ImportError:
+
+    @dataclass(frozen=True, **SLOTS)
+    class DocInfo:  # type: ignore [no-redef]
+        """ "
+        The return value of doc(), mainly to be used by tools that want to extract the
+        Annotated documentation at runtime.
+        """
+
+        documentation: str
+        """The documentation string passed to doc()."""
+
+    def doc(
+        documentation: str,
+    ) -> DocInfo:
+        """
+        Add documentation to a type annotation inside of Annotated.
+
+        For example:
+
+        >>> def hi(name: Annotated[int, doc("The name of the user")]) -> None: ...
+        """
+        return DocInfo(documentation)

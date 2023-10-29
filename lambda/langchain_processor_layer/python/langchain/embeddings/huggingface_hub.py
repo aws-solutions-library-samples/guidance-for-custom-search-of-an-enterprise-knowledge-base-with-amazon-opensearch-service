@@ -1,9 +1,7 @@
-"""Wrapper around HuggingFace Hub embedding models."""
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Extra, root_validator
-
-from langchain.embeddings.base import Embeddings
+from langchain.pydantic_v1 import BaseModel, Extra, root_validator
+from langchain.schema.embeddings import Embeddings
 from langchain.utils import get_from_dict_or_env
 
 DEFAULT_REPO_ID = "sentence-transformers/all-mpnet-base-v2"
@@ -11,7 +9,7 @@ VALID_TASKS = ("feature-extraction",)
 
 
 class HuggingFaceHubEmbeddings(BaseModel, Embeddings):
-    """Wrapper around HuggingFaceHub embedding models.
+    """HuggingFaceHub embedding models.
 
     To use, you should have the ``huggingface_hub`` python package installed, and the
     environment variable ``HUGGINGFACEHUB_API_TOKEN`` set with your API token, or pass
@@ -35,7 +33,7 @@ class HuggingFaceHubEmbeddings(BaseModel, Embeddings):
     task: Optional[str] = "feature-extraction"
     """Task to call the model with."""
     model_kwargs: Optional[dict] = None
-    """Key word arguments to pass to the model."""
+    """Keyword arguments to pass to the model."""
 
     huggingfacehub_api_token: Optional[str] = None
 
@@ -71,7 +69,7 @@ class HuggingFaceHubEmbeddings(BaseModel, Embeddings):
                 )
             values["client"] = client
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import huggingface_hub python package. "
                 "Please install it with `pip install huggingface_hub`."
             )

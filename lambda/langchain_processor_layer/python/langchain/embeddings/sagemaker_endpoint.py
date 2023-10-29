@@ -1,10 +1,8 @@
-"""Wrapper around Sagemaker InvokeEndpoint API."""
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Extra, root_validator
-
-from langchain.embeddings.base import Embeddings
 from langchain.llms.sagemaker_endpoint import ContentHandlerBase
+from langchain.pydantic_v1 import BaseModel, Extra, root_validator
+from langchain.schema.embeddings import Embeddings
 
 
 class EmbeddingsContentHandler(ContentHandlerBase[List[str], List[List[float]]]):
@@ -12,7 +10,7 @@ class EmbeddingsContentHandler(ContentHandlerBase[List[str], List[List[float]]])
 
 
 class SagemakerEndpointEmbeddings(BaseModel, Embeddings):
-    """Wrapper around custom Sagemaker Inference Endpoints.
+    """Custom Sagemaker Inference Endpoints.
 
     To use, you must supply the endpoint name from your deployed
     Sagemaker model & the region where it is deployed.
@@ -48,8 +46,18 @@ class SagemakerEndpointEmbeddings(BaseModel, Embeddings):
                 region_name=region_name,
                 credentials_profile_name=credentials_profile_name
             )
+
+            #Use with boto3 client
+            client = boto3.client(
+                        "sagemaker-runtime",
+                        region_name=region_name
+                    )
+            se = SagemakerEndpointEmbeddings(
+                endpoint_name=endpoint_name,
+                client=client
+            )
     """
-    client: Any  #: :meta private:
+    client: Any = None
 
     endpoint_name: str = ""
     """The name of the endpoint from the deployed Sagemaker model.
@@ -92,7 +100,7 @@ class SagemakerEndpointEmbeddings(BaseModel, Embeddings):
     """  # noqa: E501
 
     model_kwargs: Optional[Dict] = None
-    """Key word arguments to pass to the model."""
+    """Keyword arguments to pass to the model."""
 
     endpoint_kwargs: Optional[Dict] = None
     """Optional attributes passed to the invoke_endpoint
@@ -108,6 +116,10 @@ class SagemakerEndpointEmbeddings(BaseModel, Embeddings):
 
     @root_validator()
     def validate_environment(cls, values: Dict) -> Dict:
+        """Dont do anything if client provided externally"""
+        if values.get("client") is not None:
+            return values
+
         """Validate that AWS credentials to and python package exists in environment."""
         try:
             import boto3
@@ -133,7 +145,7 @@ class SagemakerEndpointEmbeddings(BaseModel, Embeddings):
                 ) from e
 
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import boto3 python package. "
                 "Please install it with `pip install boto3`."
             )
@@ -159,12 +171,33 @@ class SagemakerEndpointEmbeddings(BaseModel, Embeddings):
                 Accept=accepts,
                 **_endpoint_kwargs,
             )
-
         except Exception as e:
             raise ValueError(f"Error raised by inference endpoint: {e}")
 
         return self.content_handler.transform_output(response["Body"])
 
+#     def embed_documents(
+#         self, texts: List[str], chunk_size: int = 64
+#     ) -> List[List[float]]:
+#         """Compute doc embeddings using a SageMaker Inference Endpoint.
+
+#         Args:
+#             texts: The list of texts to embed.
+#             chunk_size: The chunk size defines how many input texts will
+#                 be grouped together as request. If None, will use the
+#                 chunk size specified by the class.
+
+
+#         Returns:
+#             List of embeddings, one for each text.
+#         """
+#         results = []
+#         _chunk_size = len(texts) if chunk_size > len(texts) else chunk_size
+#         for i in range(0, len(texts), _chunk_size):
+#             response = self._embedding_func(texts[i : i + _chunk_size])
+#             results.extend(response)
+#         return results
+    
     def embed_documents(
         self, texts: List[str], metadatas: List[dict], chunk_size: int = 64, language: str = "chinese"
     ) -> List[List[float]]:
@@ -180,11 +213,6 @@ class SagemakerEndpointEmbeddings(BaseModel, Embeddings):
         Returns:
             List of embeddings, one for each text.
         """
-
-       # _chunk_size = len(texts) if chunk_size > len(texts) else chunk_size
-       # for i in range(0, len(texts), _chunk_size):
-       #     response = self._embedding_func(texts[i : i + _chunk_size])
-       #     results.extend(response)
 
         results = []
         text_result = []
@@ -216,8 +244,6 @@ class SagemakerEndpointEmbeddings(BaseModel, Embeddings):
                 else:
                     response = self._embedding_func(list(texts[i: i+_chunk_size]))
                     sentences.append(texts[i: i+_chunk_size])
-#                     print('sentences:',i,'  ',texts[i: i+_chunk_size])
-#                     print('emb:',i,'  ',response[0][:3])
                     if language == 'english':
                         text_result.append(texts[i: i+_chunk_size])
 
@@ -234,7 +260,7 @@ class SagemakerEndpointEmbeddings(BaseModel, Embeddings):
                 print("Embedding Error:",e)
 
         return results,text_result,metadatas_result,sentences
-    
+   
 
     def embed_query(self, text: str) -> List[float]:
         """Compute query embeddings using a SageMaker inference endpoint.

@@ -1,18 +1,15 @@
 import datetime
 from typing import Any, Optional, Sequence, Union
 
-try:
-    import lark
-    from packaging import version
+from langchain.utils import check_package_version
 
-    if version.parse(lark.__version__) < version.parse("1.1.5"):
-        raise ValueError(
-            f"Lark should be at least version 1.1.5, got {lark.__version__}"
-        )
+try:
+    check_package_version("lark", gte_version="1.1.5")
     from lark import Lark, Transformer, v_args
 except ImportError:
 
     def v_args(*args: Any, **kwargs: Any) -> Any:  # type: ignore
+        """Dummy decorator for when lark is not installed."""
         return lambda _: None
 
     Transformer = object  # type: ignore
@@ -26,7 +23,7 @@ from langchain.chains.query_constructor.ir import (
     Operator,
 )
 
-GRAMMAR = """
+GRAMMAR = r"""
     ?program: func_call
     ?expr: func_call
         | value
@@ -57,19 +54,20 @@ GRAMMAR = """
 
 @v_args(inline=True)
 class QueryTransformer(Transformer):
-    """Transforms a query string into an IR representation
-    (intermediate representation)."""
+    """Transforms a query string into an intermediate representation."""
 
     def __init__(
         self,
         *args: Any,
         allowed_comparators: Optional[Sequence[Comparator]] = None,
         allowed_operators: Optional[Sequence[Operator]] = None,
+        allowed_attributes: Optional[Sequence[str]] = None,
         **kwargs: Any,
     ):
         super().__init__(*args, **kwargs)
         self.allowed_comparators = allowed_comparators
         self.allowed_operators = allowed_operators
+        self.allowed_attributes = allowed_attributes
 
     def program(self, *items: Any) -> tuple:
         return items
@@ -77,6 +75,11 @@ class QueryTransformer(Transformer):
     def func_call(self, func_name: Any, args: list) -> FilterDirective:
         func = self._match_func_name(str(func_name))
         if isinstance(func, Comparator):
+            if self.allowed_attributes and args[0] not in self.allowed_attributes:
+                raise ValueError(
+                    f"Received invalid attributes {args[0]}. Allowed attributes are "
+                    f"{self.allowed_attributes}"
+                )
             return Comparison(comparator=func, attribute=args[0], value=args[1])
         elif len(args) == 1 and func in (Operator.AND, Operator.OR):
             return args[0]
@@ -138,6 +141,7 @@ class QueryTransformer(Transformer):
 def get_parser(
     allowed_comparators: Optional[Sequence[Comparator]] = None,
     allowed_operators: Optional[Sequence[Operator]] = None,
+    allowed_attributes: Optional[Sequence[str]] = None,
 ) -> Lark:
     """
     Returns a parser for the query language.
@@ -149,7 +153,14 @@ def get_parser(
     Returns:
         Lark parser for the query language.
     """
+    # QueryTransformer is None when Lark cannot be imported.
+    if QueryTransformer is None:
+        raise ImportError(
+            "Cannot import lark, please install it with 'pip install lark'."
+        )
     transformer = QueryTransformer(
-        allowed_comparators=allowed_comparators, allowed_operators=allowed_operators
+        allowed_comparators=allowed_comparators,
+        allowed_operators=allowed_operators,
+        allowed_attributes=allowed_attributes,
     )
     return Lark(GRAMMAR, parser="lalr", transformer=transformer, start="program")

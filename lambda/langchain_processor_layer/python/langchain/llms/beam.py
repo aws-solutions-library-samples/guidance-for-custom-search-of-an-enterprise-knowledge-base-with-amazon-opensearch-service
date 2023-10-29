@@ -1,4 +1,3 @@
-"""Wrapper around Beam API."""
 import base64
 import json
 import logging
@@ -8,10 +7,10 @@ import time
 from typing import Any, Dict, List, Mapping, Optional
 
 import requests
-from pydantic import Extra, Field, root_validator
 
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
+from langchain.pydantic_v1 import Extra, Field, root_validator
 from langchain.utils import get_from_dict_or_env
 
 logger = logging.getLogger(__name__)
@@ -21,12 +20,12 @@ DEFAULT_SLEEP_TIME = 4
 
 
 class Beam(LLM):
-    """Wrapper around Beam API for gpt2 large language model.
+    """Beam API for gpt2 large language model.
 
     To use, you should have the ``beam-sdk`` python package installed,
     and the environment variable ``BEAM_CLIENT_ID`` set with your client id
     and ``BEAM_CLIENT_SECRET`` set with your client secret. Information on how
-    to get these is available here: https://docs.beam.cloud/account/api-keys.
+    to get this is available here: https://docs.beam.cloud/account/api-keys.
 
     The wrapper can then be called as follows, where the name, cpu, memory, gpu,
     python version, and python packages can be updated accordingly. Once deployed,
@@ -90,7 +89,7 @@ class Beam(LLM):
                 if field_name in extra:
                     raise ValueError(f"Found {field_name} supplied twice.")
                 logger.warning(
-                    f"""{field_name} was transfered to model_kwargs.
+                    f"""{field_name} was transferred to model_kwargs.
                     Please confirm that {field_name} is what you intended."""
                 )
                 extra[field_name] = values.pop(field_name)

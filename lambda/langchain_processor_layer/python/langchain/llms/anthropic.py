@@ -1,24 +1,48 @@
-"""Wrapper around Anthropic APIs."""
 import re
 import warnings
-from typing import Any, Callable, Dict, Generator, List, Mapping, Optional, Tuple, Union
-
-from pydantic import BaseModel, root_validator
+from typing import (
+    Any,
+    AsyncIterator,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    Union,
+)
 
 from langchain.callbacks.manager import (
     AsyncCallbackManagerForLLMRun,
     CallbackManagerForLLMRun,
 )
 from langchain.llms.base import LLM
-from langchain.utils import get_from_dict_or_env
+from langchain.pydantic_v1 import Field, SecretStr, root_validator
+from langchain.schema.language_model import BaseLanguageModel
+from langchain.schema.output import GenerationChunk
+from langchain.schema.prompt import PromptValue
+from langchain.utils import (
+    check_package_version,
+    get_from_dict_or_env,
+    get_pydantic_field_names,
+)
+from langchain.utils.utils import build_extra_kwargs
 
 
-class _AnthropicCommon(BaseModel):
+def _to_secret(value: Union[SecretStr, str]) -> SecretStr:
+    """Convert a string to a SecretStr if needed."""
+    if isinstance(value, SecretStr):
+        return value
+    return SecretStr(value)
+
+
+class _AnthropicCommon(BaseLanguageModel):
     client: Any = None  #: :meta private:
-    model: str = "claude-v1"
+    async_client: Any = None  #: :meta private:
+    model: str = Field(default="claude-2", alias="model_name")
     """Model name to use."""
 
-    max_tokens_to_sample: int = 256
+    max_tokens_to_sample: int = Field(default=256, alias="max_tokens")
     """Denotes the number of tokens to predict per generation."""
 
     temperature: Optional[float] = None
@@ -33,25 +57,35 @@ class _AnthropicCommon(BaseModel):
     streaming: bool = False
     """Whether to stream the results."""
 
-    default_request_timeout: Optional[Union[float, Tuple[float, float]]] = None
+    default_request_timeout: Optional[float] = None
     """Timeout for requests to Anthropic Completion API. Default is 600 seconds."""
 
     anthropic_api_url: Optional[str] = None
 
-    anthropic_api_key: Optional[str] = None
+    anthropic_api_key: Optional[SecretStr] = None
 
     HUMAN_PROMPT: Optional[str] = None
     AI_PROMPT: Optional[str] = None
     count_tokens: Optional[Callable[[str], int]] = None
+    model_kwargs: Dict[str, Any] = Field(default_factory=dict)
+
+    @root_validator(pre=True)
+    def build_extra(cls, values: Dict) -> Dict:
+        extra = values.get("model_kwargs", {})
+        all_required_field_names = get_pydantic_field_names(cls)
+        values["model_kwargs"] = build_extra_kwargs(
+            extra, values, all_required_field_names
+        )
+        return values
 
     @root_validator()
     def validate_environment(cls, values: Dict) -> Dict:
         """Validate that api key and python package exists in environment."""
-        anthropic_api_key = get_from_dict_or_env(
-            values, "anthropic_api_key", "ANTHROPIC_API_KEY"
+        values["anthropic_api_key"] = _to_secret(
+            get_from_dict_or_env(values, "anthropic_api_key", "ANTHROPIC_API_KEY")
         )
-        """Get custom api url from environment."""
-        anthropic_api_url = get_from_dict_or_env(
+        # Get custom api url from environment.
+        values["anthropic_api_url"] = get_from_dict_or_env(
             values,
             "anthropic_api_url",
             "ANTHROPIC_API_URL",
@@ -61,14 +95,21 @@ class _AnthropicCommon(BaseModel):
         try:
             import anthropic
 
-            values["client"] = anthropic.Client(
-                api_url=anthropic_api_url,
-                api_key=anthropic_api_key,
-                default_request_timeout=values["default_request_timeout"],
+            check_package_version("anthropic", gte_version="0.3")
+            values["client"] = anthropic.Anthropic(
+                base_url=values["anthropic_api_url"],
+                api_key=values["anthropic_api_key"].get_secret_value(),
+                timeout=values["default_request_timeout"],
+            )
+            values["async_client"] = anthropic.AsyncAnthropic(
+                base_url=values["anthropic_api_url"],
+                api_key=values["anthropic_api_key"].get_secret_value(),
+                timeout=values["default_request_timeout"],
             )
             values["HUMAN_PROMPT"] = anthropic.HUMAN_PROMPT
             values["AI_PROMPT"] = anthropic.AI_PROMPT
-            values["count_tokens"] = anthropic.count_tokens
+            values["count_tokens"] = values["client"].count_tokens
+
         except ImportError:
             raise ImportError(
                 "Could not import anthropic python package. "
@@ -89,7 +130,7 @@ class _AnthropicCommon(BaseModel):
             d["top_k"] = self.top_k
         if self.top_p is not None:
             d["top_p"] = self.top_p
-        return d
+        return {**d, **self.model_kwargs}
 
     @property
     def _identifying_params(self) -> Mapping[str, Any]:
@@ -110,7 +151,7 @@ class _AnthropicCommon(BaseModel):
 
 
 class Anthropic(LLM, _AnthropicCommon):
-    r"""Wrapper around Anthropic's large language models.
+    """Anthropic large language models.
 
     To use, you should have the ``anthropic`` python package installed, and the
     environment variable ``ANTHROPIC_API_KEY`` set with your API key, or pass
@@ -121,6 +162,7 @@ class Anthropic(LLM, _AnthropicCommon):
 
             import anthropic
             from langchain.llms import Anthropic
+
             model = Anthropic(model="<model_name>", anthropic_api_key="my-api-key")
 
             # Simplest invocation, automatically wrapped with HUMAN_PROMPT
@@ -133,6 +175,12 @@ class Anthropic(LLM, _AnthropicCommon):
             prompt = f"{anthropic.HUMAN_PROMPT} {prompt}{anthropic.AI_PROMPT}"
             response = model(prompt)
     """
+
+    class Config:
+        """Configuration for this pydantic object."""
+
+        allow_population_by_field_name = True
+        arbitrary_types_allowed = True
 
     @root_validator()
     def raise_warning(cls, values: Dict) -> Dict:
@@ -187,27 +235,25 @@ class Anthropic(LLM, _AnthropicCommon):
                 response = model(prompt)
 
         """
+        if self.streaming:
+            completion = ""
+            for chunk in self._stream(
+                prompt=prompt, stop=stop, run_manager=run_manager, **kwargs
+            ):
+                completion += chunk.text
+            return completion
+
         stop = self._get_anthropic_stop(stop)
         params = {**self._default_params, **kwargs}
-        if self.streaming:
-            stream_resp = self.client.completion_stream(
-                prompt=self._wrap_prompt(prompt),
-                stop_sequences=stop,
-                **params,
-            )
-            current_completion = ""
-            for data in stream_resp:
-                delta = data["completion"][len(current_completion) :]
-                current_completion = data["completion"]
-                if run_manager:
-                    run_manager.on_llm_new_token(delta, **data)
-            return current_completion
-        response = self.client.completion(
+        response = self.client.completions.create(
             prompt=self._wrap_prompt(prompt),
             stop_sequences=stop,
             **params,
         )
-        return response["completion"]
+        return response.completion
+
+    def convert_prompt(self, prompt: PromptValue) -> str:
+        return self._wrap_prompt(prompt.to_string())
 
     async def _acall(
         self,
@@ -217,44 +263,40 @@ class Anthropic(LLM, _AnthropicCommon):
         **kwargs: Any,
     ) -> str:
         """Call out to Anthropic's completion endpoint asynchronously."""
+        if self.streaming:
+            completion = ""
+            async for chunk in self._astream(
+                prompt=prompt, stop=stop, run_manager=run_manager, **kwargs
+            ):
+                completion += chunk.text
+            return completion
+
         stop = self._get_anthropic_stop(stop)
         params = {**self._default_params, **kwargs}
-        if self.streaming:
-            stream_resp = await self.client.acompletion_stream(
-                prompt=self._wrap_prompt(prompt),
-                stop_sequences=stop,
-                **params,
-            )
-            current_completion = ""
-            async for data in stream_resp:
-                delta = data["completion"][len(current_completion) :]
-                current_completion = data["completion"]
-                if run_manager:
-                    await run_manager.on_llm_new_token(delta, **data)
-            return current_completion
-        response = await self.client.acompletion(
+
+        response = await self.async_client.completions.create(
             prompt=self._wrap_prompt(prompt),
             stop_sequences=stop,
             **params,
         )
-        return response["completion"]
+        return response.completion
 
-    def stream(self, prompt: str, stop: Optional[List[str]] = None) -> Generator:
+    def _stream(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> Iterator[GenerationChunk]:
         r"""Call Anthropic completion_stream and return the resulting generator.
-
-        BETA: this is a beta feature while we figure out the right abstraction.
-        Once that happens, this interface could change.
 
         Args:
             prompt: The prompt to pass into the model.
             stop: Optional list of stop words to use when generating.
-
         Returns:
             A generator representing the stream of tokens from Anthropic.
-
         Example:
             .. code-block:: python
-
 
                 prompt = "Write a poem about a stream."
                 prompt = f"\n\nHuman: {prompt}\n\nAssistant:"
@@ -263,11 +305,51 @@ class Anthropic(LLM, _AnthropicCommon):
                     yield token
         """
         stop = self._get_anthropic_stop(stop)
-        return self.client.completion_stream(
+        params = {**self._default_params, **kwargs}
+
+        for token in self.client.completions.create(
+            prompt=self._wrap_prompt(prompt), stop_sequences=stop, stream=True, **params
+        ):
+            chunk = GenerationChunk(text=token.completion)
+            yield chunk
+            if run_manager:
+                run_manager.on_llm_new_token(chunk.text, chunk=chunk)
+
+    async def _astream(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[GenerationChunk]:
+        r"""Call Anthropic completion_stream and return the resulting generator.
+
+        Args:
+            prompt: The prompt to pass into the model.
+            stop: Optional list of stop words to use when generating.
+        Returns:
+            A generator representing the stream of tokens from Anthropic.
+        Example:
+            .. code-block:: python
+                prompt = "Write a poem about a stream."
+                prompt = f"\n\nHuman: {prompt}\n\nAssistant:"
+                generator = anthropic.stream(prompt)
+                for token in generator:
+                    yield token
+        """
+        stop = self._get_anthropic_stop(stop)
+        params = {**self._default_params, **kwargs}
+
+        async for token in await self.async_client.completions.create(
             prompt=self._wrap_prompt(prompt),
             stop_sequences=stop,
-            **self._default_params,
-        )
+            stream=True,
+            **params,
+        ):
+            chunk = GenerationChunk(text=token.completion)
+            yield chunk
+            if run_manager:
+                await run_manager.on_llm_new_token(chunk.text, chunk=chunk)
 
     def get_num_tokens(self, text: str) -> int:
         """Calculate number of tokens."""

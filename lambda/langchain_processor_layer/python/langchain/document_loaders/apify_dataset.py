@@ -1,13 +1,29 @@
 from typing import Any, Callable, Dict, List
 
-from pydantic import BaseModel, root_validator
-
 from langchain.docstore.document import Document
 from langchain.document_loaders.base import BaseLoader
+from langchain.pydantic_v1 import BaseModel, root_validator
 
 
 class ApifyDatasetLoader(BaseLoader, BaseModel):
-    """Loading Documents from Apify datasets."""
+    """Load datasets from `Apify` web scraping, crawling, and data extraction platform.
+
+    For details, see https://docs.apify.com/platform/integrations/langchain
+
+    Example:
+        .. code-block:: python
+
+            from langchain.document_loaders import ApifyDatasetLoader
+            from langchain.schema import Document
+
+            loader = ApifyDatasetLoader(
+                dataset_id="YOUR-DATASET-ID",
+                dataset_mapping_function=lambda dataset_item: Document(
+                    page_content=dataset_item["text"], metadata={"source": dataset_item["url"]}
+                ),
+            )
+            documents = loader.load()
+    """  # noqa: E501
 
     apify_client: Any
     """An instance of the ApifyClient class from the apify-client Python package."""

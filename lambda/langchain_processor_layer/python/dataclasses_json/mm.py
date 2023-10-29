@@ -13,9 +13,8 @@ from enum import Enum
 
 from typing_inspect import is_union_type  # type: ignore
 
-from marshmallow import fields, Schema, post_load
-from marshmallow_enum import EnumField  # type: ignore
-from marshmallow.exceptions import ValidationError
+from marshmallow import fields, Schema, post_load  # type: ignore
+from marshmallow.exceptions import ValidationError  # type: ignore
 
 from dataclasses_json.core import (_is_supported_generic, _decode_dataclass,
                                    _ExtendedEncoder, _user_overrides_or_exts)
@@ -101,16 +100,34 @@ class _UnionField(fields.Field):
                 if is_dataclass(type_) and type_.__name__ == dc_name:
                     del tmp_value['__type']
                     return schema_._deserialize(tmp_value, attr, data, **kwargs)
-        for type_, schema_ in self.desc.items():
-            if isinstance(tmp_value, _get_type_origin(type_)):
-                return schema_._deserialize(tmp_value, attr, data, **kwargs)
-        else:
+        elif isinstance(tmp_value, dict):
             warnings.warn(
-                f'The type "{type(tmp_value).__name__}" (value: "{tmp_value}") '
-                f'is not in the list of possible types of typing.Union '
-                f'(dataclass: {self.cls.__name__}, field: {self.field.name}). '
-                f'Value cannot be deserialized properly.')
-        return super()._deserialize(tmp_value, attr, data, **kwargs)
+                f'Attempting to deserialize "dict" (value: "{tmp_value}) '
+                f'that does not have a "__type" type specifier field into'
+                f'(dataclass: {self.cls.__name__}, field: {self.field.name}).'
+                f'Deserialization may fail, or deserialization to wrong type may occur.'
+            )
+            return super()._deserialize(tmp_value, attr, data, **kwargs)
+        else:
+            for type_, schema_ in self.desc.items():
+                if isinstance(tmp_value, _get_type_origin(type_)):
+                    return schema_._deserialize(tmp_value, attr, data, **kwargs)
+            else:
+                warnings.warn(
+                    f'The type "{type(tmp_value).__name__}" (value: "{tmp_value}") '
+                    f'is not in the list of possible types of typing.Union '
+                    f'(dataclass: {self.cls.__name__}, field: {self.field.name}). '
+                    f'Value cannot be deserialized properly.')
+            return super()._deserialize(tmp_value, attr, data, **kwargs)
+
+
+class _TupleVarLen(fields.List):
+    """
+    variable-length homogeneous tuples
+    """
+    def _deserialize(self, value, attr, data, **kwargs):
+        optional_list = super()._deserialize(value, attr, data, **kwargs)
+        return None if optional_list is None else tuple(optional_list)
 
 
 TYPES = {
@@ -154,68 +171,61 @@ if sys.version_info >= (3, 7) or typing.TYPE_CHECKING:
             raise NotImplementedError()
 
         @typing.overload
-        def dump(self, obj: typing.List[A], many: bool = None) -> typing.List[
-            TEncoded]:  # type: ignore
+        def dump(self, obj: typing.List[A], many: typing.Optional[bool] = None) -> typing.List[TEncoded]:  # type: ignore
             # mm has the wrong return type annotation (dict) so we can ignore the mypy error
             pass
 
         @typing.overload
-        def dump(self, obj: A, many: bool = None) -> TEncoded:
+        def dump(self, obj: A, many: typing.Optional[bool] = None) -> TEncoded:
             pass
 
-        def dump(self, obj: TOneOrMulti,
-                 many: bool = None) -> TOneOrMultiEncoded:
+        def dump(self, obj: TOneOrMulti,    # type: ignore
+                 many: typing.Optional[bool] = None) -> TOneOrMultiEncoded:
             pass
 
         @typing.overload
-        def dumps(self, obj: typing.List[A], many: bool = None, *args,
+        def dumps(self, obj: typing.List[A], many: typing.Optional[bool] = None, *args,
                   **kwargs) -> str:
             pass
 
         @typing.overload
-        def dumps(self, obj: A, many: bool = None, *args, **kwargs) -> str:
+        def dumps(self, obj: A, many: typing.Optional[bool] = None, *args, **kwargs) -> str:
             pass
 
-        def dumps(self, obj: TOneOrMulti, many: bool = None, *args,
+        def dumps(self, obj: TOneOrMulti, many: typing.Optional[bool] = None, *args,   # type: ignore
                   **kwargs) -> str:
             pass
 
         @typing.overload  # type: ignore
         def load(self, data: typing.List[TEncoded],
-                 many: bool = True, partial: bool = None,
-                 unknown: str = None) -> \
+                 many: bool = True, partial: typing.Optional[bool] = None,
+                 unknown: typing.Optional[str] = None) -> \
                 typing.List[A]:
             # ignore the mypy error of the decorator because mm does not define lists as an allowed input type
             pass
 
         @typing.overload
         def load(self, data: TEncoded,
-                 many: None = None, partial: bool = None,
-                 unknown: str = None) -> A:
+                 many: None = None, partial: typing.Optional[bool] = None,
+                 unknown: typing.Optional[str] = None) -> A:
             pass
 
         def load(self, data: TOneOrMultiEncoded,
-                 many: bool = None, partial: bool = None,
-                 unknown: str = None) -> TOneOrMulti:
+                 many: typing.Optional[bool] = None, partial: typing.Optional[bool] = None,
+                 unknown: typing.Optional[str] = None) -> TOneOrMulti:
             pass
 
         @typing.overload  # type: ignore
         def loads(self, json_data: JsonData,  # type: ignore
-                  many: bool = True, partial: bool = None, unknown: str = None,
+                  many: typing.Optional[bool] = True, partial: typing.Optional[bool] = None, unknown: typing.Optional[str] = None,
                   **kwargs) -> typing.List[A]:
             # ignore the mypy error of the decorator because mm does not define bytes as correct input data
             # mm has the wrong return type annotation (dict) so we can ignore the mypy error
             # for the return type overlap
             pass
 
-        @typing.overload
         def loads(self, json_data: JsonData,
-                  many: None = None, partial: bool = None, unknown: str = None,
-                  **kwargs) -> A:
-            pass
-
-        def loads(self, json_data: JsonData,
-                  many: bool = None, partial: bool = None, unknown: str = None,
+                  many: typing.Optional[bool] = None, partial: typing.Optional[bool] = None, unknown: typing.Optional[str] = None,
                   **kwargs) -> TOneOrMulti:
             pass
 
@@ -253,14 +263,21 @@ def build_type(type_, options, mixin, field, cls):
         args = [inner(a, {}) for a in getattr(type_, '__args__', []) if
                 a is not type(None)]
 
+        if type_ == Ellipsis:
+            return type_
+
         if _is_optional(type_):
             options["allow_none"] = True
-
+        if origin is tuple:
+            if len(args) == 2 and args[1] == Ellipsis:
+                return _TupleVarLen(args[0], **options)
+            else:
+                return fields.Tuple(args, **options)
         if origin in TYPES:
             return TYPES[origin](*args, **options)
 
         if _issubclass_safe(origin, Enum):
-            return EnumField(enum=origin, by_value=True, *args, **options)
+            return fields.Enum(enum=origin, by_value=True, *args, **options)
 
         if is_union_type(type_):
             union_types = [a for a in getattr(type_, '__args__', []) if
@@ -282,18 +299,19 @@ def schema(cls, mixin, infer_missing):
     # TODO check the undefined parameters and add the proper schema action
     #  https://marshmallow.readthedocs.io/en/stable/quickstart.html
     for field in dc_fields(cls):
-        metadata = (field.metadata or {}).get('dataclasses_json', {})
         metadata = overrides[field.name]
         if metadata.mm_field is not None:
             schema[field.name] = metadata.mm_field
         else:
             type_ = field.type
-            options = {}
+            options: typing.Dict[str, typing.Any] = {}
             missing_key = 'missing' if infer_missing else 'default'
             if field.default is not MISSING:
                 options[missing_key] = field.default
             elif field.default_factory is not MISSING:
-                options[missing_key] = field.default_factory
+                options[missing_key] = field.default_factory()
+            else:
+                options['required'] = True
 
             if options.get(missing_key, ...) is None:
                 options['allow_none'] = True
@@ -309,6 +327,16 @@ def schema(cls, mixin, infer_missing):
                 options['data_key'] = metadata.letter_case(field.name)
 
             t = build_type(type_, options, mixin, field, cls)
+            if field.metadata.get('dataclasses_json', {}).get('decoder'):
+                # If the field defines a custom decoder, it should completely replace the Marshmallow field's conversion
+                # logic.
+                # From Marshmallow's documentation for the _deserialize method:
+                # "Deserialize value. Concrete :class:`Field` classes should implement this method. "
+                # This is the method that Field implementations override to perform the actual deserialization logic.
+                # In this case we specifically override this method instead of `deserialize` to minimize potential
+                # side effects, and only cancel the actual value deserialization.
+                t._deserialize = lambda v, *_a, **_kw: v
+
             # if type(t) is not fields.Field:  # If we use `isinstance` we would return nothing.
             if field.type != typing.Optional[CatchAllVar]:
                 schema[field.name] = t
@@ -322,7 +350,7 @@ def build_schema(cls: typing.Type[A],
                  partial) -> typing.Type["SchemaType[A]"]:
     Meta = type('Meta',
                 (),
-                {'fields': tuple(field.name for field in dc_fields(cls)
+                {'fields': tuple(field.name for field in dc_fields(cls)  # type: ignore
                                  if
                                  field.name != 'dataclass_json_config' and field.type !=
                                  typing.Optional[CatchAllVar]),
@@ -346,7 +374,7 @@ def build_schema(cls: typing.Type[A],
         # TODO This is hacky, but the other option I can think of is to generate a different schema
         #  depending on dump and load, which is even more hacky
 
-        # The only problem is the catch all field, we can't statically create a schema for it
+        # The only problem is the catch-all field, we can't statically create a schema for it,
         # so we just update the dumped dict
         if many:
             for i, _obj in enumerate(obj):
@@ -369,5 +397,3 @@ def build_schema(cls: typing.Type[A],
          **schema_})
 
     return DataClassSchema
-
-

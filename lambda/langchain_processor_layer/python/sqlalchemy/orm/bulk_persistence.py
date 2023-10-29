@@ -525,6 +525,7 @@ class ORMDMLState(AbstractORMCompileState):
                 dml_level_statement,
                 _adapt_on_names=False,
             )
+            fs = fs.execution_options(**orm_level_statement._execution_options)
             fs = fs.options(*orm_level_statement._with_options)
             self.select_statement = fs
             self.from_statement_ctx = (
@@ -578,7 +579,10 @@ class ORMDMLState(AbstractORMCompileState):
         execution_context = result.context
         compile_state = execution_context.compiled.compile_state
 
-        if compile_state.from_statement_ctx:
+        if (
+            compile_state.from_statement_ctx
+            and not compile_state.from_statement_ctx.compile_options._is_star
+        ):
             load_options = execution_options.get(
                 "_sa_orm_load_options", QueryContext.default_load_options
             )
@@ -656,9 +660,9 @@ class BulkUDCompileState(ORMDMLState):
         except KeyError:
             assert False, "statement had 'orm' plugin but no plugin_subject"
         else:
-            bind_arguments["mapper"] = plugin_subject.mapper
-
-        update_options += {"_subject_mapper": plugin_subject.mapper}
+            if plugin_subject:
+                bind_arguments["mapper"] = plugin_subject.mapper
+                update_options += {"_subject_mapper": plugin_subject.mapper}
 
         if "parententity" not in statement.table._annotations:
             update_options += {"_dml_strategy": "core_only"}
@@ -1164,9 +1168,9 @@ class BulkORMInsert(ORMDMLState, InsertDMLState):
         except KeyError:
             assert False, "statement had 'orm' plugin but no plugin_subject"
         else:
-            bind_arguments["mapper"] = plugin_subject.mapper
-
-        insert_options += {"_subject_mapper": plugin_subject.mapper}
+            if plugin_subject:
+                bind_arguments["mapper"] = plugin_subject.mapper
+                insert_options += {"_subject_mapper": plugin_subject.mapper}
 
         if not params:
             if insert_options._dml_strategy == "auto":
@@ -1374,6 +1378,16 @@ class BulkORMInsert(ORMDMLState, InsertDMLState):
             use_supplemental_cols=True,
         )
 
+        if (
+            self.from_statement_ctx is not None
+            and self.from_statement_ctx.compile_options._is_star
+        ):
+            raise sa_exc.CompileError(
+                "Can't use RETURNING * with bulk ORM INSERT.  "
+                "Please use a different INSERT form, such as INSERT..VALUES "
+                "or INSERT with a Core Connection"
+            )
+
         self.statement = statement
 
 
@@ -1424,7 +1438,6 @@ class BulkORMUpdate(BulkUDCompileState, UpdateDMLState):
             self._resolved_values = dict(self._resolved_values)
 
         new_stmt = statement._clone()
-        new_stmt.table = mapper.local_table
 
         # note if the statement has _multi_values, these
         # are passed through to the new statement, which will then raise
@@ -1485,9 +1498,7 @@ class BulkORMUpdate(BulkUDCompileState, UpdateDMLState):
             # over and over again.   so perhaps if it could be RETURNING just
             # the elements that were based on a SQL expression and not
             # a constant.   For now it doesn't quite seem worth it
-            new_stmt = new_stmt.return_defaults(
-                *(list(mapper.local_table.primary_key))
-            )
+            new_stmt = new_stmt.return_defaults(*new_stmt.table.primary_key)
 
         if toplevel:
             new_stmt = self._setup_orm_returning(
@@ -1846,7 +1857,6 @@ class BulkORMDelete(BulkUDCompileState, DeleteDMLState):
         )
 
         new_stmt = statement._clone()
-        new_stmt.table = mapper.local_table
 
         new_crit = cls._adjust_for_extra_criteria(
             self.global_attributes, mapper

@@ -1,14 +1,13 @@
 import importlib.util
 from typing import Any, Dict, List
 
-from pydantic import BaseModel, Extra, root_validator
-
-from langchain.embeddings.base import Embeddings
+from langchain.pydantic_v1 import BaseModel, Extra, root_validator
+from langchain.schema.embeddings import Embeddings
 
 
 class SpacyEmbeddings(BaseModel, Embeddings):
-    """
-    SpacyEmbeddings is a class for generating embeddings using the Spacy library.
+    """Embeddings by SpaCy models.
+
     It only supports the 'en_core_web_sm' model.
 
     Attributes:

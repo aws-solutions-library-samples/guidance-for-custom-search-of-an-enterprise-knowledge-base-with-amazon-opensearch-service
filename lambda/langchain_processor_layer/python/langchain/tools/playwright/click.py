@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import Optional, Type
 
-from pydantic import BaseModel, Field
-
 from langchain.callbacks.manager import (
     AsyncCallbackManagerForToolRun,
     CallbackManagerForToolRun,
 )
+from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools.playwright.base import BaseBrowserTool
 from langchain.tools.playwright.utils import (
     aget_current_page,
@@ -22,6 +21,8 @@ class ClickToolInput(BaseModel):
 
 
 class ClickTool(BaseBrowserTool):
+    """Tool for clicking on an element with the given CSS selector."""
+
     name: str = "click_element"
     description: str = "Click on an element with the given CSS selector"
     args_schema: Type[BaseModel] = ClickToolInput

@@ -7,7 +7,7 @@ from langchain.document_loaders.base import BaseLoader
 
 
 class SnowflakeLoader(BaseLoader):
-    """Loads a query result from Snowflake into a list of documents.
+    """Load from `Snowflake` API.
 
     Each document represents one row of the result. The `page_content_columns`
     are written into the `page_content` of the document. The `metadata_columns`
@@ -41,6 +41,7 @@ class SnowflakeLoader(BaseLoader):
             role: Snowflake role.
             database: Snowflake database
             schema: Snowflake schema
+            parameters: Optional. Parameters to pass to the query.
             page_content_columns: Optional. Columns written to Document `page_content`.
             metadata_columns: Optional. Columns written to Document `metadata`.
         """
@@ -62,7 +63,7 @@ class SnowflakeLoader(BaseLoader):
         try:
             import snowflake.connector
         except ImportError as ex:
-            raise ValueError(
+            raise ImportError(
                 "Could not import snowflake-connector-python package. "
                 "Please install it with `pip install snowflake-connector-python`."
             ) from ex

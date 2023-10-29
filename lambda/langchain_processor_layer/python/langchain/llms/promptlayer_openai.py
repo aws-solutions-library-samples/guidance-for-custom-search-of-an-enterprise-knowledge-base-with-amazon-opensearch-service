@@ -1,4 +1,3 @@
-"""PromptLayer wrapper."""
 import datetime
 from typing import Any, List, Optional
 
@@ -6,12 +5,12 @@ from langchain.callbacks.manager import (
     AsyncCallbackManagerForLLMRun,
     CallbackManagerForLLMRun,
 )
-from langchain.llms import OpenAI, OpenAIChat
+from langchain.llms.openai import OpenAI, OpenAIChat
 from langchain.schema import LLMResult
 
 
 class PromptLayerOpenAI(OpenAI):
-    """Wrapper around OpenAI large language models.
+    """PromptLayer OpenAI large language models.
 
     To use, you should have the ``openai`` and ``promptlayer`` python
     package installed, and the environment variable ``OPENAI_API_KEY``

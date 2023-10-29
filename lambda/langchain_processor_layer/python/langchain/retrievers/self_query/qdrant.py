@@ -1,4 +1,3 @@
-"""Logic for converting internal query language to a valid Qdrant query."""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Tuple
@@ -17,13 +16,35 @@ if TYPE_CHECKING:
 
 
 class QdrantTranslator(Visitor):
-    """Logic for converting internal query language elements to valid filters."""
+    """Translate `Qdrant` internal query language elements to valid filters."""
+
+    allowed_operators = (
+        Operator.AND,
+        Operator.OR,
+        Operator.NOT,
+    )
+    """Subset of allowed logical operators."""
+
+    allowed_comparators = (
+        Comparator.EQ,
+        Comparator.LT,
+        Comparator.LTE,
+        Comparator.GT,
+        Comparator.GTE,
+    )
+    """Subset of allowed logical comparators."""
 
     def __init__(self, metadata_key: str):
         self.metadata_key = metadata_key
 
     def visit_operation(self, operation: Operation) -> rest.Filter:
-        from qdrant_client.http import models as rest
+        try:
+            from qdrant_client.http import models as rest
+        except ImportError as e:
+            raise ImportError(
+                "Cannot import qdrant_client. Please install with `pip install "
+                "qdrant-client`."
+            ) from e
 
         args = [arg.accept(self) for arg in operation.arguments]
         operator = {
@@ -34,7 +55,13 @@ class QdrantTranslator(Visitor):
         return rest.Filter(**{operator: args})
 
     def visit_comparison(self, comparison: Comparison) -> rest.FieldCondition:
-        from qdrant_client.http import models as rest
+        try:
+            from qdrant_client.http import models as rest
+        except ImportError as e:
+            raise ImportError(
+                "Cannot import qdrant_client. Please install with `pip install "
+                "qdrant-client`."
+            ) from e
 
         self._validate_func(comparison.comparator)
         attribute = self.metadata_key + "." + comparison.attribute

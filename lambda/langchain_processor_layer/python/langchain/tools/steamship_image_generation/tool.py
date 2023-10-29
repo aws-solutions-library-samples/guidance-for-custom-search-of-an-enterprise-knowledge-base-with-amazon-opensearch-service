@@ -16,18 +16,14 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING, Dict, Optional
 
-from pydantic import root_validator
-
-from langchain.callbacks.manager import (
-    AsyncCallbackManagerForToolRun,
-    CallbackManagerForToolRun,
-)
+from langchain.callbacks.manager import CallbackManagerForToolRun
+from langchain.pydantic_v1 import root_validator
 from langchain.tools import BaseTool
 from langchain.tools.steamship_image_generation.utils import make_image_public
 from langchain.utils import get_from_dict_or_env
 
 if TYPE_CHECKING:
-    pass
+    from steamship import Steamship
 
 
 class ModelName(str, Enum):
@@ -44,19 +40,16 @@ SUPPORTED_IMAGE_SIZES = {
 
 
 class SteamshipImageGenerationTool(BaseTool):
-    try:
-        from steamship import Steamship
-    except ImportError:
-        pass
 
     """Tool used to generate images from a text-prompt."""
+
     model_name: ModelName
     size: Optional[str] = "512x512"
     steamship: Steamship
     return_urls: Optional[bool] = False
 
-    name = "GenerateImage"
-    description = (
+    name: str = "GenerateImage"
+    description: str = (
         "Useful for when you need to generate an image."
         "Input: A detailed text-2-image prompt describing an image"
         "Output: the UUID of a generated image"
@@ -117,11 +110,3 @@ class SteamshipImageGenerationTool(BaseTool):
                 return blocks[0].id
 
         raise RuntimeError(f"[{self.name}] Tool unable to generate image!")
-
-    async def _arun(
-        self,
-        query: str,
-        run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
-    ) -> str:
-        """Use the tool asynchronously."""
-        raise NotImplementedError("GenerateImageTool does not support async")

@@ -15,7 +15,6 @@ from __future__ import annotations
 import collections
 import enum
 from functools import update_wrapper
-import hashlib
 import inspect
 import itertools
 import operator
@@ -87,9 +86,9 @@ else:
 
 def md5_hex(x: Any) -> str:
     x = x.encode("utf-8")
-    m = hashlib.md5()
+    m = compat.md5_not_for_security()
     m.update(x)
-    return m.hexdigest()
+    return cast(str, m.hexdigest())
 
 
 class safe_reraise:
@@ -526,12 +525,10 @@ def get_callable_argspec(
             fn.__init__, no_self=no_self, _is_init=True
         )
     elif hasattr(fn, "__func__"):
-        return compat.inspect_getfullargspec(fn.__func__)  # type: ignore[attr-defined] # noqa: E501
+        return compat.inspect_getfullargspec(fn.__func__)
     elif hasattr(fn, "__call__"):
-        if inspect.ismethod(fn.__call__):  # type: ignore [operator]
-            return get_callable_argspec(
-                fn.__call__, no_self=no_self  # type: ignore [operator]
-            )
+        if inspect.ismethod(fn.__call__):
+            return get_callable_argspec(fn.__call__, no_self=no_self)
         else:
             raise TypeError("Can't inspect callable: %s" % fn)
     else:
@@ -693,6 +690,7 @@ def create_proxy_methods(
     classmethods: Sequence[str] = (),
     methods: Sequence[str] = (),
     attributes: Sequence[str] = (),
+    use_intermediate_variable: Sequence[str] = (),
 ) -> Callable[[_T], _T]:
     """A class decorator indicating attributes should refer to a proxy
     class.
@@ -1082,7 +1080,7 @@ class generic_fn_descriptor(Generic[_T_co]):
     __name__: str
 
     def __init__(self, fget: Callable[..., _T_co], doc: Optional[str] = None):
-        self.fget = fget  # type: ignore[assignment]
+        self.fget = fget
         self.__doc__ = doc or fget.__doc__
         self.__name__ = fget.__name__
 
@@ -1237,12 +1235,11 @@ class HasMemoized:
         __name__: str
 
         def __init__(self, fget: Callable[..., _T], doc: Optional[str] = None):
-            # https://github.com/python/mypy/issues/708
-            self.fget = fget  # type: ignore
+            self.fget = fget
             self.__doc__ = doc or fget.__doc__
             self.__name__ = fget.__name__
 
-        @overload  # type: ignore[override]
+        @overload
         def __get__(self: _MA, obj: None, cls: Any) -> _MA:
             ...
 
@@ -1476,7 +1473,7 @@ def assert_arg_type(
         if isinstance(argtype, tuple):
             raise exc.ArgumentError(
                 "Argument '%s' is expected to be one of type %s, got '%s'"
-                % (name, " or ".join("'%s'" % a for a in argtype), type(arg))  # type: ignore  # noqa: E501
+                % (name, " or ".join("'%s'" % a for a in argtype), type(arg))
             )
         else:
             raise exc.ArgumentError(
@@ -1527,7 +1524,7 @@ class classproperty(property):
         self.__doc__ = fget.__doc__
 
     def __get__(self, obj: Any, cls: Optional[type] = None) -> Any:
-        return self.fget(cls)  # type: ignore
+        return self.fget(cls)
 
 
 class hybridproperty(Generic[_T]):
@@ -1636,7 +1633,7 @@ class symbol(int):
             else:
                 if canonical and canonical != sym:
                     raise TypeError(
-                        f"Can't replace canonical symbol for {name} "
+                        f"Can't replace canonical symbol for {name!r} "
                         f"with new int value {canonical}"
                     )
             return sym

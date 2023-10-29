@@ -1,3 +1,4 @@
+import asyncio
 from typing import List
 
 from langchain.callbacks.manager import (
@@ -8,25 +9,10 @@ from langchain.schema import BaseRetriever, Document
 
 
 class MergerRetriever(BaseRetriever):
-    """
-    This class merges the results of multiple retrievers.
+    """Retriever that merges the results of multiple retrievers."""
 
-    Args:
-        retrievers: A list of retrievers to merge.
-    """
-
-    def __init__(
-        self,
-        retrievers: List[BaseRetriever],
-    ):
-        """
-        Initialize the MergerRetriever class.
-
-        Args:
-            retrievers: A list of retrievers to merge.
-        """
-
-        self.retrievers = retrievers
+    retrievers: List[BaseRetriever]
+    """A list of retrievers to merge."""
 
     def _get_relevant_documents(
         self,
@@ -115,12 +101,14 @@ class MergerRetriever(BaseRetriever):
         """
 
         # Get the results of all retrievers.
-        retriever_docs = [
-            await retriever.aget_relevant_documents(
-                query, callbacks=run_manager.get_child("retriever_{}".format(i + 1))
+        retriever_docs = await asyncio.gather(
+            *(
+                retriever.aget_relevant_documents(
+                    query, callbacks=run_manager.get_child("retriever_{}".format(i + 1))
+                )
+                for i, retriever in enumerate(self.retrievers)
             )
-            for i, retriever in enumerate(self.retrievers)
-        ]
+        )
 
         # Merge the results of the retrievers.
         merged_documents = []

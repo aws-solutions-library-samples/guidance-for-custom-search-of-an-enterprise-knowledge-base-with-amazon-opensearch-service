@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Mapping, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
-from pydantic import BaseModel, root_validator
 from tenacity import (
     before_sleep_log,
     retry,
@@ -18,6 +17,7 @@ from langchain.callbacks.manager import (
     CallbackManagerForLLMRun,
 )
 from langchain.chat_models.base import BaseChatModel
+from langchain.pydantic_v1 import BaseModel, root_validator
 from langchain.schema import (
     ChatGeneration,
     ChatResult,
@@ -38,9 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 class ChatGooglePalmError(Exception):
-    """Error raised when there is an issue with the Google PaLM API."""
-
-    pass
+    """Error with the `Google PaLM` API."""
 
 
 def _truncate_at_stop_tokens(
@@ -216,12 +214,12 @@ async def achat_with_retry(llm: ChatGooglePalm, **kwargs: Any) -> Any:
 
 
 class ChatGooglePalm(BaseChatModel, BaseModel):
-    """Wrapper around Google's PaLM Chat API.
+    """`Google PaLM` Chat models API.
 
     To use you must have the google.generativeai Python package installed and
     either:
 
-        1. The ``GOOGLE_API_KEY``` environment varaible set with your API key, or
+        1. The ``GOOGLE_API_KEY``` environment variable set with your API key, or
         2. Pass your API key using the google_api_key kwarg to the ChatGoogle
            constructor.
 
@@ -249,6 +247,14 @@ class ChatGooglePalm(BaseChatModel, BaseModel):
     n: int = 1
     """Number of chat completions to generate for each prompt. Note that the API may
        not return the full n completions if duplicates are generated."""
+
+    @property
+    def lc_secrets(self) -> Dict[str, str]:
+        return {"google_api_key": "GOOGLE_API_KEY"}
+
+    @classmethod
+    def is_lc_serializable(self) -> bool:
+        return True
 
     @root_validator()
     def validate_environment(cls, values: Dict) -> Dict:
@@ -323,7 +329,7 @@ class ChatGooglePalm(BaseChatModel, BaseModel):
         return _response_to_result(response, stop)
 
     @property
-    def _identifying_params(self) -> Mapping[str, Any]:
+    def _identifying_params(self) -> Dict[str, Any]:
         """Get the identifying parameters."""
         return {
             "model_name": self.model_name,

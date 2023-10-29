@@ -1,17 +1,15 @@
-"""Wrapper around Baseten deployed model API."""
 import logging
 from typing import Any, Dict, List, Mapping, Optional
 
-from pydantic import Field
-
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
+from langchain.pydantic_v1 import Field
 
 logger = logging.getLogger(__name__)
 
 
 class Baseten(LLM):
-    """Use your Baseten models in Langchain
+    """Baseten models.
 
     To use, you should have the ``baseten`` python package installed,
     and run ``baseten.login()`` with your Baseten API key.
@@ -60,7 +58,7 @@ class Baseten(LLM):
         try:
             import baseten
         except ImportError as exc:
-            raise ValueError(
+            raise ImportError(
                 "Could not import Baseten Python package. "
                 "Please install it with `pip install baseten`."
             ) from exc
@@ -68,8 +66,8 @@ class Baseten(LLM):
         # get the model and version
         try:
             model = baseten.deployed_model_version_id(self.model)
-            response = model.predict({"prompt": prompt})
+            response = model.predict({"prompt": prompt, **kwargs})
         except baseten.common.core.ApiError:
             model = baseten.deployed_model_id(self.model)
-            response = model.predict({"prompt": prompt})
+            response = model.predict({"prompt": prompt, **kwargs})
         return "".join(response)

@@ -1,8 +1,9 @@
 import inspect
 import sys
 from datetime import datetime, timezone
+from collections import Counter
 from typing import (Collection, Mapping, Optional, TypeVar, Any, Type, Tuple,
-                    Union)
+                    Union, cast)
 
 
 def _get_type_cons(type_):
@@ -83,7 +84,7 @@ class _NoArgs(object):
 _NO_ARGS = _NoArgs()
 
 
-def _get_type_args(tp: Type, default: Tuple[Type, ...] = _NO_ARGS) -> \
+def _get_type_args(tp: Type, default: Union[Tuple[Type, ...], _NoArgs] = _NO_ARGS) -> \
         Union[Tuple[Type, ...], _NoArgs]:
     if hasattr(tp, '__args__'):
         if tp.__args__ is not None:
@@ -95,7 +96,7 @@ def _get_type_arg_param(tp: Type, index: int) -> Union[Type, _NoArgs]:
     _args = _get_type_args(tp)
     if _args is not _NO_ARGS:
         try:
-            return _args[index]
+            return cast(Tuple[Type, ...], _args)[index]
         except (TypeError, IndexError, NotImplementedError):
             pass
 
@@ -142,12 +143,20 @@ def _is_optional(type_):
             type_ is Any)
 
 
+def _is_counter(type_):
+    return _issubclass_safe(_get_type_origin(type_), Counter)
+
+
 def _is_mapping(type_):
     return _issubclass_safe(_get_type_origin(type_), Mapping)
 
 
 def _is_collection(type_):
     return _issubclass_safe(_get_type_origin(type_), Collection)
+
+
+def _is_tuple(type_):
+    return _issubclass_safe(_get_type_origin(type_), Tuple)
 
 
 def _is_nonstr_collection(type_):

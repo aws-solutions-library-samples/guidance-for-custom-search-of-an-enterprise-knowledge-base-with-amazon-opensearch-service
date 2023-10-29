@@ -1,17 +1,28 @@
-"""Wrapper around weaviate vector database."""
 from __future__ import annotations
 
 import datetime
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type
+import os
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+)
 from uuid import uuid4
 
 import numpy as np
 
 from langchain.docstore.document import Document
-from langchain.embeddings.base import Embeddings
-from langchain.utils import get_from_dict_or_env
-from langchain.vectorstores.base import VectorStore
+from langchain.schema.embeddings import Embeddings
+from langchain.schema.vectorstore import VectorStore
 from langchain.vectorstores.utils import maximal_marginal_relevance
+
+if TYPE_CHECKING:
+    import weaviate
 
 
 def _default_schema(index_name: str) -> Dict:
@@ -26,37 +37,22 @@ def _default_schema(index_name: str) -> Dict:
     }
 
 
-def _create_weaviate_client(**kwargs: Any) -> Any:
-    client = kwargs.get("client")
-    if client is not None:
-        return client
-
-    weaviate_url = get_from_dict_or_env(kwargs, "weaviate_url", "WEAVIATE_URL")
-
-    try:
-        # the weaviate api key param should not be mandatory
-        weaviate_api_key = get_from_dict_or_env(
-            kwargs, "weaviate_api_key", "WEAVIATE_API_KEY", None
-        )
-    except ValueError:
-        weaviate_api_key = None
-
+def _create_weaviate_client(
+    url: Optional[str] = None,
+    api_key: Optional[str] = None,
+    **kwargs: Any,
+) -> weaviate.Client:
     try:
         import weaviate
     except ImportError:
-        raise ValueError(
+        raise ImportError(
             "Could not import weaviate python  package. "
             "Please install it with `pip install weaviate-client`"
         )
-
-    auth = (
-        weaviate.auth.AuthApiKey(api_key=weaviate_api_key)
-        if weaviate_api_key is not None
-        else None
-    )
-    client = weaviate.Client(weaviate_url, auth_client_secret=auth)
-
-    return client
+    url = url or os.environ.get("WEAVIATE_URL")
+    api_key = api_key or os.environ.get("WEAVIATE_API_KEY")
+    auth = weaviate.auth.AuthApiKey(api_key=api_key) if api_key else None
+    return weaviate.Client(url=url, auth_client_secret=auth, **kwargs)
 
 
 def _default_score_normalizer(val: float) -> float:
@@ -70,7 +66,7 @@ def _json_serializable(value: Any) -> Any:
 
 
 class Weaviate(VectorStore):
-    """Wrapper around Weaviate vector database.
+    """`Weaviate` vector store.
 
     To use, you should have the ``weaviate-client`` python package installed.
 
@@ -79,6 +75,7 @@ class Weaviate(VectorStore):
 
             import weaviate
             from langchain.vectorstores import Weaviate
+
             client = weaviate.Client(url=os.environ["WEAVIATE_URL"], ...)
             weaviate = Weaviate(client, index_name, text_key)
 
@@ -100,7 +97,7 @@ class Weaviate(VectorStore):
         try:
             import weaviate
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import weaviate python package. "
                 "Please install it with `pip install weaviate-client`."
             )
@@ -113,10 +110,21 @@ class Weaviate(VectorStore):
         self._embedding = embedding
         self._text_key = text_key
         self._query_attrs = [self._text_key]
-        self._relevance_score_fn = relevance_score_fn
+        self.relevance_score_fn = relevance_score_fn
         self._by_text = by_text
         if attributes is not None:
             self._query_attrs.extend(attributes)
+
+    @property
+    def embeddings(self) -> Optional[Embeddings]:
+        return self._embedding
+
+    def _select_relevance_score_fn(self) -> Callable[[float], float]:
+        return (
+            self.relevance_score_fn
+            if self.relevance_score_fn
+            else _default_score_normalizer
+        )
 
     def add_texts(
         self,
@@ -128,6 +136,12 @@ class Weaviate(VectorStore):
         from weaviate.util import get_valid_uuid
 
         ids = []
+        embeddings: Optional[List[List[float]]] = None
+        if self._embedding:
+            if not isinstance(texts, list):
+                texts = list(texts)
+            embeddings = self._embedding.embed_documents(texts)
+
         with self._client.batch as batch:
             for i, text in enumerate(texts):
                 data_properties = {self._text_key: text}
@@ -136,7 +150,7 @@ class Weaviate(VectorStore):
                         data_properties[key] = _json_serializable(val)
 
                 # Allow for ids (consistent w/ other methods)
-                # # Or uuids (backwards compatble w/ existing arg)
+                # # Or uuids (backwards compatible w/ existing arg)
                 # If the UUID of one of the objects already exists
                 # then the existing object will be replaced by the new object.
                 _id = get_valid_uuid(uuid4())
@@ -145,15 +159,11 @@ class Weaviate(VectorStore):
                 elif "ids" in kwargs:
                     _id = kwargs["ids"][i]
 
-                if self._embedding is not None:
-                    vector = self._embedding.embed_documents([text])[0]
-                else:
-                    vector = None
                 batch.add_data_object(
                     data_object=data_properties,
                     class_name=self._index_name,
                     uuid=_id,
-                    vector=vector,
+                    vector=embeddings[i] if embeddings else None,
                 )
                 ids.append(_id)
         return ids
@@ -199,6 +209,8 @@ class Weaviate(VectorStore):
         query_obj = self._client.query.get(self._index_name, self._query_attrs)
         if kwargs.get("where_filter"):
             query_obj = query_obj.with_where(kwargs.get("where_filter"))
+        if kwargs.get("tenant"):
+            query_obj = query_obj.with_tenant(kwargs.get("tenant"))
         if kwargs.get("additional"):
             query_obj = query_obj.with_additional(kwargs.get("additional"))
         result = query_obj.with_near_text(content).with_limit(k).do()
@@ -218,6 +230,8 @@ class Weaviate(VectorStore):
         query_obj = self._client.query.get(self._index_name, self._query_attrs)
         if kwargs.get("where_filter"):
             query_obj = query_obj.with_where(kwargs.get("where_filter"))
+        if kwargs.get("tenant"):
+            query_obj = query_obj.with_tenant(kwargs.get("tenant"))
         if kwargs.get("additional"):
             query_obj = query_obj.with_additional(kwargs.get("additional"))
         result = query_obj.with_near_vector(vector).with_limit(k).do()
@@ -294,6 +308,8 @@ class Weaviate(VectorStore):
         query_obj = self._client.query.get(self._index_name, self._query_attrs)
         if kwargs.get("where_filter"):
             query_obj = query_obj.with_where(kwargs.get("where_filter"))
+        if kwargs.get("tenant"):
+            query_obj = query_obj.with_tenant(kwargs.get("tenant"))
         results = (
             query_obj.with_additional("vector")
             .with_near_vector(vector)
@@ -331,10 +347,14 @@ class Weaviate(VectorStore):
         if kwargs.get("search_distance"):
             content["certainty"] = kwargs.get("search_distance")
         query_obj = self._client.query.get(self._index_name, self._query_attrs)
+        if kwargs.get("where_filter"):
+            query_obj = query_obj.with_where(kwargs.get("where_filter"))
+        if kwargs.get("tenant"):
+            query_obj = query_obj.with_tenant(kwargs.get("tenant"))
 
+        embedded_query = self._embedding.embed_query(query)
         if not self._by_text:
-            embedding = self._embedding.embed_query(query)
-            vector = {"vector": embedding}
+            vector = {"vector": embedded_query}
             result = (
                 query_obj.with_near_vector(vector)
                 .with_limit(k)
@@ -355,38 +375,27 @@ class Weaviate(VectorStore):
         docs_and_scores = []
         for res in result["data"]["Get"][self._index_name]:
             text = res.pop(self._text_key)
-            score = np.dot(
-                res["_additional"]["vector"], self._embedding.embed_query(query)
-            )
+            score = np.dot(res["_additional"]["vector"], embedded_query)
             docs_and_scores.append((Document(page_content=text, metadata=res), score))
         return docs_and_scores
 
-    def _similarity_search_with_relevance_scores(
-        self,
-        query: str,
-        k: int = 4,
-        **kwargs: Any,
-    ) -> List[Tuple[Document, float]]:
-        """Return docs and relevance scores, normalized on a scale from 0 to 1.
-
-        0 is dissimilar, 1 is most similar.
-        """
-        if self._relevance_score_fn is None:
-            raise ValueError(
-                "relevance_score_fn must be provided to"
-                " Weaviate constructor to normalize scores"
-            )
-        docs_and_scores = self.similarity_search_with_score(query, k=k, **kwargs)
-        return [
-            (doc, self._relevance_score_fn(score)) for doc, score in docs_and_scores
-        ]
-
     @classmethod
     def from_texts(
-        cls: Type[Weaviate],
+        cls,
         texts: List[str],
         embedding: Embeddings,
         metadatas: Optional[List[dict]] = None,
+        *,
+        client: Optional[weaviate.Client] = None,
+        weaviate_url: Optional[str] = None,
+        weaviate_api_key: Optional[str] = None,
+        batch_size: Optional[int] = None,
+        index_name: Optional[str] = None,
+        text_key: str = "text",
+        by_text: bool = False,
+        relevance_score_fn: Optional[
+            Callable[[float], float]
+        ] = _default_score_normalizer,
         **kwargs: Any,
     ) -> Weaviate:
         """Construct Weaviate wrapper from raw documents.
@@ -398,11 +407,34 @@ class Weaviate(VectorStore):
 
         This is intended to be a quick way to get started.
 
+        Args:
+            texts: Texts to add to vector store.
+            embedding: Text embedding model to use.
+            metadatas: Metadata associated with each text.
+            client: weaviate.Client to use.
+            weaviate_url: The Weaviate URL. If using Weaviate Cloud Services get it
+                from the ``Details`` tab. Can be passed in as a named param or by
+                setting the environment variable ``WEAVIATE_URL``. Should not be
+                specified if client is provided.
+            weaviate_api_key: The Weaviate API key. If enabled and using Weaviate Cloud
+                Services, get it from ``Details`` tab. Can be passed in as a named param
+                or by setting the environment variable ``WEAVIATE_API_KEY``. Should
+                not be specified if client is provided.
+            batch_size: Size of batch operations.
+            index_name: Index name.
+            text_key: Key to use for uploading/retrieving text to/from vectorstore.
+            by_text: Whether to search by text or by embedding.
+            relevance_score_fn: Function for converting whatever distance function the
+                vector store uses to a relevance score, which is a normalized similarity
+                score (0 means dissimilar, 1 means similar).
+            **kwargs: Additional named parameters to pass to ``Weaviate.__init__()``.
+
         Example:
             .. code-block:: python
 
-                from langchain.vectorstores.weaviate import Weaviate
                 from langchain.embeddings import OpenAIEmbeddings
+                from langchain.vectorstores import Weaviate
+
                 embeddings = OpenAIEmbeddings()
                 weaviate = Weaviate.from_texts(
                     texts,
@@ -411,19 +443,29 @@ class Weaviate(VectorStore):
                 )
         """
 
-        client = _create_weaviate_client(**kwargs)
+        try:
+            from weaviate.util import get_valid_uuid
+        except ImportError as e:
+            raise ImportError(
+                "Could not import weaviate python  package. "
+                "Please install it with `pip install weaviate-client`"
+            ) from e
 
-        from weaviate.util import get_valid_uuid
+        client = client or _create_weaviate_client(
+            url=weaviate_url,
+            api_key=weaviate_api_key,
+        )
+        if batch_size:
+            client.batch.configure(batch_size=batch_size)
 
-        index_name = kwargs.get("index_name", f"LangChain_{uuid4().hex}")
-        embeddings = embedding.embed_documents(texts) if embedding else None
-        text_key = "text"
+        index_name = index_name or f"LangChain_{uuid4().hex}"
         schema = _default_schema(index_name)
-        attributes = list(metadatas[0].keys()) if metadatas else None
-
         # check whether the index already exists
         if not client.schema.contains(schema):
             client.schema.create_class(schema)
+
+        embeddings = embedding.embed_documents(texts) if embedding else None
+        attributes = list(metadatas[0].keys()) if metadatas else None
 
         with client.batch as batch:
             for i, text in enumerate(texts):
@@ -457,9 +499,6 @@ class Weaviate(VectorStore):
 
             batch.flush()
 
-        relevance_score_fn = kwargs.get("relevance_score_fn")
-        by_text: bool = kwargs.get("by_text", False)
-
         return cls(
             client,
             index_name,
@@ -468,6 +507,7 @@ class Weaviate(VectorStore):
             attributes=attributes,
             relevance_score_fn=relevance_score_fn,
             by_text=by_text,
+            **kwargs,
         )
 
     def delete(self, ids: Optional[List[str]] = None, **kwargs: Any) -> None:

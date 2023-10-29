@@ -2,35 +2,40 @@
 import warnings
 from typing import Any, Dict, List, Optional
 
-from langchain.callbacks.manager import (
-    AsyncCallbackManagerForRetrieverRun,
-    CallbackManagerForRetrieverRun,
-)
-from langchain.embeddings.base import Embeddings
+from langchain.callbacks.manager import CallbackManagerForRetrieverRun
+from langchain.pydantic_v1 import root_validator
 from langchain.schema import BaseRetriever, Document
+from langchain.schema.embeddings import Embeddings
 from langchain.vectorstores.milvus import Milvus
 
 # TODO: Update to MilvusClient + Hybrid Search when available
 
 
 class MilvusRetriever(BaseRetriever):
-    """Retriever that uses the Milvus API."""
+    """`Milvus API` retriever."""
 
-    def __init__(
-        self,
-        embedding_function: Embeddings,
-        collection_name: str = "LangChainCollection",
-        connection_args: Optional[Dict[str, Any]] = None,
-        consistency_level: str = "Session",
-        search_params: Optional[dict] = None,
-    ):
-        self.store = Milvus(
-            embedding_function,
-            collection_name,
-            connection_args,
-            consistency_level,
+    embedding_function: Embeddings
+    collection_name: str = "LangChainCollection"
+    connection_args: Optional[Dict[str, Any]] = None
+    consistency_level: str = "Session"
+    search_params: Optional[dict] = None
+
+    store: Milvus
+    retriever: BaseRetriever
+
+    @root_validator(pre=True)
+    def create_retriever(cls, values: Dict) -> Dict:
+        """Create the Milvus store and retriever."""
+        values["store"] = Milvus(
+            values["embedding_function"],
+            values["collection_name"],
+            values["connection_args"],
+            values["consistency_level"],
         )
-        self.retriever = self.store.as_retriever(search_kwargs={"param": search_params})
+        values["retriever"] = values["store"].as_retriever(
+            search_kwargs={"param": values["search_params"]}
+        )
+        return values
 
     def add_texts(
         self, texts: List[str], metadatas: Optional[List[dict]] = None
@@ -53,15 +58,6 @@ class MilvusRetriever(BaseRetriever):
         return self.retriever.get_relevant_documents(
             query, run_manager=run_manager.get_child(), **kwargs
         )
-
-    async def _aget_relevant_documents(
-        self,
-        query: str,
-        *,
-        run_manager: AsyncCallbackManagerForRetrieverRun,
-        **kwargs: Any,
-    ) -> List[Document]:
-        raise NotImplementedError
 
 
 def MilvusRetreiver(*args: Any, **kwargs: Any) -> MilvusRetriever:

@@ -1,11 +1,12 @@
 from typing import Any, Dict
 
-from pydantic import root_validator
-
 from langchain.llms.openai import BaseOpenAI
+from langchain.pydantic_v1 import root_validator
 
 
 class OpenLM(BaseOpenAI):
+    """OpenLM models."""
+
     @property
     def _invocation_params(self) -> Dict[str, Any]:
         return {**{"model": self.model_name}, **super()._invocation_params}
@@ -17,7 +18,7 @@ class OpenLM(BaseOpenAI):
 
             values["client"] = openlm.Completion
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import openlm python package. "
                 "Please install it with `pip install openlm`."
             )

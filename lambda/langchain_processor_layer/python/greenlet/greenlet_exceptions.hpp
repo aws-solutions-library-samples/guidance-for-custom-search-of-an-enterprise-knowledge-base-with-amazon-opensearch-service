@@ -16,7 +16,50 @@ namespace greenlet {
     class PyErrOccurred : public std::runtime_error
     {
     public:
+
+        // CAUTION: In debug builds, may run arbitrary Python code.
+        static const PyErrOccurred
+        from_current()
+        {
+            assert(PyErr_Occurred());
+#ifndef NDEBUG
+            // This is not exception safe, and
+            // not necessarily safe in general (what if it switches?)
+            // But we only do this in debug mode, where we are in
+            // tight control of what exceptions are getting raised and
+            // can prevent those issues.
+
+            // You can't call PyObject_Str with a pending exception.
+            PyObject* typ;
+            PyObject* val;
+            PyObject* tb;
+
+            PyErr_Fetch(&typ, &val, &tb);
+            PyObject* typs = PyObject_Str(typ);
+            PyObject* vals = PyObject_Str(val ? val : typ);
+            const char* typ_msg = PyUnicode_AsUTF8(typs);
+            const char* val_msg = PyUnicode_AsUTF8(vals);
+            PyErr_Restore(typ, val, tb);
+
+            std::string msg(typ_msg);
+            msg += ": ";
+            msg += val_msg;
+            PyErrOccurred ex(msg);
+            Py_XDECREF(typs);
+            Py_XDECREF(vals);
+
+            return ex;
+#else
+            return PyErrOccurred();
+#endif
+        }
+
         PyErrOccurred() : std::runtime_error("")
+        {
+            assert(PyErr_Occurred());
+        }
+
+        PyErrOccurred(const std::string& msg) : std::runtime_error(msg)
         {
             assert(PyErr_Occurred());
         }
@@ -26,6 +69,7 @@ namespace greenlet {
         {
             PyErr_SetString(exc_kind, msg);
         }
+
         PyErrOccurred(PyObject* exc_kind, const std::string msg)
             : std::runtime_error(msg)
         {
@@ -81,10 +125,10 @@ namespace greenlet {
     };
 
     static inline PyObject*
-    Require(PyObject* p)
+    Require(PyObject* p, const std::string& msg="")
     {
         if (!p) {
-            throw PyErrOccurred();
+            throw PyErrOccurred(msg);
         }
         return p;
     };

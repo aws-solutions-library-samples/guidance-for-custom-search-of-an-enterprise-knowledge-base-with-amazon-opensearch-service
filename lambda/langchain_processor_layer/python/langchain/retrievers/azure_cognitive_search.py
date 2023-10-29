@@ -1,5 +1,3 @@
-"""Retriever wrapper for Azure Cognitive Search."""
-
 from __future__ import annotations
 
 import json
@@ -7,18 +5,18 @@ from typing import Dict, List, Optional
 
 import aiohttp
 import requests
-from pydantic import BaseModel, Extra, root_validator
 
 from langchain.callbacks.manager import (
     AsyncCallbackManagerForRetrieverRun,
     CallbackManagerForRetrieverRun,
 )
+from langchain.pydantic_v1 import Extra, root_validator
 from langchain.schema import BaseRetriever, Document
 from langchain.utils import get_from_dict_or_env
 
 
-class AzureCognitiveSearchRetriever(BaseRetriever, BaseModel):
-    """Wrapper around Azure Cognitive Search."""
+class AzureCognitiveSearchRetriever(BaseRetriever):
+    """`Azure Cognitive Search` service retriever."""
 
     service_name: str = ""
     """Name of Azure Cognitive Search service"""
@@ -33,6 +31,8 @@ class AzureCognitiveSearchRetriever(BaseRetriever, BaseModel):
     """ClientSession, in case we want to reuse connection for better performance."""
     content_key: str = "content"
     """Key in a retrieved result to set as the Document page_content."""
+    top_k: Optional[int] = None
+    """Number of results to retrieve. Set to None to retrieve all results."""
 
     class Config:
         extra = Extra.forbid
@@ -55,7 +55,8 @@ class AzureCognitiveSearchRetriever(BaseRetriever, BaseModel):
     def _build_search_url(self, query: str) -> str:
         base_url = f"https://{self.service_name}.search.windows.net/"
         endpoint_path = f"indexes/{self.index_name}/docs?api-version={self.api_version}"
-        return base_url + endpoint_path + f"&search={query}"
+        top_param = f"&$top={self.top_k}" if self.top_k else ""
+        return base_url + endpoint_path + f"&search={query}" + top_param
 
     @property
     def _headers(self) -> Dict[str, str]:

@@ -9,7 +9,7 @@ from smart_search_qa import SmartSearchQA
 from prompt import *
 
 EMBEDDING_ENDPOINT_NAME = os.environ.get('embedding_endpoint_name')
-LLM_ENDPOINT_NAME = os.environ.get('llm_embedding_name')
+LLM_ENDPOINT_NAME = os.environ.get('llm_endpoint_name')
 INDEX =  os.environ.get('index')
 HOST =  os.environ.get('host')
 LANGUAGE =  os.environ.get('language')
@@ -23,73 +23,145 @@ port = 443
 
 TOP_K = 2
 
+domain_name = 'tg4k9c6ol5'
+stage = 'prod'
+
 
 def lambda_handler(event, context):
     
     print("event:",event)
     print("region:",region)
+    print('table name:',table_name)
     
+    evt_para = {}
+    if 'queryStringParameters' in event.keys():
+        evt_para = event['queryStringParameters']
+    
+    requestType = 'websocket'
+    if isinstance(evt_para,dict) and "requestType" in evt_para.keys():
+        requestType = evt_para['requestType']
+        
+    evt_body = {}
+    if 'body' in event.keys() and requestType == 'websocket':
+        if event['body'] != 'None':
+            evt_body = json.loads(event['body'])
+    else:
+        evt_body = evt_para   
+
     index = INDEX
-    if "index" in event['queryStringParameters'].keys():
-        index = event['queryStringParameters']['index']
-    elif "ind" in event['queryStringParameters'].keys():
-        index = event['queryStringParameters']['ind']
+    if "index" in evt_body.keys():
+        index = evt_body['index']
+    elif "ind" in evt_body.keys():
+        index = evt_body['ind']
+    elif "indexName" in evt_body.keys():
+        index = evt_body['indexName']
     print('index:',index)
     
+    isCheckedContext= False
+    if "isCheckedContext" in evt_body.keys():
+        isCheckedContext = bool(evt_body['isCheckedContext'])
+
+    isCheckedGenerateReport= False
+    if "isCheckedGenerateReport" in evt_body.keys():
+        isCheckedGenerateReport = bool(evt_body['isCheckedGenerateReport'])
+
+    isCheckedKnowledgeBase= True
+    if "isCheckedKnowledgeBase" in evt_body.keys():
+        isCheckedKnowledgeBase = bool(evt_body['isCheckedKnowledgeBase'])
+
+    isCheckedMapReduce= False
+    if "isCheckedMapReduce" in evt_body.keys():
+        isCheckedMapReduce = bool(evt_body['isCheckedMapReduce'])
+    
     language=LANGUAGE
-    if "language" in event['queryStringParameters'].keys():
-        language = event['queryStringParameters']['language']
+    if "language" in evt_body.keys():
+        language = evt_body['language']
+
+    sessionId=""
+    if "sessionId" in evt_body.keys():
+        sessionId = str(evt_body['sessionId'])
+    print('sessionId:',sessionId)
+    
+    sessionTemplateId=""
+    if "sessionTemplateId" in evt_body.keys():
+        sessionTemplateId = str(evt_body['sessionTemplateId'])
+    print('sessionTemplateId:',sessionTemplateId)
+
+    taskDefinition=""
+    if "taskDefinition" in evt_body.keys():
+        taskDefinition = str(evt_body['taskDefinition'])
+    print('taskDefinition:',taskDefinition)
 
     temperature=0.01
-    if "temperature" in event['queryStringParameters'].keys():
-        temperature = float(event['queryStringParameters']['temperature'])
-  
-    embedding_endpoint_name=EMBEDDING_ENDPOINT_NAME
-    if "embedding_endpoint_name" in event['queryStringParameters'].keys():
-        embedding_endpoint_name = event['queryStringParameters']['embedding_endpoint_name']
-        
-    llm_embedding_name=LLM_ENDPOINT_NAME
-    if "llm_embedding_name" in event['queryStringParameters'].keys():
-        llm_embedding_name = event['queryStringParameters']['llm_embedding_name']
+    if "temperature" in evt_body.keys():
+        temperature = float(evt_body['temperature'])
 
-    search_engine = "opensearch"
+    embeddingEndpoint = EMBEDDING_ENDPOINT_NAME
+    sagemakerEndpoint = LLM_ENDPOINT_NAME
+    if "embeddingEndpoint" in evt_body.keys():
+        embeddingEndpoint = evt_body['embeddingEndpoint']
+        
+    if "sagemakerEndpoint" in evt_body.keys():
+        sagemakerEndpoint = evt_body['sagemakerEndpoint']
+    
+    modelType = 'normal'
+    if "modelType" in evt_body.keys():
+        modelType = evt_body['modelType']
+  
+    urlOrApiKey = ''
+    if "urlOrApiKey" in evt_body.keys():
+        urlOrApiKey = evt_body['urlOrApiKey']
+  
+    modelName = 'anthropic.claude-v2'
+    if "modelName" in evt_body.keys():
+        modelName = evt_body['modelName']
+
+    bedrockMaxTokens = 512
+    if "bedrockMaxTokens" in evt_body.keys():
+        bedrockMaxTokens = int(evt_body['bedrockMaxTokens'])
+    
+    name=''
+    if "name" in evt_body.keys():
+        name = evt_body['name']
+        
+    if "llmData" in evt_body.keys():
+        llmData = Dict(evt_body['llmData'])
+        if "embeddingEndpoint" in llmData.keys():
+            embeddingEndpoint = llmData['embeddingEndpoint']
+        if "sagemakerEndpoint" in llmData.keys():
+            sagemakerEndpoint = llmData['sagemakerEndpoint']
+        if "modelName" in llmData.keys():
+            modelName = llmData['modelName']
+        if "modelType" in llmData.keys():
+            modelType = llmData['modelType']
+        recordId = ''
+        if "recordId" in llmData.keys():
+            recordId = llmData['recordId']
+        if "urlOrApiKey" in llmData.keys():
+            urlOrApiKey = llmData['urlOrApiKey']
+
+    searchEngine = "opensearch"
     if not search_engine_opensearch and search_engine_kendra:
-        search_engine = "kendra"
-    if "search_engine" in event['queryStringParameters'].keys():
-        search_engine = event['queryStringParameters']['search_engine']
-    print('search_engine:',search_engine)
+        searchEngine = "kendra"
+    if "searchEngine" in evt_body.keys():
+        searchEngine = evt_body['searchEngine']
+
+    print('searchEngine:',searchEngine)
 
     username = None
     password = None
     host = HOST
-    if search_engine == "opensearch":
+    if searchEngine == "opensearch":
         # retrieve secret manager value by key using boto3                                             
         sm_client = boto3.client('secretsmanager')
         master_user = sm_client.get_secret_value(SecretId='opensearch-master-user')['SecretString']
         data= json.loads(master_user)
         username = data.get('username')
         password = data.get('password')
-    elif search_engine == "kendra":
-        if "kendra_index_id" in event['queryStringParameters'].keys():
-            host = event['queryStringParameters']['kendra_index_id']
+    elif searchEngine == "kendra":
+        if "kendra_index_id" in evt_body.keys():
+            host = evt_body['kendra_index_id']
     print("host:",host)
-  
-    model_type = 'normal'
-    if "model_type" in event['queryStringParameters'].keys():
-        model_type = event['queryStringParameters']['model_type']
-  
-    bedrock_api_url = ''
-    if "bedrock_api_url" in event['queryStringParameters'].keys():
-        bedrock_api_url = event['queryStringParameters']['bedrock_api_url']
-  
-    bedrock_model_id = 'anthropic.claude-v2'
-    if "bedrock_model_id" in event['queryStringParameters'].keys():
-        bedrock_model_id = event['queryStringParameters']['bedrock_model_id']
-
-    bedrock_max_tokens = 500
-    if "bedrock_max_tokens" in event['queryStringParameters'].keys():
-        bedrock_max_tokens = int(event['queryStringParameters']['bedrock_max_tokens'])
-  
   
     response = {
         "statusCode": 200,
@@ -106,39 +178,34 @@ def lambda_handler(event, context):
                          password,
                          host,
                          port,
-                         embedding_endpoint_name,
+                         embeddingEndpoint,
                          region,
-                         llm_embedding_name,
+                         sagemakerEndpoint,
                          temperature,
                          language,
-                         search_engine,
-                         model_type,
-                         bedrock_api_url,
-                         bedrock_model_id,
-                         bedrock_max_tokens
+                         searchEngine,
+                         modelType,
+                         urlOrApiKey,
+                         modelName,
+                         bedrockMaxTokens
                          )
             
         query = "hello"
-        if "query" in event['queryStringParameters'].keys():
-            query = event['queryStringParameters']['query'].strip()
-        elif "q" in event['queryStringParameters'].keys():
-            query = event['queryStringParameters']['q'].strip()
+        if "query" in evt_body.keys():
+            query = evt_body['query'].strip()
+        elif "q" in evt_body.keys():
+            query = evt_body['q'].strip()
         print('query:', query)
         
-        
+        contentCheckLabel = "terror"
+        contentCheckSuggestion = "block"
+
         task = "qa"    
-        if "task" in event['queryStringParameters'].keys():
-            task = event['queryStringParameters']['task']
+        if "task" in evt_body.keys():
+            task = evt_body['task']
         print('task:',task)
 
         if task == "chat":
-            
-            session_id=""
-            if "session_id" in event['queryStringParameters'].keys():
-                session_id = str(event['queryStringParameters']['session_id'])
-            
-            print('session_id:',session_id)
-            print('table name:',table_name)
             
             if language == "chinese":
                 prompt_template = CHINESE_CHAT_PROMPT_TEMPLATE
@@ -146,106 +213,123 @@ def lambda_handler(event, context):
                 prompt_template = ENGLISH_CHAT_PROMPT_TEMPLATE
                 if model_type == 'llama2':    
                     prompt_template = EN_CHAT_PROMPT_LLAMA2
-            if "prompt" in event['queryStringParameters'].keys():
-                prompt_template = event['queryStringParameters']['prompt']            
-            
-            if model_type == 'llama2':
-                result = search_qa.get_answer_from_chat_llama2(query,prompt_template,table_name,session_id)
+            if "prompt" in evt_body.keys():
+                prompt_template = evt_body['prompt']  
+
+            if modelType == 'llama2':
+                result = search_qa.get_answer_from_chat_llama2(query,prompt_template,table_name,sessionId)
             else:
-                result = search_qa.get_chat(query,language,prompt_template,table_name,session_id,model_type)
+                result = search_qa.get_chat(query,language,prompt_template,table_name,sessionId,modelType)
             
-            
-            print('chat result:',result)
+            # print('chat result:',result)
             
             response['body'] = json.dumps(
             {
-                'datetime':time.time(),
-                'suggestion_answer':result
+                'datetime':time.time()*1000,
+                'text':result
             })
-            print('response:',response)
-            return response
 
         elif task == "qa":
-            
-            session_id=""
-            if "session_id" in event['queryStringParameters'].keys():
-                session_id = str(event['queryStringParameters']['session_id'])
-            
-            print('session_id:',session_id)
-            print('table name:',table_name)
 
             if language == "chinese":
                 prompt_template = CHINESE_PROMPT_TEMPLATE
                 condense_question_prompt = CN_CONDENSE_QUESTION_PROMPT
+                responseIfNoDocsFound = '找不到答案'
             elif language == "chinese-tc":
                 prompt_template = CHINESE_TC_PROMPT_TEMPLATE
                 condense_question_prompt = TC_CONDENSE_QUESTION_PROMPT
+                responseIfNoDocsFound = '找不到答案'
             elif language == "english":
                 prompt_template = ENGLISH_PROMPT_TEMPLATE
                 condense_question_prompt = EN_CONDENSE_QUESTION_PROMPT
-                if model_type == 'llama2':    
+                if modelType == 'llama2':    
                     prompt_template = EN_CHAT_PROMPT_LLAMA2
                     condense_question_prompt = EN_CONDENSE_PROMPT_LLAMA2
-            if "prompt" in event['queryStringParameters'].keys():
-                prompt_template = event['queryStringParameters']['prompt']
+                responseIfNoDocsFound = "Can't find answer"
+            if "prompt" in evt_body.keys():
+                prompt_template = evt_body['prompt']
                 
-            top_k = TOP_K
-            if "top_k" in event['queryStringParameters'].keys():
-                top_k = int(event['queryStringParameters']['top_k'])
-            print('top_k:',top_k)
+            topK = TOP_K
+            if "topK" in evt_body.keys():
+                topK = int(evt_body['topK'])
+            print('topK:',topK)
             
-            if model_type == 'llama2':                            
+            searchMethod = 'vector' #vector/text/mix
+            if "searchMethod" in evt_body.keys():
+                searchMethod = evt_body['searchMethod']
+            print('searchMethod:',searchMethod)
+    
+            txtDocsNum = 0
+            if "txtDocsNum" in evt_body.keys():
+                txtDocsNum = int(evt_body['txtDocsNum'])
+            print('txtDocsNum:',txtDocsNum)   
+            
+            if "responseIfNoDocsFound" in evt_body.keys():
+                responseIfNoDocsFound = evt_body['responseIfNoDocsFound']
+            print('responseIfNoDocsFound:',responseIfNoDocsFound)
+            
+            vecDocsScoreThresholds = 0
+            if "vecDocsScoreThresholds" in evt_body.keys():
+                vecDocsScoreThresholds = float(evt_body['vecDocsScoreThresholds'])
+            print('vecDocsScoreThresholds:',vecDocsScoreThresholds) 
+            
+            txtDocsScoreThresholds = 0
+            if "txtDocsScoreThresholds" in evt_body.keys():
+                txtDocsScoreThresholds = float(evt_body['txtDocsScoreThresholds'])
+            print('txtDocsScoreThresholds:',txtDocsScoreThresholds) 
+            
+            if modelType == 'llama2':                            
                 result = search_qa.get_answer_from_conversational_llama2(query,
-                                            session_id,
+                                            sessionId,
                                             table_name,
                                             prompt_template=prompt_template,
                                             condense_question_prompt=condense_question_prompt,
-                                            top_k=top_k
+                                            top_k=topK
                                             )
             else:
                 result = search_qa.get_answer_from_conversational(query,
-                            session_id,
+                            sessionId,
                             table_name,
                             prompt_template=prompt_template,
                             condense_question_prompt=condense_question_prompt,
-                            top_k=top_k
+                            search_method=searchMethod,
+                            top_k=topK,
+                            txt_docs_num=txtDocsNum,
+                            response_if_no_docs_found=responseIfNoDocsFound,
+                            vec_docs_score_thresholds=vecDocsScoreThresholds,
+                            txt_docs_score_thresholds=txtDocsScoreThresholds
                             )
                     
             print('result:',result)
             
             answer = result['answer']
-            if model_type == "bedrock":
-                answer=answer.split('\n\nhuman')[0].split('\n\n用户')[0].split('\n\nquestion')[0].split('\n\n\ufeffquestion')[0].split('\n\nQuestion')[0].strip()
-
-            # if language == "english":
-            #     answer = answer.split('Answer:')[-1]
             print('answer:',answer)
             
             source_documents = result['source_documents']
-            if search_engine == "opensearch":
+            if searchEngine == "opensearch":
                 source_docs = [doc[0] for doc in source_documents]
                 query_docs_scores = [doc[1] for doc in source_documents]
                 sentences = [doc[2] for doc in source_documents]
-            elif search_engine == "kendra":
+            elif searchEngine == "kendra":
                 source_docs = source_documents
                 
             #cal query_answer_score
-            cal_query_answer_score = "false"
+            isCheckedScoreQA = False
             query_answer_score = -1
-            if "cal_query_answer_score" in event['queryStringParameters'].keys():
-                cal_query_answer_score = event['queryStringParameters']['cal_query_answer_score']
-            if cal_query_answer_score == 'true' and search_engine == "opensearch":
+            if "isCheckedScoreQA" in evt_body.keys():
+                isCheckedScoreQA = bool(evt_body['isCheckedScoreQA'])
+            if isCheckedScoreQA and searchEngine == "opensearch":
                 if language.find("chinese")>=0 and len(answer) > 350:
                     answer = answer[:350]
                 query_answer_score = search_qa.get_qa_relation_score(query,answer)
             print('1.query_answer_score:',query_answer_score)
                 
             #cal answer_docs_scores
-            cal_answer_docs_score = "false"
+            isCheckedScoreAD = False
             answer_docs_scores = []
-            if "cal_answer_docs_score" in event['queryStringParameters'].keys():
-                cal_answer_docs_score = event['queryStringParameters']['cal_answer_docs_score']
-            if cal_answer_docs_score == 'true' and search_engine == "opensearch":
+            if "isCheckedScoreAD" in evt_body.keys():
+                isCheckedScoreAD = bool(evt_body['isCheckedScoreAD'])
+            if isCheckedScoreAD:
                 cal_answer = answer
                 if language.find("chinese")>=0 and len(answer) > 150:
                     cal_answer = answer[:150]
@@ -257,72 +341,26 @@ def lambda_handler(event, context):
                     answer_docs_scores.append(answer_docs_score)
             print('2.answer_docs_scores:',answer_docs_scores)
             
-            #cal docs_list_overlap_score
-            docs_list_overlap_score = -1
-            cal_docs_list_overlap_score = "false"
-            if "cal_docs_list_overlap_score" in event['queryStringParameters'].keys():
-                cal_docs_list_overlap_score = event['queryStringParameters']['cal_docs_list_overlap_score']
-            if cal_docs_list_overlap_score == 'true' and search_engine == "opensearch":       
-                find_answer_top_k = 3
-                answer_relate_docs = search_qa.get_retriever(find_answer_top_k).get_relevant_documents(answer)
-                print('answer_relate_docs:',answer_relate_docs)
-                answer_relate_docs = [doc[0] for doc in answer_relate_docs]
-
-                find_index = []
-                for answer_relate_doc in answer_relate_docs:
-                    try:
-                        relate_source = answer_relate_doc.metadata['source']
-                        relate_page_content = answer_relate_doc.page_content
-                    except KeyError:
-                        print("KeyError found")
-                        continue
-                    for i in range(len(source_docs)):
-                        source_page_content = source_docs[i].page_content
-                        if source_page_content == relate_page_content:
-                            find_index.append(i)
-                            break
-                print('find_index:',find_index)
-
-                if len(find_index) > 0:                
-                    list_score = 0
-                    find_topk = 1
-                    query_relate_docs_len = len(source_docs)
-                    answer_relate_docs_len = len(answer_relate_docs)
-                    for i in range(query_relate_docs_len):
-                        for j in range(len(find_index)):
-                            if i == find_index[j]:
-                                list_score += (query_relate_docs_len-i)*(answer_relate_docs_len-j)        
-                    print('qa_list_score:',list_score)
-
-                    total = query_relate_docs_len*answer_relate_docs_len
-                    if query_relate_docs_len > 1 and answer_relate_docs_len > 1:
-                        total += (query_relate_docs_len-1)*(answer_relate_docs_len-1)
-                    print('total score:',total)
-
-                    docs_list_overlap_score = round(list_score/total,3)
-            print('3.docs_list_overlap_score:',docs_list_overlap_score)
-                    
             response_type = ""
-            if "response_type" in event['queryStringParameters'].keys():
-                response_type = event['queryStringParameters']['response_type']         
+            if "response_type" in evt_body.keys():
+                response_type = evt_body['response_type']         
 
             if response_type.find('web_ui') >= 0:
-                
                 source_list = []
                 for i in range(len(source_docs)):
                     source = {}
                     source["_id"] = i
                     if language.find("chinese")>=0: 
-                        source["_score"] = float(query_docs_scores[i])*100 if search_engine == "opensearch" else 1
+                        source["_score"] = float(query_docs_scores[i]) if searchEngine == "opensearch" else 1
                     else:
-                        source["_score"] = query_docs_scores[i] if search_engine == "opensearch" else 1
+                        source["_score"] = query_docs_scores[i] if searchEngine == "opensearch" else 1
                     
                     try:
                         source["title"] = os.path.split(source_docs[i].metadata['source'])[-1]
                     except KeyError:
                         print("KeyError,Source not found")
                         source["title"] = ''
-                    source["sentence"] = sentences[i] if search_engine == "opensearch" else source_docs[i].page_content.replace("\n","")
+                    source["sentence"] = sentences[i] if searchEngine == "opensearch" else source_docs[i].page_content.replace("\n","")
                     source["paragraph"] =source_docs[i].page_content.replace("\n","")
                     source["sentence_id"] = i
                     if 'row' in source_docs[i].metadata.keys():
@@ -335,10 +373,11 @@ def lambda_handler(event, context):
                                      
                 response['body'] = json.dumps(
                 {
-                    'datetime':time.time(),
+                    'datetime':time.time()*1000,
                     'body': source_list,
-                    'suggestion_answer': answer
-                    
+                    'text': answer,
+                    'contentCheckLabel':contentCheckLabel,
+                    'contentCheckSuggestion':contentCheckSuggestion
                 })
 
             else:    
@@ -347,55 +386,68 @@ def lambda_handler(event, context):
                     source = {}
                     source["id"] = i
                     try:
-                        source["source"] = os.path.split(source_docs[i].metadata['source'])[-1]
+                        source["title"] = os.path.split(source_docs[i].metadata['source'])[-1]
                     except KeyError:
                         print("KeyError found")                    
                     source["paragraph"] =source_docs[i].page_content.replace("\n","")
-                    source["sentence"] = sentences[i] if search_engine == "opensearch" else source_docs[i].page_content.replace("\n","")
+                    source["sentence"] = sentences[i] if searchEngine == "opensearch" else source_docs[i].page_content.replace("\n","")
                     if language.find("chinese")>=0: 
-                        source["score"] = float(query_docs_scores[i])*100 if search_engine == "opensearch" else 1
+                        source["score"] = float(query_docs_scores[i]) if searchEngine == "opensearch" else 1
                     else:
-                        source["score"] = query_docs_scores[i] if search_engine == "opensearch" else 1
+                        source["score"] = query_docs_scores[i] if searchEngine == "opensearch" else 1
 
                     source_list.append(source)
             
-                query_docs_score = query_docs_scores[0] if search_engine == "opensearch" and len(query_docs_scores) > 0 else -1
+                query_docs_score = query_docs_scores[0] if searchEngine == "opensearch" and len(query_docs_scores) > 0 else -1
                 answer_docs_score = max(answer_docs_scores) if len(answer_docs_scores) > 0 else -1
                 response['body'] = json.dumps(
                 {
-                    'datetime':time.time(),
+                    'datetime':time.time()*1000,
                     'source_list': source_list,
-                    'suggestion_answer': answer,
-                    'query_docs_score': str(query_docs_score),
-                    'query_answer_score': str(query_answer_score),
-                    'answer_docs_score': str(answer_docs_score),
-                    'docs_list_overlap_score' : str(docs_list_overlap_score),
-                    
+                    'text': answer,
+                    'scoreQueryDoc': str(query_docs_score),
+                    'scoreQueryAnswer': str(query_answer_score),
+                    'scoreAnswerDoc': str(answer_docs_score),
+                    'contentCheckLabel':contentCheckLabel,
+                    'contentCheckSuggestion':contentCheckSuggestion
+
                 })
-            return response
 
         elif task == "summarize":
             
             prompt_template = SUMMARIZE_PROMPT_TEMPLATE
-            if "prompt" in event['queryStringParameters'].keys():
-                prompt_template = event['queryStringParameters']['prompt']
+            if "prompt" in evt_body.keys():
+                prompt_template = evt_body['prompt']
 
             chain_type = "stuff"  
             combine_prompt_template = COMBINE_SUMMARIZE_PROMPT_TEMPLATE
-            if "chain_type" in event['queryStringParameters'].keys():
-                chain_type = event['queryStringParameters']['chain_type']
+            
+            
+            if "chain_type" in evt_body.keys():
+                chain_type = evt_body['chain_type']
                 if chain_type =="map_reduce":
-                    if "combine_prompt" in event['queryStringParameters'].keys():
-                        combine_prompt_template = event['queryStringParameters']['combine_prompt']
+                    if "combine_prompt" in evt_body.keys():
+                        combine_prompt_template = evt_body['combine_prompt']
             
             result = search_qa.get_summarize(query,chain_type,prompt_template,combine_prompt_template)
             
             response['body'] = json.dumps(
             {
-                'datetime':time.time(),
-                'summarize': result
+                'datetime':time.time()*1000,
+                'summarize': result,
+                'contentCheckLabel':contentCheckLabel,
+                'contentCheckSuggestion':contentCheckSuggestion,
             })
             
+        if requestType == 'websocket':
+            connectionId = str(event.get('requestContext',{}).get('connectionId'))
+            endpoint_url=F"https://{domain_name}.execute-api.{region}.amazonaws.com/{stage}"
+            apigw_management = boto3.client('apigatewaymanagementapi',
+                                            endpoint_url=endpoint_url)
+            api_res = apigw_management.post_to_connection(ConnectionId=connectionId,
+                                                                    Data=response['body'])
+            print('api_res',api_res)
+        else:
             return response
 
     except Exception as e:

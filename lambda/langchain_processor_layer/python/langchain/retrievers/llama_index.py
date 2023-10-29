@@ -1,19 +1,20 @@
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, cast
 
-from pydantic import BaseModel, Field
-
-from langchain.callbacks.manager import (
-    AsyncCallbackManagerForRetrieverRun,
-    CallbackManagerForRetrieverRun,
-)
+from langchain.callbacks.manager import CallbackManagerForRetrieverRun
+from langchain.pydantic_v1 import Field
 from langchain.schema import BaseRetriever, Document
 
 
-class LlamaIndexRetriever(BaseRetriever, BaseModel):
-    """Question-answering with sources over an LlamaIndex data structure."""
+class LlamaIndexRetriever(BaseRetriever):
+    """`LlamaIndex` retriever.
+
+    It is used for the question-answering with sources over
+    an LlamaIndex data structure."""
 
     index: Any
+    """LlamaIndex index to query."""
     query_kwargs: Dict = Field(default_factory=dict)
+    """Keyword arguments to pass to the query method."""
 
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun
@@ -39,17 +40,17 @@ class LlamaIndexRetriever(BaseRetriever, BaseModel):
             )
         return docs
 
-    async def _aget_relevant_documents(
-        self, query: str, *, run_manager: Optional[AsyncCallbackManagerForRetrieverRun]
-    ) -> List[Document]:
-        raise NotImplementedError("LlamaIndexRetriever does not support async")
 
+class LlamaIndexGraphRetriever(BaseRetriever):
+    """`LlamaIndex` graph data structure retriever.
 
-class LlamaIndexGraphRetriever(BaseRetriever, BaseModel):
-    """Question-answering with sources over an LlamaIndex graph data structure."""
+    It is used for question-answering with sources over an LlamaIndex
+    graph data structure."""
 
     graph: Any
+    """LlamaIndex graph to query."""
     query_configs: List[Dict] = Field(default_factory=list)
+    """List of query configs to pass to the query method."""
 
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun
@@ -82,8 +83,3 @@ class LlamaIndexGraphRetriever(BaseRetriever, BaseModel):
                 Document(page_content=source_node.source_text, metadata=metadata)
             )
         return docs
-
-    async def _aget_relevant_documents(
-        self, query: str, *, run_manager: AsyncCallbackManagerForRetrieverRun
-    ) -> List[Document]:
-        raise NotImplementedError("LlamaIndexGraphRetriever does not support async")

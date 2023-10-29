@@ -1,16 +1,14 @@
-"""Wrapper for the GPT4All model."""
 from functools import partial
 from typing import Any, Dict, List, Mapping, Optional, Set
-
-from pydantic import Extra, Field, root_validator
 
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.llms.utils import enforce_stop_tokens
+from langchain.pydantic_v1 import Extra, Field, root_validator
 
 
 class GPT4All(LLM):
-    r"""Wrapper around GPT4All language models.
+    """GPT4All language models.
 
     To use, you should have the ``gpt4all`` python package installed, the
     pre-trained model file, and the model's config information.
@@ -19,7 +17,7 @@ class GPT4All(LLM):
         .. code-block:: python
 
             from langchain.llms import GPT4All
-            model = GPT4All(model="./models/gpt4all-model.bin", n_ctx=512, n_threads=8)
+            model = GPT4All(model="./models/gpt4all-model.bin", n_threads=8)
 
             # Simplest invocation
             response = model("Once upon a time, ")
@@ -30,7 +28,7 @@ class GPT4All(LLM):
 
     backend: Optional[str] = Field(None, alias="backend")
 
-    n_ctx: int = Field(512, alias="n_ctx")
+    max_tokens: int = Field(200, alias="max_tokens")
     """Token context window."""
 
     n_parts: int = Field(-1, alias="n_parts")
@@ -61,10 +59,10 @@ class GPT4All(LLM):
     n_predict: Optional[int] = 256
     """The maximum number of tokens to generate."""
 
-    temp: Optional[float] = 0.8
+    temp: Optional[float] = 0.7
     """The temperature to use for sampling."""
 
-    top_p: Optional[float] = 0.95
+    top_p: Optional[float] = 0.1
     """The top-p value to use for sampling."""
 
     top_k: Optional[int] = 40
@@ -79,21 +77,20 @@ class GPT4All(LLM):
     repeat_last_n: Optional[int] = 64
     "Last n tokens to penalize"
 
-    repeat_penalty: Optional[float] = 1.3
+    repeat_penalty: Optional[float] = 1.18
     """The penalty to apply to repeated tokens."""
 
-    n_batch: int = Field(1, alias="n_batch")
+    n_batch: int = Field(8, alias="n_batch")
     """Batch size for prompt processing."""
 
     streaming: bool = False
     """Whether to stream the results or not."""
 
-    context_erase: float = 0.5
-    """Leave (n_ctx * context_erase) tokens
-    starting from beginning if the context has run out."""
-
     allow_download: bool = False
     """If model does not exist in ~/.cache/gpt4all/, download it."""
+
+    device: Optional[str] = Field("cpu", alias="device")
+    """Device name: cpu, gpu, nvidia, intel, amd or DeviceName."""
 
     client: Any = None  #: :meta private:
 
@@ -105,7 +102,7 @@ class GPT4All(LLM):
     @staticmethod
     def _model_param_names() -> Set[str]:
         return {
-            "n_ctx",
+            "max_tokens",
             "n_predict",
             "top_k",
             "top_p",
@@ -113,12 +110,11 @@ class GPT4All(LLM):
             "n_batch",
             "repeat_penalty",
             "repeat_last_n",
-            "context_erase",
         }
 
     def _default_params(self) -> Dict[str, Any]:
         return {
-            "n_ctx": self.n_ctx,
+            "max_tokens": self.max_tokens,
             "n_predict": self.n_predict,
             "top_k": self.top_k,
             "top_p": self.top_p,
@@ -126,7 +122,6 @@ class GPT4All(LLM):
             "n_batch": self.n_batch,
             "repeat_penalty": self.repeat_penalty,
             "repeat_last_n": self.repeat_last_n,
-            "context_erase": self.context_erase,
         }
 
     @root_validator()
@@ -149,6 +144,7 @@ class GPT4All(LLM):
             model_path=model_path or None,
             model_type=values["backend"],
             allow_download=values["allow_download"],
+            device=values["device"],
         )
         if values["n_threads"] is not None:
             # set n_threads

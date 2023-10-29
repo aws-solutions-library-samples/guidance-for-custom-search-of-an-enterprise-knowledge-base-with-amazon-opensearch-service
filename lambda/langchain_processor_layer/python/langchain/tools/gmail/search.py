@@ -3,12 +3,8 @@ import email
 from enum import Enum
 from typing import Any, Dict, List, Optional, Type
 
-from pydantic import BaseModel, Field
-
-from langchain.callbacks.manager import (
-    AsyncCallbackManagerForToolRun,
-    CallbackManagerForToolRun,
-)
+from langchain.callbacks.manager import CallbackManagerForToolRun
+from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools.gmail.base import GmailBaseTool
 from langchain.tools.gmail.utils import clean_email_body
 
@@ -21,6 +17,8 @@ class Resource(str, Enum):
 
 
 class SearchArgsSchema(BaseModel):
+    """Input for SearchGmailTool."""
+
     # From https://support.google.com/mail/answer/7190?hl=en
     query: str = Field(
         ...,
@@ -45,6 +43,8 @@ class SearchArgsSchema(BaseModel):
 
 
 class GmailSearch(GmailBaseTool):
+    """Tool that searches for messages or threads in Gmail."""
+
     name: str = "search_gmail"
     description: str = (
         "Use this tool to search for email messages or threads."
@@ -91,7 +91,16 @@ class GmailSearch(GmailBaseTool):
             subject = email_msg["Subject"]
             sender = email_msg["From"]
 
-            message_body = email_msg.get_payload()
+            message_body = ""
+            if email_msg.is_multipart():
+                for part in email_msg.walk():
+                    ctype = part.get_content_type()
+                    cdispo = str(part.get("Content-Disposition"))
+                    if ctype == "text/plain" and "attachment" not in cdispo:
+                        message_body = part.get_payload(decode=True).decode("utf-8")
+                        break
+            else:
+                message_body = email_msg.get_payload(decode=True).decode("utf-8")
 
             body = clean_email_body(message_body)
 
@@ -128,13 +137,3 @@ class GmailSearch(GmailBaseTool):
             return self._parse_messages(results)
         else:
             raise NotImplementedError(f"Resource of type {resource} not implemented.")
-
-    async def _arun(
-        self,
-        query: str,
-        resource: Resource = Resource.MESSAGES,
-        max_results: int = 10,
-        run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
-    ) -> List[Dict[str, Any]]:
-        """Run the tool."""
-        raise NotImplementedError

@@ -1,4 +1,3 @@
-"""Wrapper around DashScope embedding models."""
 from __future__ import annotations
 
 import logging
@@ -10,7 +9,6 @@ from typing import (
     Optional,
 )
 
-from pydantic import BaseModel, Extra, root_validator
 from requests.exceptions import HTTPError
 from tenacity import (
     before_sleep_log,
@@ -20,7 +18,8 @@ from tenacity import (
     wait_exponential,
 )
 
-from langchain.embeddings.base import Embeddings
+from langchain.pydantic_v1 import BaseModel, Extra, root_validator
+from langchain.schema.embeddings import Embeddings
 from langchain.utils import get_from_dict_or_env
 
 logger = logging.getLogger(__name__)
@@ -58,14 +57,15 @@ def embed_with_retry(embeddings: DashScopeEmbeddings, **kwargs: Any) -> Any:
         else:
             raise HTTPError(
                 f"HTTP error occurred: status_code: {resp.status_code} \n "
-                f"code: {resp.code} \n message: {resp.message}"
+                f"code: {resp.code} \n message: {resp.message}",
+                response=resp,
             )
 
     return _embed_with_retry(**kwargs)
 
 
 class DashScopeEmbeddings(BaseModel, Embeddings):
-    """Wrapper around DashScope embedding models.
+    """DashScope embedding models.
 
     To use, you should have the ``dashscope`` python package installed, and the
     environment variable ``DASHSCOPE_API_KEY`` set with your API key or pass it
@@ -93,10 +93,11 @@ class DashScopeEmbeddings(BaseModel, Embeddings):
     """
 
     client: Any  #: :meta private:
+    """The DashScope client."""
     model: str = "text-embedding-v1"
     dashscope_api_key: Optional[str] = None
-    """Maximum number of retries to make when generating."""
     max_retries: int = 5
+    """Maximum number of retries to make when generating."""
 
     class Config:
         """Configuration for this pydantic object."""

@@ -1,18 +1,16 @@
-"""Wrapper around GooseAI API."""
 import logging
 from typing import Any, Dict, List, Mapping, Optional
 
-from pydantic import Extra, Field, root_validator
-
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
+from langchain.pydantic_v1 import Extra, Field, root_validator
 from langchain.utils import get_from_dict_or_env
 
 logger = logging.getLogger(__name__)
 
 
 class GooseAI(LLM):
-    """Wrapper around OpenAI large language models.
+    """GooseAI large language models.
 
     To use, you should have the ``openai`` python package installed, and the
     environment variable ``GOOSEAI_API_KEY`` set with your API key.
@@ -81,7 +79,7 @@ class GooseAI(LLM):
                     raise ValueError(f"Found {field_name} supplied twice.")
                 logger.warning(
                     f"""WARNING! {field_name} is not default parameter.
-                    {field_name} was transfered to model_kwargs.
+                    {field_name} was transferred to model_kwargs.
                     Please confirm that {field_name} is what you intended."""
                 )
                 extra[field_name] = values.pop(field_name)

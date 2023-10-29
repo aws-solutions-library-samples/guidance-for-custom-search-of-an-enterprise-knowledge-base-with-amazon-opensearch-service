@@ -4,6 +4,8 @@ from langchain.document_loaders.parsers.language.code_segmenter import CodeSegme
 
 
 class JavaScriptSegmenter(CodeSegmenter):
+    """Code segmenter for JavaScript."""
+
     def __init__(self, code: str):
         super().__init__(code)
         self.source_lines = self.code.splitlines()

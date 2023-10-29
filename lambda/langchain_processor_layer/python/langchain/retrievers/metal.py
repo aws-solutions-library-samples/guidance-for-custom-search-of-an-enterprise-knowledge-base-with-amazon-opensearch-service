@@ -1,25 +1,34 @@
 from typing import Any, List, Optional
 
-from langchain.callbacks.manager import (
-    AsyncCallbackManagerForRetrieverRun,
-    CallbackManagerForRetrieverRun,
-)
+from langchain.callbacks.manager import CallbackManagerForRetrieverRun
+from langchain.pydantic_v1 import root_validator
 from langchain.schema import BaseRetriever, Document
 
 
 class MetalRetriever(BaseRetriever):
-    """Retriever that uses the Metal API."""
+    """`Metal API` retriever."""
 
-    def __init__(self, client: Any, params: Optional[dict] = None):
+    client: Any
+    """The Metal client to use."""
+    params: Optional[dict] = None
+    """The parameters to pass to the Metal client."""
+
+    @root_validator(pre=True)
+    def validate_client(cls, values: dict) -> dict:
+        """Validate that the client is of the correct type."""
         from metal_sdk.metal import Metal
 
-        if not isinstance(client, Metal):
-            raise ValueError(
-                "Got unexpected client, should be of type metal_sdk.metal.Metal. "
-                f"Instead, got {type(client)}"
-            )
-        self.client: Metal = client
-        self.params = params or {}
+        if "client" in values:
+            client = values["client"]
+            if not isinstance(client, Metal):
+                raise ValueError(
+                    "Got unexpected client, should be of type metal_sdk.metal.Metal. "
+                    f"Instead, got {type(client)}"
+                )
+
+        values["params"] = values.get("params", {})
+
+        return values
 
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun
@@ -30,8 +39,3 @@ class MetalRetriever(BaseRetriever):
             metadata = {k: v for k, v in r.items() if k != "text"}
             final_results.append(Document(page_content=r["text"], metadata=metadata))
         return final_results
-
-    async def _aget_relevant_documents(
-        self, query: str, *, run_manager: AsyncCallbackManagerForRetrieverRun
-    ) -> List[Document]:
-        raise NotImplementedError

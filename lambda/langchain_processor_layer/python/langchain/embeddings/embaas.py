@@ -1,11 +1,10 @@
-"""Wrapper around embaas embeddings API."""
 from typing import Any, Dict, List, Mapping, Optional
 
 import requests
-from pydantic import BaseModel, Extra, root_validator
 from typing_extensions import NotRequired, TypedDict
 
-from langchain.embeddings.base import Embeddings
+from langchain.pydantic_v1 import BaseModel, Extra, root_validator
+from langchain.schema.embeddings import Embeddings
 from langchain.utils import get_from_dict_or_env
 
 # Currently supported maximum batch size for embedding requests
@@ -14,7 +13,7 @@ EMBAAS_API_URL = "https://api.embaas.io/v1/embeddings/"
 
 
 class EmbaasEmbeddingsPayload(TypedDict):
-    """Payload for the embaas embeddings API."""
+    """Payload for the Embaas embeddings API."""
 
     model: str
     texts: List[str]
@@ -22,7 +21,7 @@ class EmbaasEmbeddingsPayload(TypedDict):
 
 
 class EmbaasEmbeddings(BaseModel, Embeddings):
-    """Wrapper around embaas's embedding service.
+    """Embaas's embedding service.
 
     To use, you should have the
     environment variable ``EMBAAS_API_KEY`` set with your API key, or pass

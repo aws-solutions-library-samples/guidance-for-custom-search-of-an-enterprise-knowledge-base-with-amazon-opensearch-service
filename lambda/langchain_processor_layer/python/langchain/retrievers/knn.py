@@ -8,14 +8,10 @@ import concurrent.futures
 from typing import Any, List, Optional
 
 import numpy as np
-from pydantic import BaseModel
 
-from langchain.callbacks.manager import (
-    AsyncCallbackManagerForRetrieverRun,
-    CallbackManagerForRetrieverRun,
-)
-from langchain.embeddings.base import Embeddings
+from langchain.callbacks.manager import CallbackManagerForRetrieverRun
 from langchain.schema import BaseRetriever, Document
+from langchain.schema.embeddings import Embeddings
 
 
 def create_index(contexts: List[str], embeddings: Embeddings) -> np.ndarray:
@@ -33,14 +29,19 @@ def create_index(contexts: List[str], embeddings: Embeddings) -> np.ndarray:
         return np.array(list(executor.map(embeddings.embed_query, contexts)))
 
 
-class KNNRetriever(BaseRetriever, BaseModel):
-    """KNN Retriever."""
+class KNNRetriever(BaseRetriever):
+    """`KNN` retriever."""
 
     embeddings: Embeddings
+    """Embeddings model to use."""
     index: Any
+    """Index of embeddings."""
     texts: List[str]
+    """List of texts to index."""
     k: int = 4
+    """Number of results to return."""
     relevancy_threshold: Optional[float] = None
+    """Threshold for relevancy."""
 
     class Config:
 
@@ -78,8 +79,3 @@ class KNNRetriever(BaseRetriever, BaseModel):
             )
         ]
         return top_k_results
-
-    async def _aget_relevant_documents(
-        self, query: str, *, run_manager: AsyncCallbackManagerForRetrieverRun
-    ) -> List[Document]:
-        raise NotImplementedError

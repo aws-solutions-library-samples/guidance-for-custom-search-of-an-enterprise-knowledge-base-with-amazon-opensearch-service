@@ -3,9 +3,9 @@ from __future__ import annotations
 import itertools
 from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Tuple
 
-from langchain.embeddings.base import Embeddings
 from langchain.schema import Document
-from langchain.vectorstores import VectorStore
+from langchain.schema.embeddings import Embeddings
+from langchain.schema.vectorstore import VectorStore
 
 if TYPE_CHECKING:
     from tigrisdb import TigrisClient
@@ -15,18 +15,24 @@ if TYPE_CHECKING:
 
 
 class Tigris(VectorStore):
+    """`Tigris` vector store."""
+
     def __init__(self, client: TigrisClient, embeddings: Embeddings, index_name: str):
-        """Initialize Tigris vector store"""
+        """Initialize Tigris vector store."""
         try:
             import tigrisdb  # noqa: F401
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import tigrisdb python package. "
                 "Please install it with `pip install tigrisdb`"
             )
 
         self._embed_fn = embeddings
         self._vector_store = TigrisVectorStore(client.get_search(), index_name)
+
+    @property
+    def embeddings(self) -> Embeddings:
+        return self._embed_fn
 
     @property
     def search_index(self) -> TigrisVectorStore:

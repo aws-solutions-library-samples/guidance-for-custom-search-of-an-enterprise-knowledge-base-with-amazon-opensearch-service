@@ -9,7 +9,7 @@
 r"""
 .. dialect:: postgresql
     :name: PostgreSQL
-    :full_support: 9.6, 10, 11, 12, 13, 14
+    :full_support: 12, 13, 14, 15
     :normal_support: 9.6+
     :best_effort: 9+
 
@@ -303,7 +303,7 @@ Setting Alternate Search Paths on Connect
 ------------------------------------------
 
 The PostgreSQL ``search_path`` variable refers to the list of schema names
-that will be implicitly referred towards when a particular table or other
+that will be implicitly referenced when a particular table or other
 object is referenced in a SQL statement.  As detailed in the next section
 :ref:`postgresql_schema_reflection`, SQLAlchemy is generally organized around
 the concept of keeping this variable at its default value of ``public``,
@@ -1376,8 +1376,8 @@ Built-in support for rendering a ``ROW`` may be approximated using
 Table Types passed to Functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-PostgreSQL supports passing a table as an argument to a function, which it
-refers towards as a "record" type. SQLAlchemy :class:`_sql.FromClause` objects
+PostgreSQL supports passing a table as an argument to a function, which is
+known as a "record" type. SQLAlchemy :class:`_sql.FromClause` objects
 such as :class:`_schema.Table` support this special form using the
 :meth:`_sql.FromClause.table_valued` method, which is comparable to the
 :meth:`_functions.FunctionElement.table_valued` method except that the collection
@@ -1405,9 +1405,12 @@ from collections import defaultdict
 from functools import lru_cache
 import re
 from typing import Any
+from typing import cast
 from typing import List
 from typing import Optional
 from typing import Tuple
+from typing import TYPE_CHECKING
+from typing import Union
 
 from . import array as _array
 from . import hstore as _hstore
@@ -1459,6 +1462,7 @@ from ...engine import interfaces
 from ...engine import ObjectKind
 from ...engine import ObjectScope
 from ...engine import reflection
+from ...engine import URL
 from ...engine.reflection import ReflectionDefaults
 from ...sql import bindparam
 from ...sql import coercions
@@ -1697,7 +1701,7 @@ class PGCompiler(compiler.SQLCompiler):
         return f"{element.name}{self.function_argspec(element, **kw)}"
 
     def render_bind_cast(self, type_, dbapi_type, sqltext):
-        if dbapi_type._type_affinity is sqltypes.String:
+        if dbapi_type._type_affinity is sqltypes.String and dbapi_type.length:
             # use VARCHAR with no length for VARCHAR cast.
             # see #9511
             dbapi_type = sqltypes.STRINGTYPE
@@ -1810,14 +1814,14 @@ class PGCompiler(compiler.SQLCompiler):
             return self._generate_generic_binary(
                 binary, " %s " % base_op, **kw
             )
-        if isinstance(flags, elements.BindParameter) and flags.value == "i":
+        if flags == "i":
             return self._generate_generic_binary(
                 binary, " %s* " % base_op, **kw
             )
         return "%s %s CONCAT('(?', %s, ')', %s)" % (
             self.process(binary.left, **kw),
             base_op,
-            self.process(flags, **kw),
+            self.render_literal_value(flags, sqltypes.STRINGTYPE),
             self.process(binary.right, **kw),
         )
 
@@ -1829,21 +1833,18 @@ class PGCompiler(compiler.SQLCompiler):
 
     def visit_regexp_replace_op_binary(self, binary, operator, **kw):
         string = self.process(binary.left, **kw)
-        pattern = self.process(binary.right, **kw)
+        pattern_replace = self.process(binary.right, **kw)
         flags = binary.modifiers["flags"]
-        replacement = self.process(binary.modifiers["replacement"], **kw)
         if flags is None:
-            return "REGEXP_REPLACE(%s, %s, %s)" % (
+            return "REGEXP_REPLACE(%s, %s)" % (
                 string,
-                pattern,
-                replacement,
+                pattern_replace,
             )
         else:
-            return "REGEXP_REPLACE(%s, %s, %s, %s)" % (
+            return "REGEXP_REPLACE(%s, %s, %s)" % (
                 string,
-                pattern,
-                replacement,
-                self.process(flags, **kw),
+                pattern_replace,
+                self.render_literal_value(flags, sqltypes.STRINGTYPE),
             )
 
     def visit_empty_set_expr(self, element_types, **kw):
@@ -1866,6 +1867,9 @@ class PGCompiler(compiler.SQLCompiler):
         if self.dialect._backslash_escapes:
             value = value.replace("\\", "\\\\")
         return value
+
+    def visit_aggregate_strings_func(self, fn, **kw):
+        return "string_agg%s" % self.function_argspec(fn)
 
     def visit_sequence(self, seq, **kw):
         return "nextval('%s')" % self.preparer.format_sequence(seq)
@@ -3028,9 +3032,16 @@ class PGDialect(default.DefaultDialect):
     _supports_create_index_concurrently = True
     _supports_drop_index_concurrently = True
 
-    def __init__(self, json_serializer=None, json_deserializer=None, **kwargs):
+    def __init__(
+        self,
+        native_inet_types=None,
+        json_serializer=None,
+        json_deserializer=None,
+        **kwargs,
+    ):
         default.DefaultDialect.__init__(self, **kwargs)
 
+        self._native_inet_types = native_inet_types
         self._json_deserializer = json_deserializer
         self._json_serializer = json_serializer
 
@@ -3085,6 +3096,92 @@ class PGDialect(default.DefaultDialect):
 
     def get_deferrable(self, connection):
         raise NotImplementedError()
+
+    def _split_multihost_from_url(
+        self, url: URL
+    ) -> Union[
+        Tuple[None, None],
+        Tuple[Tuple[Optional[str], ...], Tuple[Optional[int], ...]],
+    ]:
+        hosts: Optional[Tuple[Optional[str], ...]] = None
+        ports_str: Union[str, Tuple[Optional[str], ...], None] = None
+
+        integrated_multihost = False
+
+        if "host" in url.query:
+            if isinstance(url.query["host"], (list, tuple)):
+                integrated_multihost = True
+                hosts, ports_str = zip(
+                    *[
+                        token.split(":") if ":" in token else (token, None)
+                        for token in url.query["host"]
+                    ]
+                )
+
+            elif isinstance(url.query["host"], str):
+                hosts = tuple(url.query["host"].split(","))
+
+                if (
+                    "port" not in url.query
+                    and len(hosts) == 1
+                    and ":" in hosts[0]
+                ):
+                    # internet host is alphanumeric plus dots or hyphens.
+                    # this is essentially rfc1123, which refers to rfc952.
+                    # https://stackoverflow.com/questions/3523028/
+                    # valid-characters-of-a-hostname
+                    host_port_match = re.match(
+                        r"^([a-zA-Z0-9\-\.]*)(?:\:(\d*))?$", hosts[0]
+                    )
+                    if host_port_match:
+                        integrated_multihost = True
+                        h, p = host_port_match.group(1, 2)
+                        if TYPE_CHECKING:
+                            assert isinstance(h, str)
+                            assert isinstance(p, str)
+                        hosts = (h,)
+                        ports_str = cast(
+                            "Tuple[Optional[str], ...]", (p,) if p else (None,)
+                        )
+
+        if "port" in url.query:
+            if integrated_multihost:
+                raise exc.ArgumentError(
+                    "Can't mix 'multihost' formats together; use "
+                    '"host=h1,h2,h3&port=p1,p2,p3" or '
+                    '"host=h1:p1&host=h2:p2&host=h3:p3" separately'
+                )
+            if isinstance(url.query["port"], (list, tuple)):
+                ports_str = url.query["port"]
+            elif isinstance(url.query["port"], str):
+                ports_str = tuple(url.query["port"].split(","))
+
+        ports: Optional[Tuple[Optional[int], ...]] = None
+
+        if ports_str:
+            try:
+                ports = tuple(int(x) if x else None for x in ports_str)
+            except ValueError:
+                raise exc.ArgumentError(
+                    f"Received non-integer port arguments: {ports_str}"
+                ) from None
+
+        if ports and (
+            (not hosts and len(ports) > 1)
+            or (
+                hosts
+                and ports
+                and len(hosts) != len(ports)
+                and (len(hosts) > 1 or len(ports) > 1)
+            )
+        ):
+            raise exc.ArgumentError("number of hosts and ports don't match")
+
+        if hosts is not None:
+            if ports is None:
+                ports = tuple(None for _ in hosts)
+
+        return hosts, ports  # type: ignore
 
     def do_begin_twophase(self, connection, xid):
         self.do_begin(connection.connection)
@@ -4020,9 +4117,13 @@ class PGDialect(default.DefaultDialect):
 
     @util.memoized_property
     def _fk_regex_pattern(self):
+        # optionally quoted token
+        qtoken = '(?:"[^"]+"|[A-Za-z0-9_]+?)'
+
         # https://www.postgresql.org/docs/current/static/sql-createtable.html
         return re.compile(
-            r"FOREIGN KEY \((.*?)\) REFERENCES (?:(.*?)\.)?(.*?)\((.*?)\)"
+            r"FOREIGN KEY \((.*?)\) "
+            rf"REFERENCES (?:({qtoken})\.)?({qtoken})\(((?:{qtoken}(?: *, *)?)+)\)"  # noqa: E501
             r"[\s]?(MATCH (FULL|PARTIAL|SIMPLE)+)?"
             r"[\s]?(ON UPDATE "
             r"(CASCADE|RESTRICT|NO ACTION|SET NULL|SET DEFAULT)+)?"

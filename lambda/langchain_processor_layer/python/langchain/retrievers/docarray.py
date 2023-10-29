@@ -2,14 +2,10 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
-from pydantic import BaseModel
 
-from langchain.callbacks.manager import (
-    AsyncCallbackManagerForRetrieverRun,
-    CallbackManagerForRetrieverRun,
-)
-from langchain.embeddings.base import Embeddings
+from langchain.callbacks.manager import CallbackManagerForRetrieverRun
 from langchain.schema import BaseRetriever, Document
+from langchain.schema.embeddings import Embeddings
 from langchain.vectorstores.utils import maximal_marginal_relevance
 
 
@@ -20,11 +16,10 @@ class SearchType(str, Enum):
     mmr = "mmr"
 
 
-class DocArrayRetriever(BaseRetriever, BaseModel):
-    """
-    Retriever class for DocArray Document Indices.
+class DocArrayRetriever(BaseRetriever):
+    """`DocArray Document Indices` retriever.
 
-    Currently, supports 5 backends:
+    Currently, it supports 5 backends:
     InMemoryExactNNIndex, HnswDocumentIndex, QdrantDocumentIndex,
     ElasticDocIndex, and WeaviateDocumentIndex.
 
@@ -209,11 +204,3 @@ class DocArrayRetriever(BaseRetriever, BaseModel):
                 lc_doc.metadata[name] = value
 
         return lc_doc
-
-    async def _aget_relevant_documents(
-        self,
-        query: str,
-        *,
-        run_manager: AsyncCallbackManagerForRetrieverRun,
-    ) -> List[Document]:
-        raise NotImplementedError

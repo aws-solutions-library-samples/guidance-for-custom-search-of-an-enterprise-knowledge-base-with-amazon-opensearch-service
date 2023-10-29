@@ -1,4 +1,3 @@
-"""Loader that fetches data from Modern Treasury"""
 import json
 import urllib.request
 from base64 import b64encode
@@ -27,7 +26,7 @@ incoming_payment_details",
 
 
 class ModernTreasuryLoader(BaseLoader):
-    """Loader that fetches data from Modern Treasury."""
+    """Load from `Modern Treasury`."""
 
     def __init__(
         self,
@@ -35,6 +34,16 @@ class ModernTreasuryLoader(BaseLoader):
         organization_id: Optional[str] = None,
         api_key: Optional[str] = None,
     ) -> None:
+        """
+
+        Args:
+            resource: The Modern Treasury resource to load.
+            organization_id: The Modern Treasury organization ID. It can also be
+               specified via the environment variable
+               "MODERN_TREASURY_ORGANIZATION_ID".
+            api_key: The Modern Treasury API key. It can also be specified via
+               the environment variable "MODERN_TREASURY_API_KEY".
+        """
         self.resource = resource
         organization_id = organization_id or get_from_env(
             "organization_id", "MODERN_TREASURY_ORGANIZATION_ID"

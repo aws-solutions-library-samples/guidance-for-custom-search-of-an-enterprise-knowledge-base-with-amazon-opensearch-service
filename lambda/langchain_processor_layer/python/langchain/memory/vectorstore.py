@@ -1,17 +1,16 @@
 """Class for a VectorStore-backed memory object."""
 
-from typing import Any, Dict, List, Optional, Union
-
-from pydantic import Field
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 from langchain.memory.chat_memory import BaseMemory
 from langchain.memory.utils import get_prompt_input_key
+from langchain.pydantic_v1 import Field
 from langchain.schema import Document
-from langchain.vectorstores.base import VectorStoreRetriever
+from langchain.schema.vectorstore import VectorStoreRetriever
 
 
 class VectorStoreRetrieverMemory(BaseMemory):
-    """Class for a VectorStore-backed memory object."""
+    """VectorStoreRetriever-backed memory."""
 
     retriever: VectorStoreRetriever = Field(exclude=True)
     """VectorStoreRetriever object to connect to."""
@@ -24,6 +23,9 @@ class VectorStoreRetrieverMemory(BaseMemory):
 
     return_docs: bool = False
     """Whether or not to return the result of querying the database directly."""
+
+    exclude_input_keys: Sequence[str] = Field(default_factory=tuple)
+    """Input keys to exclude in addition to memory key when constructing the document"""
 
     @property
     def memory_variables(self) -> List[str]:
@@ -55,7 +57,9 @@ class VectorStoreRetrieverMemory(BaseMemory):
     ) -> List[Document]:
         """Format context from this conversation to buffer."""
         # Each document should only include the current turn, not the chat history
-        filtered_inputs = {k: v for k, v in inputs.items() if k != self.memory_key}
+        exclude = set(self.exclude_input_keys)
+        exclude.add(self.memory_key)
+        filtered_inputs = {k: v for k, v in inputs.items() if k not in exclude}
         texts = [
             f"{k}: {v}"
             for k, v in list(filtered_inputs.items()) + list(outputs.items())

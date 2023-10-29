@@ -608,14 +608,21 @@ class Numeric(HasExpressionLookup, TypeEngine[_N]):
 
 
 class Float(Numeric[_N]):
-
     """Type representing floating point types, such as ``FLOAT`` or ``REAL``.
 
     This type returns Python ``float`` objects by default, unless the
-    :paramref:`.Float.asdecimal` flag is set to True, in which case they
+    :paramref:`.Float.asdecimal` flag is set to ``True``, in which case they
     are coerced to ``decimal.Decimal`` objects.
 
-
+    When a :paramref:`.Float.precision` is not provided in a
+    :class:`_types.Float` type some backend may compile this type as
+    an 8 bytes / 64 bit float datatype. To use a 4 bytes / 32 bit float
+    datatype a precision <= 24 can usually be provided or the
+    :class:`_types.REAL` type can be used.
+    This is known to be the case in the PostgreSQL and MSSQL dialects
+    that render the type as ``FLOAT`` that's in both an alias of
+    ``DOUBLE PRECISION``. Other third party dialects may have similar
+    behavior.
     """
 
     __visit_name__ = "float"
@@ -1395,7 +1402,10 @@ class Enum(String, SchemaType, Emulated, TypeEngine[Union[str, enum.Enum]]):
            compliant enumerated type, which should then return a list of string
            values to be persisted. This allows for alternate usages such as
            using the string value of an enum to be persisted to the database
-           instead of its name.
+           instead of its name. The callable must return the values to be
+           persisted in the same order as iterating through the Enum's
+           ``__member__`` attribute. For example
+           ``lambda x: [i.value for i in x]``.
 
            .. versionadded:: 1.2.3
 
@@ -1451,7 +1461,11 @@ class Enum(String, SchemaType, Emulated, TypeEngine[Union[str, enum.Enum]]):
             self._default_length = length = 0
 
         if length_arg is not NO_ARG:
-            if not _disable_warnings and length_arg < length:
+            if (
+                not _disable_warnings
+                and length_arg is not None
+                and length_arg < length
+            ):
                 raise ValueError(
                     "When provided, length must be larger or equal"
                     " than the length of the longest enum value. %s < %s"
@@ -1658,14 +1672,14 @@ class Enum(String, SchemaType, Emulated, TypeEngine[Union[str, enum.Enum]]):
         )
 
     def as_generic(self, allow_nulltype=False):
-        if hasattr(self, "enums"):
+        try:
             args = self.enums
-        else:
+        except AttributeError:
             raise NotImplementedError(
                 "TypeEngine.as_generic() heuristic "
                 "is undefined for types that inherit Enum but do not have "
                 "an `enums` attribute."
-            )
+            ) from None
 
         return util.constructor_copy(
             self, self._generic_type_affinity, *args, _disable_warnings=True

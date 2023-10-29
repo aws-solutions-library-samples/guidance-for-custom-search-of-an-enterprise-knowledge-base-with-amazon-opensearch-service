@@ -1,26 +1,28 @@
-"""TF-IDF Retriever.
-
-Largely based on
-https://github.com/asvskartheek/Text-Retrieval/blob/master/TF-IDF%20Search%20Engine%20(SKLEARN).ipynb"""
-
 from __future__ import annotations
 
+import pickle
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
-from pydantic import BaseModel
-
-from langchain.callbacks.manager import (
-    AsyncCallbackManagerForRetrieverRun,
-    CallbackManagerForRetrieverRun,
-)
+from langchain.callbacks.manager import CallbackManagerForRetrieverRun
 from langchain.schema import BaseRetriever, Document
 
 
-class TFIDFRetriever(BaseRetriever, BaseModel):
+class TFIDFRetriever(BaseRetriever):
+    """`TF-IDF` retriever.
+
+    Largely based on
+    https://github.com/asvskartheek/Text-Retrieval/blob/master/TF-IDF%20Search%20Engine%20(SKLEARN).ipynb
+    """
+
     vectorizer: Any
+    """TF-IDF vectorizer."""
     docs: List[Document]
+    """Documents."""
     tfidf_array: Any
+    """TF-IDF array."""
     k: int = 4
+    """Number of documents to return."""
 
     class Config:
         """Configuration for this pydantic object."""
@@ -77,7 +79,48 @@ class TFIDFRetriever(BaseRetriever, BaseModel):
         return_docs = [self.docs[i] for i in results.argsort()[-self.k :][::-1]]
         return return_docs
 
-    async def _aget_relevant_documents(
-        self, query: str, *, run_manager: AsyncCallbackManagerForRetrieverRun
-    ) -> List[Document]:
-        raise NotImplementedError
+    def save_local(
+        self,
+        folder_path: str,
+        file_name: str = "tfidf_vectorizer",
+    ) -> None:
+        try:
+            import joblib
+        except ImportError:
+            raise ImportError(
+                "Could not import joblib, please install with `pip install joblib`."
+            )
+
+        path = Path(folder_path)
+        path.mkdir(exist_ok=True, parents=True)
+
+        # Save vectorizer with joblib dump.
+        joblib.dump(self.vectorizer, path / f"{file_name}.joblib")
+
+        # Save docs and tfidf array as pickle.
+        with open(path / f"{file_name}.pkl", "wb") as f:
+            pickle.dump((self.docs, self.tfidf_array), f)
+
+    @classmethod
+    def load_local(
+        cls,
+        folder_path: str,
+        file_name: str = "tfidf_vectorizer",
+    ) -> TFIDFRetriever:
+        try:
+            import joblib
+        except ImportError:
+            raise ImportError(
+                "Could not import joblib, please install with `pip install joblib`."
+            )
+
+        path = Path(folder_path)
+
+        # Load vectorizer with joblib load.
+        vectorizer = joblib.load(path / f"{file_name}.joblib")
+
+        # Load docs and tfidf array as pickle.
+        with open(path / f"{file_name}.pkl", "rb") as f:
+            docs, tfidf_array = pickle.load(f)
+
+        return cls(vectorizer=vectorizer, docs=docs, tfidf_array=tfidf_array)

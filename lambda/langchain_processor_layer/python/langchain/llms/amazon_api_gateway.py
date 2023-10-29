@@ -1,16 +1,18 @@
 from typing import Any, Dict, List, Mapping, Optional
 
 import requests
-from pydantic import Extra
 
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.llms.utils import enforce_stop_tokens
+from langchain.pydantic_v1 import Extra
 
 
 class ContentHandlerAmazonAPIGateway:
-    """Adapter class to prepare the inputs from Langchain to a format
-    that LLM model expects. Also, provides helper function to extract
+    """Adapter to prepare the inputs from Langchain to a format
+    that LLM model expects.
+
+    It also provides helper function to extract
     the generated text from the model response."""
 
     @classmethod
@@ -25,7 +27,7 @@ class ContentHandlerAmazonAPIGateway:
 
 
 class AmazonAPIGateway(LLM):
-    """Wrapper around custom Amazon API Gateway"""
+    """Amazon API Gateway to access LLM models hosted on AWS."""
 
     api_url: str
     """API Gateway URL"""
@@ -34,7 +36,7 @@ class AmazonAPIGateway(LLM):
     """API Gateway HTTP Headers to send, e.g. for authentication"""
 
     model_kwargs: Optional[Dict] = None
-    """Key word arguments to pass to the model."""
+    """Keyword arguments to pass to the model."""
 
     content_handler: ContentHandlerAmazonAPIGateway = ContentHandlerAmazonAPIGateway()
     """The content handler class that provides an input and
@@ -52,7 +54,7 @@ class AmazonAPIGateway(LLM):
         """Get the identifying parameters."""
         _model_kwargs = self.model_kwargs or {}
         return {
-            **{"endpoint_name": self.api_url},
+            **{"api_url": self.api_url, "headers": self.headers},
             **{"model_kwargs": _model_kwargs},
         }
 

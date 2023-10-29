@@ -300,7 +300,7 @@ class Annotated(SupportsAnnotations):
 
     def _annotate(self, values: _AnnotationDict) -> Self:
         _values = self._annotations.union(values)
-        new = self._with_annotations(_values)  # type: ignore
+        new = self._with_annotations(_values)
         return new
 
     def _with_annotations(self, values: _AnnotationDict) -> Self:
@@ -402,6 +402,18 @@ annotated_classes: Dict[
 _SA = TypeVar("_SA", bound="SupportsAnnotations")
 
 
+def _safe_annotate(to_annotate: _SA, annotations: _AnnotationDict) -> _SA:
+    try:
+        _annotate = to_annotate._annotate
+    except AttributeError:
+        # skip objects that don't actually have an `_annotate`
+        # attribute, namely QueryableAttribute inside of a join
+        # condition
+        return to_annotate
+    else:
+        return _annotate(annotations)
+
+
 def _deep_annotate(
     element: _SA,
     annotations: _AnnotationDict,
@@ -455,7 +467,7 @@ def _deep_annotate(
             if annotate_callable:
                 newelem = annotate_callable(to_annotate, annotations)
             else:
-                newelem = to_annotate._annotate(annotations)
+                newelem = _safe_annotate(to_annotate, annotations)
         else:
             newelem = elem
 

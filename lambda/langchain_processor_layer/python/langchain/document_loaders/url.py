@@ -9,7 +9,31 @@ logger = logging.getLogger(__name__)
 
 
 class UnstructuredURLLoader(BaseLoader):
-    """Loader that uses unstructured to load HTML files."""
+    """Load files from remote URLs using `Unstructured`.
+
+    Use the unstructured partition function to detect the MIME type
+    and route the file to the appropriate partitioner.
+
+    You can run the loader in one of two modes: "single" and "elements".
+    If you use "single" mode, the document will be returned as a single
+    langchain Document object. If you use "elements" mode, the unstructured
+    library will split the document into elements such as Title and NarrativeText.
+    You can pass in additional unstructured kwargs after mode to apply
+    different unstructured settings.
+
+    Examples
+    --------
+    from langchain.document_loaders import UnstructuredURLLoader
+
+    loader = UnstructuredURLLoader(
+        urls=["<url-1>", "<url-2>"], mode="elements", strategy="fast",
+    )
+    docs = loader.load()
+
+    References
+    ----------
+    https://unstructured-io.github.io/unstructured/bricks.html#partition
+    """
 
     def __init__(
         self,
@@ -26,7 +50,7 @@ class UnstructuredURLLoader(BaseLoader):
 
             self.__version = __unstructured_version__
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "unstructured package not found, please install it with "
                 "`pip install unstructured`"
             )

@@ -1,4 +1,3 @@
-"""Loader that loads Telegram chat json dump."""
 from __future__ import annotations
 
 import asyncio
@@ -24,10 +23,10 @@ def concatenate_rows(row: dict) -> str:
 
 
 class TelegramChatFileLoader(BaseLoader):
-    """Loader that loads Telegram chat json directory dump."""
+    """Load from `Telegram chat` dump."""
 
     def __init__(self, path: str):
-        """Initialize with path."""
+        """Initialize with a path."""
         self.file_path = path
 
     def load(self) -> List[Document]:
@@ -48,7 +47,7 @@ class TelegramChatFileLoader(BaseLoader):
 
 
 def text_to_docs(text: Union[str, List[str]]) -> List[Document]:
-    """Converts a string or list of strings to a list of Documents with metadata."""
+    """Convert a string or list of strings to a list of Documents with metadata."""
     if isinstance(text, str):
         # Take a single string as one page
         text = [text]
@@ -79,7 +78,7 @@ def text_to_docs(text: Union[str, List[str]]) -> List[Document]:
 
 
 class TelegramChatApiLoader(BaseLoader):
-    """Loader that loads Telegram chat json directory dump."""
+    """Load `Telegram` chat json directory dump."""
 
     def __init__(
         self,
@@ -89,7 +88,16 @@ class TelegramChatApiLoader(BaseLoader):
         username: Optional[str] = None,
         file_path: str = "telegram_data.json",
     ):
-        """Initialize with API parameters."""
+        """Initialize with API parameters.
+
+        Args:
+            chat_entity: The chat entity to fetch data from.
+            api_id: The API ID.
+            api_hash: The API hash.
+            username: The username.
+            file_path: The file path to save the data to. Defaults to
+                 "telegram_data.json".
+        """
         self.chat_entity = chat_entity
         self.api_id = api_id
         self.api_hash = api_hash

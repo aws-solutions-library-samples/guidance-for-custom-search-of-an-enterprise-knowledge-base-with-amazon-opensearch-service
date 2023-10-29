@@ -10,7 +10,7 @@
 r"""
 .. dialect:: oracle
     :name: Oracle
-    :full_support: 11.2, 18c
+    :full_support: 18c
     :normal_support: 11+
     :best_effort: 9+
 
@@ -1217,7 +1217,7 @@ class OracleCompiler(compiler.SQLCompiler):
             return "REGEXP_LIKE(%s, %s, %s)" % (
                 string,
                 pattern,
-                self.process(flags, **kw),
+                self.render_literal_value(flags, sqltypes.STRINGTYPE),
             )
 
     def visit_not_regexp_match_op_binary(self, binary, operator, **kw):
@@ -1227,22 +1227,22 @@ class OracleCompiler(compiler.SQLCompiler):
 
     def visit_regexp_replace_op_binary(self, binary, operator, **kw):
         string = self.process(binary.left, **kw)
-        pattern = self.process(binary.right, **kw)
-        replacement = self.process(binary.modifiers["replacement"], **kw)
+        pattern_replace = self.process(binary.right, **kw)
         flags = binary.modifiers["flags"]
         if flags is None:
-            return "REGEXP_REPLACE(%s, %s, %s)" % (
+            return "REGEXP_REPLACE(%s, %s)" % (
                 string,
-                pattern,
-                replacement,
+                pattern_replace,
             )
         else:
-            return "REGEXP_REPLACE(%s, %s, %s, %s)" % (
+            return "REGEXP_REPLACE(%s, %s, %s)" % (
                 string,
-                pattern,
-                replacement,
-                self.process(flags, **kw),
+                pattern_replace,
+                self.render_literal_value(flags, sqltypes.STRINGTYPE),
             )
+
+    def visit_aggregate_strings_func(self, fn, **kw):
+        return "LISTAGG%s" % self.function_argspec(fn, **kw)
 
 
 class OracleDDLCompiler(compiler.DDLCompiler):
@@ -1318,8 +1318,9 @@ class OracleDDLCompiler(compiler.DDLCompiler):
         text = text.replace("NO MINVALUE", "NOMINVALUE")
         text = text.replace("NO MAXVALUE", "NOMAXVALUE")
         text = text.replace("NO CYCLE", "NOCYCLE")
-        text = text.replace("NO ORDER", "NOORDER")
-        return text
+        if identity_options.order is not None:
+            text += " ORDER" if identity_options.order else " NOORDER"
+        return text.strip()
 
     def visit_computed_column(self, generated, **kw):
         text = "GENERATED ALWAYS AS (%s)" % self.sql_compiler.process(

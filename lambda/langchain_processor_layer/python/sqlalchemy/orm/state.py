@@ -617,8 +617,8 @@ class InstanceState(interfaces.InspectionAttrInfo, Generic[_O]):
             self.class_ = state_dict["class_"]
 
         self.committed_state = state_dict.get("committed_state", {})
-        self._pending_mutations = state_dict.get("_pending_mutations", {})  # type: ignore  # noqa E501
-        self.parents = state_dict.get("parents", {})  # type: ignore
+        self._pending_mutations = state_dict.get("_pending_mutations", {})
+        self.parents = state_dict.get("parents", {})
         self.modified = state_dict.get("modified", False)
         self.expired = state_dict.get("expired", False)
         if "info" in state_dict:
@@ -1121,6 +1121,9 @@ class PendingCollection:
     def __init__(self) -> None:
         self.deleted_items = util.IdentitySet()
         self.added_items = util.OrderedIdentitySet()
+
+    def merge_with_history(self, history: History) -> History:
+        return history._merge(self.added_items, self.deleted_items)
 
     def append(self, value: Any) -> None:
         if value in self.deleted_items:

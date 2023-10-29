@@ -7,12 +7,8 @@ https://learn.microsoft.com/en-us/graph/auth/
 from datetime import datetime as dt
 from typing import List, Optional, Type
 
-from pydantic import BaseModel, Field
-
-from langchain.callbacks.manager import (
-    AsyncCallbackManagerForToolRun,
-    CallbackManagerForToolRun,
-)
+from langchain.callbacks.manager import CallbackManagerForToolRun
+from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools.office365.base import O365BaseTool
 
 
@@ -50,6 +46,8 @@ class SendEventSchema(BaseModel):
 
 
 class O365SendEvent(O365BaseTool):
+    """Tool for sending calendar events in Office 365."""
+
     name: str = "send_event"
     description: str = (
         "Use this tool to create and send an event with the provided event fields."
@@ -83,14 +81,3 @@ class O365SendEvent(O365BaseTool):
 
         output = "Event sent: " + str(event)
         return output
-
-    async def _arun(
-        self,
-        message: str,
-        to: List[str],
-        subject: str,
-        cc: Optional[List[str]] = None,
-        bcc: Optional[List[str]] = None,
-        run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
-    ) -> str:
-        raise NotImplementedError(f"The tool {self.name} does not support async yet.")

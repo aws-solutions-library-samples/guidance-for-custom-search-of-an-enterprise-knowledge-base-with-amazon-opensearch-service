@@ -1,11 +1,10 @@
-"""Wrapper around AI21 APIs."""
 from typing import Any, Dict, List, Optional
 
 import requests
-from pydantic import BaseModel, Extra, root_validator
 
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
+from langchain.pydantic_v1 import BaseModel, Extra, root_validator
 from langchain.utils import get_from_dict_or_env
 
 
@@ -21,7 +20,7 @@ class AI21PenaltyData(BaseModel):
 
 
 class AI21(LLM):
-    """Wrapper around AI21 large language models.
+    """AI21 large language models.
 
     To use, you should have the environment variable ``AI21_API_KEY``
     set with your API key.

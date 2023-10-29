@@ -1,7 +1,6 @@
+import asyncio
 import logging
-from typing import List
-
-from pydantic import BaseModel, Field
+from typing import List, Sequence
 
 from langchain.callbacks.manager import (
     AsyncCallbackManagerForRetrieverRun,
@@ -11,16 +10,22 @@ from langchain.chains.llm import LLMChain
 from langchain.llms.base import BaseLLM
 from langchain.output_parsers.pydantic import PydanticOutputParser
 from langchain.prompts.prompt import PromptTemplate
+from langchain.pydantic_v1 import BaseModel, Field
 from langchain.schema import BaseRetriever, Document
 
 logger = logging.getLogger(__name__)
 
 
 class LineList(BaseModel):
+    """List of lines."""
+
     lines: List[str] = Field(description="Lines of text")
+    """List of lines."""
 
 
 class LineListOutputParser(PydanticOutputParser):
+    """Output parser for a list of lines."""
+
     def __init__(self) -> None:
         super().__init__(pydantic_object=LineList)
 
@@ -38,37 +43,24 @@ DEFAULT_QUERY_PROMPT = PromptTemplate(
     By generating multiple perspectives on the user question, 
     your goal is to help the user overcome some of the limitations 
     of distance-based similarity search. Provide these alternative 
-    questions seperated by newlines. Original question: {question}""",
+    questions separated by newlines. Original question: {question}""",
 )
 
 
+def _unique_documents(documents: Sequence[Document]) -> List[Document]:
+    return [doc for i, doc in enumerate(documents) if doc not in documents[:i]]
+
+
 class MultiQueryRetriever(BaseRetriever):
+    """Given a query, use an LLM to write a set of queries.
 
-    """Given a user query, use an LLM to write a set of queries.
-    Retrieve docs for each query. Rake the unique union of all retrieved docs."""
+    Retrieve docs for each query. Return the unique union of all retrieved docs.
+    """
 
-    def __init__(
-        self,
-        retriever: BaseRetriever,
-        llm_chain: LLMChain,
-        verbose: bool = True,
-        parser_key: str = "lines",
-    ) -> None:
-        """Initialize MultiQueryRetriever.
-
-        Args:
-            retriever: retriever to query documents from
-            llm_chain: llm_chain for query generation
-            verbose: show the queries that we generated to the user
-            parser_key: attribute name for the parsed output
-
-        Returns:
-            MultiQueryRetriever
-        """
-        self.retriever = retriever
-        self.llm_chain = llm_chain
-        self.verbose = verbose
-        self.parser_key = parser_key
+    retriever: BaseRetriever
+    llm_chain: LLMChain
+    verbose: bool = True
+    parser_key: str = "lines"
 
     @classmethod
     def from_llm(
@@ -95,13 +87,71 @@ class MultiQueryRetriever(BaseRetriever):
             parser_key=parser_key,
         )
 
+    async def _aget_relevant_documents(
+        self,
+        query: str,
+        *,
+        run_manager: AsyncCallbackManagerForRetrieverRun,
+    ) -> List[Document]:
+        """Get relevant documents given a user query.
+
+        Args:
+            question: user query
+
+        Returns:
+            Unique union of relevant documents from all generated queries
+        """
+        queries = await self.agenerate_queries(query, run_manager)
+        documents = await self.aretrieve_documents(queries, run_manager)
+        return self.unique_union(documents)
+
+    async def agenerate_queries(
+        self, question: str, run_manager: AsyncCallbackManagerForRetrieverRun
+    ) -> List[str]:
+        """Generate queries based upon user input.
+
+        Args:
+            question: user query
+
+        Returns:
+            List of LLM generated queries that are similar to the user input
+        """
+        response = await self.llm_chain.acall(
+            inputs={"question": question}, callbacks=run_manager.get_child()
+        )
+        lines = getattr(response["text"], self.parser_key, [])
+        if self.verbose:
+            logger.info(f"Generated queries: {lines}")
+        return lines
+
+    async def aretrieve_documents(
+        self, queries: List[str], run_manager: AsyncCallbackManagerForRetrieverRun
+    ) -> List[Document]:
+        """Run all LLM generated queries.
+
+        Args:
+            queries: query list
+
+        Returns:
+            List of retrieved Documents
+        """
+        document_lists = await asyncio.gather(
+            *(
+                self.retriever.aget_relevant_documents(
+                    query, callbacks=run_manager.get_child()
+                )
+                for query in queries
+            )
+        )
+        return [doc for docs in document_lists for doc in docs]
+
     def _get_relevant_documents(
         self,
         query: str,
         *,
         run_manager: CallbackManagerForRetrieverRun,
     ) -> List[Document]:
-        """Get relevated documents given a user query.
+        """Get relevant documents given a user query.
 
         Args:
             question: user query
@@ -111,16 +161,7 @@ class MultiQueryRetriever(BaseRetriever):
         """
         queries = self.generate_queries(query, run_manager)
         documents = self.retrieve_documents(queries, run_manager)
-        unique_documents = self.unique_union(documents)
-        return unique_documents
-
-    async def _aget_relevant_documents(
-        self,
-        query: str,
-        *,
-        run_manager: AsyncCallbackManagerForRetrieverRun,
-    ) -> List[Document]:
-        raise NotImplementedError
+        return self.unique_union(documents)
 
     def generate_queries(
         self, question: str, run_manager: CallbackManagerForRetrieverRun
@@ -150,7 +191,7 @@ class MultiQueryRetriever(BaseRetriever):
             queries: query list
 
         Returns:
-            List of retrived Documents
+            List of retrieved Documents
         """
         documents = []
         for query in queries:
@@ -161,20 +202,12 @@ class MultiQueryRetriever(BaseRetriever):
         return documents
 
     def unique_union(self, documents: List[Document]) -> List[Document]:
-        """Get uniqe Documents.
+        """Get unique Documents.
 
         Args:
-            documents: List of retrived Documents
+            documents: List of retrieved Documents
 
         Returns:
-            List of unique retrived Documents
+            List of unique retrieved Documents
         """
-        # Create a dictionary with page_content as keys to remove duplicates
-        # TODO: Add Document ID property (e.g., UUID)
-        unique_documents_dict = {
-            (doc.page_content, tuple(sorted(doc.metadata.items()))): doc
-            for doc in documents
-        }
-
-        unique_documents = list(unique_documents_dict.values())
-        return unique_documents
+        return _unique_documents(documents)

@@ -1,10 +1,7 @@
-"""Module providing a wrapper around OctoAI Compute Service embedding models."""
-
 from typing import Any, Dict, List, Mapping, Optional
 
-from pydantic import BaseModel, Extra, Field, root_validator
-
-from langchain.embeddings.base import Embeddings
+from langchain.pydantic_v1 import BaseModel, Extra, Field, root_validator
+from langchain.schema.embeddings import Embeddings
 from langchain.utils import get_from_dict_or_env
 
 DEFAULT_EMBED_INSTRUCTION = "Represent this input: "
@@ -12,7 +9,7 @@ DEFAULT_QUERY_INSTRUCTION = "Represent the question for retrieving similar docum
 
 
 class OctoAIEmbeddings(BaseModel, Embeddings):
-    """Wrapper around OctoAI Compute Service embedding models.
+    """OctoAI Compute Service embedding models.
 
     The environment variable ``OCTOAI_API_TOKEN`` should be set
     with your API token, or it can be passed
@@ -90,4 +87,4 @@ class OctoAIEmbeddings(BaseModel, Embeddings):
     def embed_query(self, text: str) -> List[float]:
         """Compute query embedding using an OctoAI instruct model."""
         text = text.replace("\n", " ")
-        return self._compute_embeddings([text], self.embed_instruction)[0]
+        return self._compute_embeddings([text], self.query_instruction)[0]

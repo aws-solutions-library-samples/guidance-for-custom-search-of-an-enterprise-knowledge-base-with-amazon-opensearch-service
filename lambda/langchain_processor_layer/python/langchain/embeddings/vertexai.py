@@ -1,14 +1,14 @@
-"""Wrapper around Google VertexAI embedding models."""
 from typing import Dict, List
 
-from pydantic import root_validator
-
-from langchain.embeddings.base import Embeddings
 from langchain.llms.vertexai import _VertexAICommon
+from langchain.pydantic_v1 import root_validator
+from langchain.schema.embeddings import Embeddings
 from langchain.utilities.vertexai import raise_vertex_import_error
 
 
 class VertexAIEmbeddings(_VertexAICommon, Embeddings):
+    """Google Cloud VertexAI embedding models."""
+
     model_name: str = "textembedding-gecko"
 
     @root_validator()

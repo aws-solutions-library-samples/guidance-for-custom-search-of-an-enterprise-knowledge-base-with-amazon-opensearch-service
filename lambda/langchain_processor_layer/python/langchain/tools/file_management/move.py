@@ -1,12 +1,8 @@
 import shutil
 from typing import Optional, Type
 
-from pydantic import BaseModel, Field
-
-from langchain.callbacks.manager import (
-    AsyncCallbackManagerForToolRun,
-    CallbackManagerForToolRun,
-)
+from langchain.callbacks.manager import CallbackManagerForToolRun
+from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools.base import BaseTool
 from langchain.tools.file_management.utils import (
     INVALID_PATH_TEMPLATE,
@@ -23,6 +19,8 @@ class FileMoveInput(BaseModel):
 
 
 class MoveFileTool(BaseFileToolMixin, BaseTool):
+    """Tool that moves a file."""
+
     name: str = "move_file"
     args_schema: Type[BaseModel] = FileMoveInput
     description: str = "Move or rename a file from one location to another"
@@ -54,11 +52,4 @@ class MoveFileTool(BaseFileToolMixin, BaseTool):
         except Exception as e:
             return "Error: " + str(e)
 
-    async def _arun(
-        self,
-        source_path: str,
-        destination_path: str,
-        run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
-    ) -> str:
-        # TODO: Add aiofiles method
-        raise NotImplementedError
+    # TODO: Add aiofiles method

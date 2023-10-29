@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, List, Optional, Sequence, Union
 
-from pydantic import BaseModel
+from langchain.pydantic_v1 import BaseModel
 
 
 class Visitor(ABC):
@@ -53,7 +53,17 @@ def _to_snake_case(name: str) -> str:
 
 
 class Expr(BaseModel):
+    """Base class for all expressions."""
+
     def accept(self, visitor: Visitor) -> Any:
+        """Accept a visitor.
+
+        Args:
+            visitor: visitor to accept
+
+        Returns:
+            result of visiting
+        """
         return getattr(visitor, f"visit_{_to_snake_case(self.__class__.__name__)}")(
             self
         )
@@ -71,12 +81,15 @@ class Comparator(str, Enum):
     """Enumerator of the comparison operators."""
 
     EQ = "eq"
+    NE = "ne"
     GT = "gt"
     GTE = "gte"
     LT = "lt"
     LTE = "lte"
     CONTAIN = "contain"
     LIKE = "like"
+    IN = "in"
+    NIN = "nin"
 
 
 class FilterDirective(Expr, ABC):
@@ -99,6 +112,11 @@ class Operation(FilterDirective):
 
 
 class StructuredQuery(Expr):
+    """A structured query."""
+
     query: str
+    """Query string."""
     filter: Optional[FilterDirective]
+    """Filtering expression."""
     limit: Optional[int]
+    """Limit on the number of results."""

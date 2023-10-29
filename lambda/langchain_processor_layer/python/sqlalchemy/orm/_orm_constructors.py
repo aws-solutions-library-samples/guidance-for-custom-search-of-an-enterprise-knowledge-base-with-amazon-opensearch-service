@@ -114,7 +114,7 @@ def mapped_column(
     primary_key: Optional[bool] = False,
     deferred: Union[_NoArg, bool] = _NoArg.NO_ARG,
     deferred_group: Optional[str] = None,
-    deferred_raiseload: bool = False,
+    deferred_raiseload: Optional[bool] = None,
     use_existing_column: bool = False,
     name: Optional[str] = None,
     type_: Optional[_TypeEngineArgument[Any]] = None,
@@ -132,7 +132,7 @@ def mapped_column(
     quote: Optional[bool] = None,
     system: bool = False,
     comment: Optional[str] = None,
-    sort_order: int = 0,
+    sort_order: Union[_NoArg, int] = _NoArg.NO_ARG,
     **kw: Any,
 ) -> MappedColumn[Any]:
     r"""declare a new ORM-mapped :class:`_schema.Column` construct
@@ -2182,7 +2182,7 @@ AliasedType = Annotated[Type[_O], "aliased"]
 @overload
 def aliased(
     element: Type[_O],
-    alias: Optional[Union[Alias, Subquery]] = None,
+    alias: Optional[FromClause] = None,
     name: Optional[str] = None,
     flat: bool = False,
     adapt_on_names: bool = False,
@@ -2193,7 +2193,7 @@ def aliased(
 @overload
 def aliased(
     element: Union[AliasedClass[_O], Mapper[_O], AliasedInsp[_O]],
-    alias: Optional[Union[Alias, Subquery]] = None,
+    alias: Optional[FromClause] = None,
     name: Optional[str] = None,
     flat: bool = False,
     adapt_on_names: bool = False,
@@ -2204,7 +2204,7 @@ def aliased(
 @overload
 def aliased(
     element: FromClause,
-    alias: Optional[Union[Alias, Subquery]] = None,
+    alias: None = None,
     name: Optional[str] = None,
     flat: bool = False,
     adapt_on_names: bool = False,
@@ -2214,7 +2214,7 @@ def aliased(
 
 def aliased(
     element: Union[_EntityType[_O], FromClause],
-    alias: Optional[Union[Alias, Subquery]] = None,
+    alias: Optional[FromClause] = None,
     name: Optional[str] = None,
     flat: bool = False,
     adapt_on_names: bool = False,

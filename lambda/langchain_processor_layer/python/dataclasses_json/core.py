@@ -2,9 +2,7 @@ import copy
 import json
 import warnings
 from collections import defaultdict, namedtuple
-# noinspection PyProtectedMember
 from dataclasses import (MISSING,
-                         _is_dataclass_instance,
                          fields,
                          is_dataclass  # type: ignore
                          )
@@ -23,14 +21,14 @@ from dataclasses_json.utils import (_get_type_cons, _get_type_origin,
                                     _is_collection, _is_mapping, _is_new_type,
                                     _is_optional, _isinstance_safe,
                                     _get_type_arg_param,
-                                    _get_type_args,
+                                    _get_type_args, _is_counter,
                                     _NO_ARGS,
-                                    _issubclass_safe)
+                                    _issubclass_safe, _is_tuple)
 
 Json = Union[dict, list, str, int, float, bool, None]
 
 confs = ['encoder', 'decoder', 'mm_field', 'letter_case', 'exclude']
-FieldOverride = namedtuple('FieldOverride', confs)
+FieldOverride = namedtuple('FieldOverride', confs)  # type: ignore
 
 
 class _ExtendedEncoder(json.JSONEncoder):
@@ -65,7 +63,7 @@ def _user_overrides_or_exts(cls):
         if field.type in decoders:
             global_metadata[field.name]['decoder'] = decoders[field.type]
         if field.type in mm_fields:
-            global_metadata[field.name]['mm_fields'] = mm_fields[field.type]
+            global_metadata[field.name]['mm_field'] = mm_fields[field.type]
     try:
         cls_config = (cls.dataclass_json_config
                       if cls.dataclass_json_config is not None else {})
@@ -114,6 +112,11 @@ def _encode_overrides(kvs, overrides, encode_json=False):
             letter_case = overrides[k].letter_case
             original_key = k
             k = letter_case(k) if letter_case is not None else k
+            if k in override_kvs:
+                raise ValueError(
+                    f"Multiple fields map to the same JSON "
+                    f"key after letter case encoding: {k}"
+                )
 
             encoder = overrides[original_key].encoder
             v = encoder(v) if encoder is not None else v
@@ -182,7 +185,7 @@ def _decode_dataclass(cls, kvs, infer_missing):
                     )
                 else:
                     warnings.warn(
-                        f"`NoneType` object {warning}.", RuntimeWarning
+                        f"'NoneType' object {warning}.", RuntimeWarning
                     )
             init_kwargs[field.name] = field_value
             continue
@@ -268,23 +271,32 @@ def _decode_generic(type_, value, infer_missing):
         res = type_(value)
     # FIXME this is a hack to fix a deeper underlying issue. A refactor is due.
     elif _is_collection(type_):
-        if _is_mapping(type_):
+        if _is_mapping(type_) and not _is_counter(type_):
             k_type, v_type = _get_type_args(type_, (Any, Any))
             # a mapping type has `.keys()` and `.values()`
             # (see collections.abc)
             ks = _decode_dict_keys(k_type, value.keys(), infer_missing)
             vs = _decode_items(v_type, value.values(), infer_missing)
             xs = zip(ks, vs)
+        elif _is_tuple(type_):
+            types = _get_type_args(type_)
+            if Ellipsis in types:
+                xs = _decode_items(types[0], value, infer_missing)
+            else:
+                xs = _decode_items(_get_type_args(type_) or _NO_ARGS, value, infer_missing)
+        elif _is_counter(type_):
+            xs = dict(zip(_decode_items(_get_type_arg_param(type_, 0), value.keys(), infer_missing), value.values()))
         else:
-            xs = _decode_items(_get_type_arg_param(type_, 0),
-                               value, infer_missing)
+            xs = _decode_items(_get_type_arg_param(type_, 0), value, infer_missing)
 
         # get the constructor if using corresponding generic type in `typing`
         # otherwise fallback on constructing using type_ itself
+        materialize_type = type_
         try:
-            res = _get_type_cons(type_)(xs)
+            materialize_type = _get_type_cons(type_)
         except (TypeError, AttributeError):
-            res = type_(xs)
+            pass
+        res = materialize_type(xs)
     else:  # Optional or Union
         _args = _get_type_args(type_)
         if _args is _NO_ARGS:
@@ -298,8 +310,22 @@ def _decode_generic(type_, value, infer_missing):
                 res = _decode_generic(type_arg, value, infer_missing)
             else:
                 res = _support_extended_types(type_arg, value)
-        else:  # Union (already decoded or unsupported 'from_json' used)
-            res = value
+        else:  # Union (already decoded or try to decode a dataclass)
+            type_options = _get_type_args(type_)
+            res = value  # assume already decoded
+            if type(value) is dict and dict not in type_options:
+                for type_option in type_options:
+                    if is_dataclass(type_option):
+                        try:
+                            res = _decode_dataclass(type_option, value, infer_missing)
+                            break
+                        except (KeyError, ValueError):
+                            continue
+                if res == value:
+                    warnings.warn(
+                        f"Failed to decode {value} Union dataclasses."
+                        f"Expected Union to include a matching dataclass and it didn't."
+                    )
     return res
 
 
@@ -330,7 +356,7 @@ def _decode_dict_keys(key_type, xs, infer_missing):
     return map(decode_function, _decode_items(key_type, xs, infer_missing))
 
 
-def _decode_items(type_arg, xs, infer_missing):
+def _decode_items(type_args, xs, infer_missing):
     """
     This is a tricky situation where we need to check both the annotated
     type info (which is usually a type from `typing`) and check the
@@ -340,14 +366,16 @@ def _decode_items(type_arg, xs, infer_missing):
     type_arg is a typevar we need to extract the reified type information
     hence the check of `is_dataclass(vs)`
     """
-    if is_dataclass(type_arg) or is_dataclass(xs):
-        items = (_decode_dataclass(type_arg, x, infer_missing)
-                 for x in xs)
-    elif _is_supported_generic(type_arg):
-        items = (_decode_generic(type_arg, x, infer_missing) for x in xs)
-    else:
-        items = xs
-    return items
+    def _decode_item(type_arg, x):
+        if is_dataclass(type_arg) or is_dataclass(xs):
+            return _decode_dataclass(type_arg, x, infer_missing)
+        if _is_supported_generic(type_arg):
+            return _decode_generic(type_arg, x, infer_missing)
+        return x
+
+    if _isinstance_safe(type_args, Collection) and not _issubclass_safe(type_args, Enum):
+        return list(_decode_item(type_arg, x) for type_arg, x in zip(type_args, xs))
+    return list(_decode_item(type_args, x) for x in xs)
 
 
 def _asdict(obj, encode_json=False):
@@ -355,7 +383,7 @@ def _asdict(obj, encode_json=False):
     A re-implementation of `asdict` (based on the original in the `dataclasses`
     source) to support arbitrary Collection and Mapping types.
     """
-    if _is_dataclass_instance(obj):
+    if is_dataclass(obj):
         result = []
         overrides = _user_overrides_or_exts(obj)
         for field in fields(obj):
@@ -376,8 +404,8 @@ def _asdict(obj, encode_json=False):
         return dict((_asdict(k, encode_json=encode_json),
                      _asdict(v, encode_json=encode_json)) for k, v in
                     obj.items())
-    elif isinstance(obj, Collection) and not isinstance(obj, str) \
-            and not isinstance(obj, bytes):
+    # enum.IntFlag and enum.Flag are regarded as collections in Python 3.11, thus a check against Enum is needed
+    elif isinstance(obj, Collection) and not isinstance(obj, (str, bytes, Enum)):
         return list(_asdict(v, encode_json=encode_json) for v in obj)
     else:
         return copy.deepcopy(obj)

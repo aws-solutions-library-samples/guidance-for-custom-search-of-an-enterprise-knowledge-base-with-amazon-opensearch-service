@@ -1,24 +1,28 @@
+from __future__ import annotations
+
 import json
 import re
 from collections import defaultdict
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
 import requests
-from openapi_schema_pydantic import Parameter
 from requests import Response
 
-from langchain import LLMChain
-from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.manager import CallbackManagerForChainRun
 from langchain.chains.base import Chain
+from langchain.chains.llm import LLMChain
 from langchain.chains.sequential import SequentialChain
 from langchain.chat_models import ChatOpenAI
-from langchain.input import get_colored_text
 from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema import BasePromptTemplate
+from langchain.schema.language_model import BaseLanguageModel
 from langchain.tools import APIOperation
 from langchain.utilities.openapi import OpenAPISpec
+from langchain.utils.input import get_colored_text
+
+if TYPE_CHECKING:
+    from openapi_pydantic import Parameter
 
 
 def _get_description(o: Any, prefer_short: bool) -> Optional[str]:
@@ -188,9 +192,14 @@ def openapi_spec_to_openai_fn(
 
 
 class SimpleRequestChain(Chain):
+    """Chain for making a simple request to an API endpoint."""
+
     request_method: Callable
+    """Method to use for making the request."""
     output_key: str = "response"
+    """Key to use for the output of the request."""
     input_key: str = "function"
+    """Key to use for the input of the request."""
 
     @property
     def input_keys(self) -> List[str]:
@@ -207,8 +216,8 @@ class SimpleRequestChain(Chain):
     ) -> Dict[str, Any]:
         """Run the logic of this chain and return the output."""
         _run_manager = run_manager or CallbackManagerForChainRun.get_noop_manager()
-        name = inputs["function"].pop("name")
-        args = inputs["function"].pop("arguments")
+        name = inputs[self.input_key].pop("name")
+        args = inputs[self.input_key].pop("arguments")
         _pretty_name = get_colored_text(name, "green")
         _pretty_args = get_colored_text(json.dumps(args, indent=2), "green")
         _text = f"Calling endpoint {_pretty_name} with arguments:\n" + _pretty_args
@@ -218,7 +227,7 @@ class SimpleRequestChain(Chain):
             response = (
                 f"{api_response.status_code}: {api_response.reason}"
                 + f"\nFor {name} "
-                + f"Called with args: {args['params']}"
+                + f"Called with args: {args.get('params','')}"
             )
         else:
             try:
@@ -257,6 +266,8 @@ def get_openapi_chain(
             try:
                 spec = conversion(spec)  # type: ignore[arg-type]
                 break
+            except ImportError as e:
+                raise e
             except Exception:  # noqa: E722
                 pass
         if isinstance(spec, str):

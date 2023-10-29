@@ -3,10 +3,17 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional
 
 import requests
-from pydantic import BaseModel, Extra, Field, PrivateAttr, root_validator, validator
 
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
+from langchain.pydantic_v1 import (
+    BaseModel,
+    Extra,
+    Field,
+    PrivateAttr,
+    root_validator,
+    validator,
+)
 
 __all__ = ["Databricks"]
 
@@ -85,7 +92,7 @@ def get_repl_context() -> Any:
 
         return get_context()
     except ImportError:
-        raise ValueError(
+        raise ImportError(
             "Cannot access dbruntime, not running inside a Databricks notebook."
         )
 
@@ -130,7 +137,8 @@ def get_default_api_token() -> str:
 
 
 class Databricks(LLM):
-    """LLM wrapper around a Databricks serving endpoint or a cluster driver proxy app.
+    """Databricks serving endpoint or a cluster driver proxy app for LLM.
+
     It supports two endpoint types:
 
     * **Serving endpoint** (recommended for both production and development).
@@ -193,7 +201,7 @@ class Databricks(LLM):
     """
 
     endpoint_name: Optional[str] = None
-    """Name of the model serving endpont.
+    """Name of the model serving endpoint.
     You must specify the endpoint name to connect to a model serving endpoint.
     You must not set both ``endpoint_name`` and ``cluster_id``.
     """

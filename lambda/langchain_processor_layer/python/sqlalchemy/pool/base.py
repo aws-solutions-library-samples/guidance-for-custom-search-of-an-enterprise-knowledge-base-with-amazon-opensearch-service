@@ -323,13 +323,13 @@ class Pool(log.Identified, event.EventTarget):
 
         # mypy seems to get super confused assigning functions to
         # attributes
-        self._invoke_creator = self._should_wrap_creator(creator)  # type: ignore  # noqa: E501
+        self._invoke_creator = self._should_wrap_creator(creator)
 
     @_creator.deleter
     def _creator(self) -> None:
         # needed for mock testing
         del self._creator_arg
-        del self._invoke_creator  # type: ignore[misc]
+        del self._invoke_creator
 
     def _should_wrap_creator(
         self, creator: Union[_CreatorFnType, _CreatorWRecFnType]
@@ -835,7 +835,7 @@ class _ConnectionRecord(ConnectionPoolEntry):
         # time and invalidation for the logic below to work reliably.
 
         if self.dbapi_connection is None:
-            self.info.clear()  # type: ignore  # our info is always present
+            self.info.clear()
             self.__connect()
         elif (
             self.__pool._recycle > -1
@@ -863,7 +863,7 @@ class _ConnectionRecord(ConnectionPoolEntry):
 
         if recycle:
             self.__close(terminate=True)
-            self.info.clear()  # type: ignore  # our info is always present
+            self.info.clear()
 
             self.__connect()
 
@@ -1040,7 +1040,9 @@ def _finalize_fairy(
     # test/engine/test_pool.py::PoolEventsTest::test_checkin_event_gc[True]
     # which actually started failing when pytest warnings plugin was
     # turned on, due to util.warn() above
-    fairy.dbapi_connection = fairy._connection_record = None  # type: ignore
+    if fairy is not None:
+        fairy.dbapi_connection = None  # type: ignore
+        fairy._connection_record = None
     del dbapi_connection
     del connection_record
     del fairy

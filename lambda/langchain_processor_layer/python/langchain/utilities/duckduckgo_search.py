@@ -5,17 +5,15 @@ https://pypi.org/project/duckduckgo-search/
 """
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Extra
-from pydantic.class_validators import root_validator
+from langchain.pydantic_v1 import BaseModel, Extra, root_validator
 
 
 class DuckDuckGoSearchAPIWrapper(BaseModel):
     """Wrapper for DuckDuckGo Search API.
 
-    Free and does not require any setup
+    Free and does not require any setup.
     """
 
-    k: int = 10
     region: Optional[str] = "wt-wt"
     safesearch: str = "moderate"
     time: Optional[str] = "y"
@@ -32,7 +30,7 @@ class DuckDuckGoSearchAPIWrapper(BaseModel):
         try:
             from duckduckgo_search import DDGS  # noqa: F401
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import duckduckgo-search python package. "
                 "Please install it with `pip install duckduckgo-search`."
             )
@@ -63,7 +61,9 @@ class DuckDuckGoSearchAPIWrapper(BaseModel):
         snippets = self.get_snippets(query)
         return " ".join(snippets)
 
-    def results(self, query: str, num_results: int) -> List[Dict[str, str]]:
+    def results(
+        self, query: str, num_results: int, backend: str = "api"
+    ) -> List[Dict[str, str]]:
         """Run query through DuckDuckGo and return metadata.
 
         Args:
@@ -84,11 +84,20 @@ class DuckDuckGoSearchAPIWrapper(BaseModel):
                 region=self.region,
                 safesearch=self.safesearch,
                 timelimit=self.time,
+                backend=backend,
             )
             if results is None:
                 return [{"Result": "No good DuckDuckGo Search Result was found"}]
 
             def to_metadata(result: Dict) -> Dict[str, str]:
+                if backend == "news":
+                    return {
+                        "date": result["date"],
+                        "title": result["title"],
+                        "snippet": result["body"],
+                        "source": result["source"],
+                        "link": result["url"],
+                    }
                 return {
                     "snippet": result["body"],
                     "title": result["title"],

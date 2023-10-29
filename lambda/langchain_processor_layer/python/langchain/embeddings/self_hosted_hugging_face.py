@@ -1,4 +1,3 @@
-"""Wrapper around HuggingFace embedding models for self-hosted remote hardware."""
 import importlib
 import logging
 from typing import Any, Callable, List, Optional
@@ -58,7 +57,7 @@ def load_embedding_model(model_id: str, instruct: bool = False, device: int = 0)
 
 
 class SelfHostedHuggingFaceEmbeddings(SelfHostedEmbeddings):
-    """Runs sentence_transformers embedding models on self-hosted remote hardware.
+    """HuggingFace embedding models on self-hosted remote hardware.
 
     Supported hardware includes auto-launched instances on AWS, GCP, Azure,
     and Lambda, as well as servers specified
@@ -87,7 +86,7 @@ class SelfHostedHuggingFaceEmbeddings(SelfHostedEmbeddings):
     model_load_fn: Callable = load_embedding_model
     """Function to load the model remotely on the server."""
     load_fn_kwargs: Optional[dict] = None
-    """Key word arguments to pass to the model load function."""
+    """Keyword arguments to pass to the model load function."""
     inference_fn: Callable = _embed_documents
     """Inference function to extract the embeddings."""
 
@@ -101,7 +100,7 @@ class SelfHostedHuggingFaceEmbeddings(SelfHostedEmbeddings):
 
 
 class SelfHostedHuggingFaceInstructEmbeddings(SelfHostedHuggingFaceEmbeddings):
-    """Runs InstructorEmbedding embedding models on self-hosted remote hardware.
+    """HuggingFace InstructEmbedding models on self-hosted remote hardware.
 
     Supported hardware includes auto-launched instances on AWS, GCP, Azure,
     and Lambda, as well as servers specified

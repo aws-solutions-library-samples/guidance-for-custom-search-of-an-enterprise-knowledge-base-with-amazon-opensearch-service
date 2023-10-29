@@ -1,10 +1,8 @@
-"""Wrapper arround Google's PaLM Embeddings APIs."""
 from __future__ import annotations
 
 import logging
 from typing import Any, Callable, Dict, List, Optional
 
-from pydantic import BaseModel, root_validator
 from tenacity import (
     before_sleep_log,
     retry,
@@ -13,7 +11,8 @@ from tenacity import (
     wait_exponential,
 )
 
-from langchain.embeddings.base import Embeddings
+from langchain.pydantic_v1 import BaseModel, root_validator
+from langchain.schema.embeddings import Embeddings
 from langchain.utils import get_from_dict_or_env
 
 logger = logging.getLogger(__name__)
@@ -55,6 +54,8 @@ def embed_with_retry(
 
 
 class GooglePalmEmbeddings(BaseModel, Embeddings):
+    """Google's PaLM Embeddings APIs."""
+
     client: Any
     google_api_key: Optional[str]
     model_name: str = "models/embedding-gecko-001"

@@ -1,15 +1,16 @@
 """Filter that uses an LLM to drop documents that aren't relevant to the query."""
 from typing import Any, Callable, Dict, Optional, Sequence
 
-from langchain import LLMChain, PromptTemplate
-from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.manager import Callbacks
+from langchain.chains import LLMChain
 from langchain.output_parsers.boolean import BooleanOutputParser
+from langchain.prompts import PromptTemplate
 from langchain.retrievers.document_compressors.base import BaseDocumentCompressor
 from langchain.retrievers.document_compressors.chain_filter_prompt import (
     prompt_template,
 )
 from langchain.schema import BasePromptTemplate, Document
+from langchain.schema.language_model import BaseLanguageModel
 
 
 def _get_default_chain_prompt() -> PromptTemplate:
@@ -52,15 +53,6 @@ class LLMChainFilter(BaseDocumentCompressor):
                 filtered_docs.append(doc)
         return filtered_docs
 
-    async def acompress_documents(
-        self,
-        documents: Sequence[Document],
-        query: str,
-        callbacks: Optional[Callbacks] = None,
-    ) -> Sequence[Document]:
-        """Filter down documents."""
-        raise NotImplementedError
-
     @classmethod
     def from_llm(
         cls,
@@ -68,6 +60,16 @@ class LLMChainFilter(BaseDocumentCompressor):
         prompt: Optional[BasePromptTemplate] = None,
         **kwargs: Any
     ) -> "LLMChainFilter":
+        """Create a LLMChainFilter from a language model.
+
+        Args:
+            llm: The language model to use for filtering.
+            prompt: The prompt to use for the filter.
+            **kwargs: Additional arguments to pass to the constructor.
+
+        Returns:
+            A LLMChainFilter that uses the given language model.
+        """
         _prompt = prompt if prompt is not None else _get_default_chain_prompt()
         llm_chain = LLMChain(llm=llm, prompt=_prompt)
         return cls(llm_chain=llm_chain, **kwargs)

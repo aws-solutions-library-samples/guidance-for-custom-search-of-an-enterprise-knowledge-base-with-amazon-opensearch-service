@@ -78,6 +78,7 @@ from ..sql import roles
 from ..sql import visitors
 from ..sql._typing import _ColumnExpressionArgument
 from ..sql._typing import _HasClauseElement
+from ..sql.annotation import _safe_annotate
 from ..sql.elements import ColumnClause
 from ..sql.elements import ColumnElement
 from ..sql.util import _deep_annotate
@@ -171,7 +172,8 @@ _ORMOrderByArgument = Union[
     Literal[False],
     str,
     _ColumnExpressionArgument[Any],
-    Callable[[], Iterable[ColumnElement[Any]]],
+    Callable[[], _ColumnExpressionArgument[Any]],
+    Callable[[], Iterable[_ColumnExpressionArgument[Any]]],
     Iterable[Union[str, _ColumnExpressionArgument[Any]]],
 ]
 ORMBackrefArgument = Union[str, Tuple[str, Dict[str, Any]]]
@@ -269,6 +271,9 @@ class _RelationshipArg(Generic[_T1, _T2]):
             self.resolved = attr_value
 
 
+_RelationshipOrderByArg = Union[Literal[False], Tuple[ColumnElement[Any], ...]]
+
+
 class _RelationshipArgs(NamedTuple):
     """stores user-passed parameters that are resolved at mapper configuration
     time.
@@ -287,10 +292,7 @@ class _RelationshipArgs(NamedTuple):
         Optional[_RelationshipJoinConditionArgument],
         Optional[ColumnElement[Any]],
     ]
-    order_by: _RelationshipArg[
-        _ORMOrderByArgument,
-        Union[Literal[None, False], Tuple[ColumnElement[Any], ...]],
-    ]
+    order_by: _RelationshipArg[_ORMOrderByArgument, _RelationshipOrderByArg]
     foreign_keys: _RelationshipArg[
         Optional[_ORMColCollectionArgument], Set[ColumnElement[Any]]
     ]
@@ -339,7 +341,7 @@ class RelationshipProperty(
     secondaryjoin: Optional[ColumnElement[bool]]
     secondary: Optional[FromClause]
     _join_condition: JoinCondition
-    order_by: Union[Literal[False], Tuple[ColumnElement[Any], ...]]
+    order_by: _RelationshipOrderByArg
 
     _user_defined_foreign_keys: Set[ColumnElement[Any]]
     _calculated_foreign_keys: Set[ColumnElement[Any]]
@@ -1612,7 +1614,8 @@ class RelationshipProperty(
     @util.memoized_property
     def entity(self) -> _InternalEntityType[_T]:
         """Return the target mapped entity, which is an inspect() of the
-        class or aliased class that is referred towards.
+        class or aliased class that is referenced by this
+        :class:`.RelationshipProperty`.
 
         """
         self.parent._check_configure()
@@ -1762,7 +1765,7 @@ class RelationshipProperty(
         argument = de_optionalize_union_types(argument)
 
         if hasattr(argument, "__origin__"):
-            arg_origin = argument.__origin__  # type: ignore
+            arg_origin = argument.__origin__
             if isinstance(arg_origin, type) and issubclass(
                 arg_origin, abc.Collection
             ):
@@ -1784,7 +1787,7 @@ class RelationshipProperty(
 
             if argument.__args__:  # type: ignore
                 if isinstance(arg_origin, type) and issubclass(
-                    arg_origin, typing.Mapping  # type: ignore
+                    arg_origin, typing.Mapping
                 ):
                     type_arg = argument.__args__[-1]  # type: ignore
                 else:
@@ -1802,7 +1805,7 @@ class RelationshipProperty(
                     f"Generic alias {argument} requires an argument"
                 )
         elif hasattr(argument, "__forward_arg__"):
-            argument = argument.__forward_arg__  # type: ignore
+            argument = argument.__forward_arg__
 
             argument = resolve_name_to_real_class_name(
                 argument, originating_module
@@ -1872,7 +1875,7 @@ class RelationshipProperty(
                     % (self.key, type(resolved_argument))
                 )
 
-        self.entity = entity  # type: ignore
+        self.entity = entity
         self.target = self.entity.persist_selectable
 
     def _setup_join_conditions(self) -> None:
@@ -1988,7 +1991,7 @@ class RelationshipProperty(
                 'and not on the "many" side of a many-to-one or many-to-many '
                 "relationship.  "
                 "To force this relationship to allow a particular "
-                '"%(relatedcls)s" object to be referred towards by only '
+                '"%(relatedcls)s" object to be referenced by only '
                 'a single "%(clsname)s" object at a time via the '
                 "%(rel)s relationship, which "
                 "would allow "
@@ -3296,7 +3299,7 @@ class JoinCondition:
                     parentmapper_for_element is not self.prop.parent
                     and parentmapper_for_element is not self.prop.mapper
                 ):
-                    return elem._annotate(annotations)
+                    return _safe_annotate(elem, annotations)
                 else:
                     return elem
 

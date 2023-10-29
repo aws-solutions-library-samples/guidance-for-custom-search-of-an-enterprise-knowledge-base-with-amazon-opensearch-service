@@ -4,14 +4,13 @@ from __future__ import annotations
 from abc import ABC
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional
 
-from pydantic import Extra
-
 from langchain.callbacks.manager import (
     AsyncCallbackManagerForChainRun,
     CallbackManagerForChainRun,
     Callbacks,
 )
 from langchain.chains.base import Chain
+from langchain.pydantic_v1 import Extra
 
 
 class Route(NamedTuple):
@@ -27,6 +26,16 @@ class RouterChain(Chain, ABC):
         return ["destination", "next_inputs"]
 
     def route(self, inputs: Dict[str, Any], callbacks: Callbacks = None) -> Route:
+        """
+        Route inputs to a destination chain.
+
+        Args:
+            inputs: inputs to the chain
+            callbacks: callbacks to use for the chain
+
+        Returns:
+            a Route object
+        """
         result = self(inputs, callbacks=callbacks)
         return Route(result["destination"], result["next_inputs"])
 
@@ -102,11 +111,11 @@ class MultiRouteChain(Chain):
         inputs: Dict[str, Any],
         run_manager: Optional[AsyncCallbackManagerForChainRun] = None,
     ) -> Dict[str, Any]:
-        _run_manager = run_manager or CallbackManagerForChainRun.get_noop_manager()
+        _run_manager = run_manager or AsyncCallbackManagerForChainRun.get_noop_manager()
         callbacks = _run_manager.get_child()
         route = await self.router_chain.aroute(inputs, callbacks=callbacks)
 
-        _run_manager.on_text(
+        await _run_manager.on_text(
             str(route.destination) + ": " + str(route.next_inputs), verbose=self.verbose
         )
         if not route.destination:

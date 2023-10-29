@@ -276,7 +276,7 @@ class LambdaStack(Stack):
 
         index = self.node.try_get_context("index")
         embedding_endpoint_name = self.node.try_get_context("embedding_endpoint_name")
-        llm_embedding_name = self.node.try_get_context("llm_embedding_name")
+        llm_endpoint_name = self.node.try_get_context("llm_endpoint_name")
         language = self.node.try_get_context("language")
         search_engine_opensearch = self.node.try_get_context("search_engine_opensearch")
         search_engine_kendra = self.node.try_get_context("search_engine_kendra")
@@ -289,7 +289,8 @@ class LambdaStack(Stack):
                     'lambda:AWSLambdaBasicExecutionRole',
                     'secretsmanager:SecretsManagerReadWrite',
                     'kendra:DescribeIndex',
-                    'kendra:Query'
+                    'kendra:Query',
+                    'bedrock:*'
                 ],
                 resources=['*']  # 可根据需求进行更改
             )
@@ -300,7 +301,8 @@ class LambdaStack(Stack):
                     'sagemaker:InvokeEndpoint',
                     'lambda:AWSLambdaBasicExecutionRole',
                     'secretsmanager:SecretsManagerReadWrite',
-                    'es:ESHttpPost'
+                    'es:ESHttpPost',
+                    'bedrock:*'
                 ],
                 resources=['*']  # 可同时使用opensearch和kendra
             )
@@ -311,7 +313,7 @@ class LambdaStack(Stack):
         langchain_processor_role.add_to_policy(_langchain_processor_role_policy)
 
         langchain_processor_role.add_managed_policy(
-            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
+            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaRole")
         )
 
         langchain_processor_role.add_managed_policy(
@@ -344,7 +346,7 @@ class LambdaStack(Stack):
         langchain_processor_qa_function.add_environment("index", index)
         langchain_processor_qa_function.add_environment("language", language)
         langchain_processor_qa_function.add_environment("embedding_endpoint_name", embedding_endpoint_name)
-        langchain_processor_qa_function.add_environment("llm_embedding_name", llm_embedding_name)
+        langchain_processor_qa_function.add_environment("llm_endpoint_name", llm_endpoint_name)
         langchain_processor_qa_function.add_environment("search_engine_opensearch", str(search_engine_opensearch))
         langchain_processor_qa_function.add_environment("search_engine_kendra", str(search_engine_kendra))
 

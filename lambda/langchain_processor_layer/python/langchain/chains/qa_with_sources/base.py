@@ -5,15 +5,13 @@ from __future__ import annotations
 import inspect
 import re
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
-from pydantic import Extra, root_validator
-
-from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.manager import (
     AsyncCallbackManagerForChainRun,
     CallbackManagerForChainRun,
 )
+from langchain.chains import ReduceDocumentsChain
 from langchain.chains.base import Chain
 from langchain.chains.combine_documents.base import BaseCombineDocumentsChain
 from langchain.chains.combine_documents.map_reduce import MapReduceDocumentsChain
@@ -26,11 +24,13 @@ from langchain.chains.qa_with_sources.map_reduce_prompt import (
     QUESTION_PROMPT,
 )
 from langchain.docstore.document import Document
+from langchain.pydantic_v1 import Extra, root_validator
 from langchain.schema import BasePromptTemplate
+from langchain.schema.language_model import BaseLanguageModel
 
 
 class BaseQAWithSourcesChain(Chain, ABC):
-    """Question answering with sources over documents."""
+    """Question answering chain with sources over documents."""
 
     combine_documents_chain: BaseCombineDocumentsChain
     """Chain to use to combine documents."""
@@ -58,13 +58,16 @@ class BaseQAWithSourcesChain(Chain, ABC):
             document_prompt=document_prompt,
             document_variable_name="summaries",
         )
-        combine_document_chain = MapReduceDocumentsChain(
+        reduce_documents_chain = ReduceDocumentsChain(
+            combine_documents_chain=combine_results_chain
+        )
+        combine_documents_chain = MapReduceDocumentsChain(
             llm_chain=llm_question_chain,
-            combine_document_chain=combine_results_chain,
+            reduce_documents_chain=reduce_documents_chain,
             document_variable_name="context",
         )
         return cls(
-            combine_documents_chain=combine_document_chain,
+            combine_documents_chain=combine_documents_chain,
             **kwargs,
         )
 
@@ -78,10 +81,10 @@ class BaseQAWithSourcesChain(Chain, ABC):
     ) -> BaseQAWithSourcesChain:
         """Load chain from chain type."""
         _chain_kwargs = chain_type_kwargs or {}
-        combine_document_chain = load_qa_with_sources_chain(
+        combine_documents_chain = load_qa_with_sources_chain(
             llm, chain_type=chain_type, **_chain_kwargs
         )
-        return cls(combine_documents_chain=combine_document_chain, **kwargs)
+        return cls(combine_documents_chain=combine_documents_chain, **kwargs)
 
     class Config:
         """Configuration for this pydantic object."""
@@ -110,10 +113,21 @@ class BaseQAWithSourcesChain(Chain, ABC):
 
     @root_validator(pre=True)
     def validate_naming(cls, values: Dict) -> Dict:
-        """Fix backwards compatability in naming."""
+        """Fix backwards compatibility in naming."""
         if "combine_document_chain" in values:
             values["combine_documents_chain"] = values.pop("combine_document_chain")
         return values
+
+    def _split_sources(self, answer: str) -> Tuple[str, str]:
+        """Split sources from answer."""
+        if re.search(r"SOURCES?:", answer, re.IGNORECASE):
+            answer, sources = re.split(
+                r"SOURCES?:|QUESTION:\s", answer, flags=re.IGNORECASE
+            )[:2]
+            sources = re.split(r"\n", sources)[0].strip()
+        else:
+            sources = ""
+        return answer, sources
 
     @abstractmethod
     def _get_docs(
@@ -141,10 +155,7 @@ class BaseQAWithSourcesChain(Chain, ABC):
         answer = self.combine_documents_chain.run(
             input_documents=docs, callbacks=_run_manager.get_child(), **inputs
         )
-        if re.search(r"SOURCES:\s", answer):
-            answer, sources = re.split(r"SOURCES:\s", answer)
-        else:
-            sources = ""
+        answer, sources = self._split_sources(answer)
         result: Dict[str, Any] = {
             self.answer_key: answer,
             self.sources_answer_key: sources,
@@ -178,10 +189,7 @@ class BaseQAWithSourcesChain(Chain, ABC):
         answer = await self.combine_documents_chain.arun(
             input_documents=docs, callbacks=_run_manager.get_child(), **inputs
         )
-        if re.search(r"SOURCES:\s", answer):
-            answer, sources = re.split(r"SOURCES:\s", answer)
-        else:
-            sources = ""
+        answer, sources = self._split_sources(answer)
         result: Dict[str, Any] = {
             self.answer_key: answer,
             self.sources_answer_key: sources,

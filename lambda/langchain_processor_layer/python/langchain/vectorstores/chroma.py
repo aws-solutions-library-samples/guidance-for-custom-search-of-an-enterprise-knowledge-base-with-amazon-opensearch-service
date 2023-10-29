@@ -1,16 +1,25 @@
-"""Wrapper around ChromaDB embeddings platform."""
 from __future__ import annotations
 
 import logging
 import uuid
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Tuple, Type
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Type,
+)
 
 import numpy as np
 
 from langchain.docstore.document import Document
-from langchain.embeddings.base import Embeddings
+from langchain.schema.embeddings import Embeddings
+from langchain.schema.vectorstore import VectorStore
 from langchain.utils import xor_args
-from langchain.vectorstores.base import VectorStore
 from langchain.vectorstores.utils import maximal_marginal_relevance
 
 if TYPE_CHECKING:
@@ -40,7 +49,7 @@ def _results_to_docs_and_scores(results: Any) -> List[Tuple[Document, float]]:
 
 
 class Chroma(VectorStore):
-    """Wrapper around ChromaDB embeddings platform.
+    """`ChromaDB` vector store.
 
     To use, you should have the ``chromadb`` python package installed.
 
@@ -64,33 +73,55 @@ class Chroma(VectorStore):
         client_settings: Optional[chromadb.config.Settings] = None,
         collection_metadata: Optional[Dict] = None,
         client: Optional[chromadb.Client] = None,
+        relevance_score_fn: Optional[Callable[[float], float]] = None,
     ) -> None:
-        """Initialize with Chroma client."""
+        """Initialize with a Chroma client."""
         try:
             import chromadb
             import chromadb.config
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import chromadb python package. "
                 "Please install it with `pip install chromadb`."
             )
 
         if client is not None:
+            self._client_settings = client_settings
             self._client = client
+            self._persist_directory = persist_directory
         else:
             if client_settings:
-                self._client_settings = client_settings
-            else:
-                self._client_settings = chromadb.config.Settings()
-                if persist_directory is not None:
-                    self._client_settings = chromadb.config.Settings(
+                # If client_settings is provided with persist_directory specified,
+                # then it is "in-memory and persisting to disk" mode.
+                client_settings.persist_directory = (
+                    persist_directory or client_settings.persist_directory
+                )
+                if client_settings.persist_directory is not None:
+                    # Maintain backwards compatibility with chromadb < 0.4.0
+                    major, minor, _ = chromadb.__version__.split(".")
+                    if int(major) == 0 and int(minor) < 4:
+                        client_settings.chroma_db_impl = "duckdb+parquet"
+
+                _client_settings = client_settings
+            elif persist_directory:
+                # Maintain backwards compatibility with chromadb < 0.4.0
+                major, minor, _ = chromadb.__version__.split(".")
+                if int(major) == 0 and int(minor) < 4:
+                    _client_settings = chromadb.config.Settings(
                         chroma_db_impl="duckdb+parquet",
-                        persist_directory=persist_directory,
                     )
-            self._client = chromadb.Client(self._client_settings)
+                else:
+                    _client_settings = chromadb.config.Settings(is_persistent=True)
+                _client_settings.persist_directory = persist_directory
+            else:
+                _client_settings = chromadb.config.Settings()
+            self._client_settings = _client_settings
+            self._client = chromadb.Client(_client_settings)
+            self._persist_directory = (
+                _client_settings.persist_directory or persist_directory
+            )
 
         self._embedding_function = embedding_function
-        self._persist_directory = persist_directory
         self._collection = self._client.get_or_create_collection(
             name=collection_name,
             embedding_function=self._embedding_function.embed_documents
@@ -98,6 +129,11 @@ class Chroma(VectorStore):
             else None,
             metadata=collection_metadata,
         )
+        self.override_relevance_score_fn = relevance_score_fn
+
+    @property
+    def embeddings(self) -> Optional[Embeddings]:
+        return self._embedding_function
 
     @xor_args(("query_texts", "query_embeddings"))
     def __query_collection(
@@ -106,6 +142,7 @@ class Chroma(VectorStore):
         query_embeddings: Optional[List[List[float]]] = None,
         n_results: int = 4,
         where: Optional[Dict[str, str]] = None,
+        where_document: Optional[Dict[str, str]] = None,
         **kwargs: Any,
     ) -> List[Document]:
         """Query the chroma collection."""
@@ -121,6 +158,7 @@ class Chroma(VectorStore):
             query_embeddings=query_embeddings,
             n_results=n_results,
             where=where,
+            where_document=where_document,
             **kwargs,
         )
 
@@ -145,11 +183,62 @@ class Chroma(VectorStore):
         if ids is None:
             ids = [str(uuid.uuid1()) for _ in texts]
         embeddings = None
+        texts = list(texts)
         if self._embedding_function is not None:
-            embeddings = self._embedding_function.embed_documents(list(texts))
-        self._collection.upsert(
-            metadatas=metadatas, embeddings=embeddings, documents=texts, ids=ids
-        )
+            embeddings = self._embedding_function.embed_documents(texts)
+        if metadatas:
+            # fill metadatas with empty dicts if somebody
+            # did not specify metadata for all texts
+            length_diff = len(texts) - len(metadatas)
+            if length_diff:
+                metadatas = metadatas + [{}] * length_diff
+            empty_ids = []
+            non_empty_ids = []
+            for idx, m in enumerate(metadatas):
+                if m:
+                    non_empty_ids.append(idx)
+                else:
+                    empty_ids.append(idx)
+            if non_empty_ids:
+                metadatas = [metadatas[idx] for idx in non_empty_ids]
+                texts_with_metadatas = [texts[idx] for idx in non_empty_ids]
+                embeddings_with_metadatas = (
+                    [embeddings[idx] for idx in non_empty_ids] if embeddings else None
+                )
+                ids_with_metadata = [ids[idx] for idx in non_empty_ids]
+                try:
+                    self._collection.upsert(
+                        metadatas=metadatas,
+                        embeddings=embeddings_with_metadatas,
+                        documents=texts_with_metadatas,
+                        ids=ids_with_metadata,
+                    )
+                except ValueError as e:
+                    if "Expected metadata value to be" in str(e):
+                        msg = (
+                            "Try filtering complex metadata from the document using "
+                            "langchain.vectorstores.utils.filter_complex_metadata."
+                        )
+                        raise ValueError(e.args[0] + "\n\n" + msg)
+                    else:
+                        raise e
+            if empty_ids:
+                texts_without_metadatas = [texts[j] for j in empty_ids]
+                embeddings_without_metadatas = (
+                    [embeddings[j] for j in empty_ids] if embeddings else None
+                )
+                ids_without_metadatas = [ids[j] for j in empty_ids]
+                self._collection.upsert(
+                    embeddings=embeddings_without_metadatas,
+                    documents=texts_without_metadatas,
+                    ids=ids_without_metadatas,
+                )
+        else:
+            self._collection.upsert(
+                embeddings=embeddings,
+                documents=texts,
+                ids=ids,
+            )
         return ids
 
     def similarity_search(
@@ -177,26 +266,60 @@ class Chroma(VectorStore):
         embedding: List[float],
         k: int = DEFAULT_K,
         filter: Optional[Dict[str, str]] = None,
+        where_document: Optional[Dict[str, str]] = None,
         **kwargs: Any,
     ) -> List[Document]:
         """Return docs most similar to embedding vector.
         Args:
-            embedding (str): Embedding to look up documents similar to.
+            embedding (List[float]): Embedding to look up documents similar to.
             k (int): Number of Documents to return. Defaults to 4.
             filter (Optional[Dict[str, str]]): Filter by metadata. Defaults to None.
         Returns:
             List of Documents most similar to the query vector.
         """
         results = self.__query_collection(
-            query_embeddings=embedding, n_results=k, where=filter
+            query_embeddings=embedding,
+            n_results=k,
+            where=filter,
+            where_document=where_document,
         )
         return _results_to_docs(results)
+
+    def similarity_search_by_vector_with_relevance_scores(
+        self,
+        embedding: List[float],
+        k: int = DEFAULT_K,
+        filter: Optional[Dict[str, str]] = None,
+        where_document: Optional[Dict[str, str]] = None,
+        **kwargs: Any,
+    ) -> List[Tuple[Document, float]]:
+        """
+        Return docs most similar to embedding vector and similarity score.
+
+        Args:
+            embedding (List[float]): Embedding to look up documents similar to.
+            k (int): Number of Documents to return. Defaults to 4.
+            filter (Optional[Dict[str, str]]): Filter by metadata. Defaults to None.
+
+        Returns:
+            List[Tuple[Document, float]]: List of documents most similar to
+            the query text and cosine distance in float for each.
+            Lower score represents more similarity.
+        """
+        results = self.__query_collection(
+            query_embeddings=embedding,
+            n_results=k,
+            where=filter,
+            where_document=where_document,
+        )
+        return _results_to_docs_and_scores(results)
 
     def similarity_search_with_score(
         self,
         query: str,
         k: int = DEFAULT_K,
         filter: Optional[Dict[str, str]] = None,
+        where_document: Optional[Dict[str, str]] = None,
         **kwargs: Any,
     ) -> List[Tuple[Document, float]]:
         """Run similarity search with Chroma with distance.
@@ -213,23 +336,53 @@ class Chroma(VectorStore):
         """
         if self._embedding_function is None:
             results = self.__query_collection(
-                query_texts=[query], n_results=k, where=filter
+                query_texts=[query],
+                n_results=k,
+                where=filter,
+                where_document=where_document,
             )
         else:
             query_embedding = self._embedding_function.embed_query(query)
             results = self.__query_collection(
-                query_embeddings=[query_embedding], n_results=k, where=filter
+                query_embeddings=[query_embedding],
+                n_results=k,
+                where=filter,
+                where_document=where_document,
             )
 
         return _results_to_docs_and_scores(results)
 
-    def _similarity_search_with_relevance_scores(
-        self,
-        query: str,
-        k: int = 4,
-        **kwargs: Any,
-    ) -> List[Tuple[Document, float]]:
-        return self.similarity_search_with_score(query, k, **kwargs)
+    def _select_relevance_score_fn(self) -> Callable[[float], float]:
+        """
+        The 'correct' relevance function
+        may differ depending on a few things, including:
+        - the distance / similarity metric used by the VectorStore
+        - the scale of your embeddings (OpenAI's are unit normed. Many others are not!)
+        - embedding dimensionality
+        - etc.
+        """
+        if self.override_relevance_score_fn:
+            return self.override_relevance_score_fn
+
+        distance = "l2"
+        distance_key = "hnsw:space"
+        metadata = self._collection.metadata
+
+        if metadata and distance_key in metadata:
+            distance = metadata[distance_key]
+
+        if distance == "cosine":
+            return self._cosine_relevance_score_fn
+        elif distance == "l2":
+            return self._euclidean_relevance_score_fn
+        elif distance == "ip":
+            return self._max_inner_product_relevance_score_fn
+        else:
+            raise ValueError(
+                "No supported normalization function"
+                f" for distance metric of type: {distance}."
+                "Consider providing relevance_score_fn to Chroma constructor."
+            )
 
     def max_marginal_relevance_search_by_vector(
         self,
@@ -238,6 +391,7 @@ class Chroma(VectorStore):
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
         filter: Optional[Dict[str, str]] = None,
+        where_document: Optional[Dict[str, str]] = None,
         **kwargs: Any,
     ) -> List[Document]:
         """Return docs selected using the maximal marginal relevance.
@@ -262,6 +416,7 @@ class Chroma(VectorStore):
             query_embeddings=embedding,
             n_results=fetch_k,
             where=filter,
+            where_document=where_document,
             include=["metadatas", "documents", "distances", "embeddings"],
         )
         mmr_selected = maximal_marginal_relevance(
@@ -283,6 +438,7 @@ class Chroma(VectorStore):
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
         filter: Optional[Dict[str, str]] = None,
+        where_document: Optional[Dict[str, str]] = None,
         **kwargs: Any,
     ) -> List[Document]:
         """Return docs selected using the maximal marginal relevance.
@@ -309,7 +465,12 @@ class Chroma(VectorStore):
 
         embedding = self._embedding_function.embed_query(query)
         docs = self.max_marginal_relevance_search_by_vector(
-            embedding, k, fetch_k, lambda_mul=lambda_mult, filter=filter
+            embedding,
+            k,
+            fetch_k,
+            lambda_mult=lambda_mult,
+            filter=filter,
+            where_document=where_document,
         )
         return docs
 
@@ -336,7 +497,7 @@ class Chroma(VectorStore):
             offset: The offset to start returning results from.
                     Useful for paging results with limit. Optional.
             where_document: A WhereDocument type dict used to filter by the documents.
-                            E.g. `{$contains: {"text": "hello"}}`. Optional.
+                            E.g. `{$contains: "hello"}`. Optional.
             include: A list of what to include in the results.
                      Can contain `"embeddings"`, `"metadatas"`, `"documents"`.
                      Ids are always included.
@@ -366,7 +527,12 @@ class Chroma(VectorStore):
                 "You must specify a persist_directory on"
                 "creation to persist the collection."
             )
-        self._client.persist()
+        import chromadb
+
+        # Maintain backwards compatibility with chromadb < 0.4.0
+        major, minor, _ = chromadb.__version__.split(".")
+        if int(major) == 0 and int(minor) < 4:
+            self._client.persist()
 
     def update_document(self, document_id: str, document: Document) -> None:
         """Update a document in the collection.
@@ -375,20 +541,48 @@ class Chroma(VectorStore):
             document_id (str): ID of the document to update.
             document (Document): Document to update.
         """
-        text = document.page_content
-        metadata = document.metadata
+        return self.update_documents([document_id], [document])
+
+    def update_documents(self, ids: List[str], documents: List[Document]) -> None:
+        """Update a document in the collection.
+
+        Args:
+            ids (List[str]): List of ids of the document to update.
+            documents (List[Document]): List of documents to update.
+        """
+        text = [document.page_content for document in documents]
+        metadata = [document.metadata for document in documents]
         if self._embedding_function is None:
             raise ValueError(
                 "For update, you must specify an embedding function on creation."
             )
-        embeddings = self._embedding_function.embed_documents([text])
+        embeddings = self._embedding_function.embed_documents(text)
 
-        self._collection.update(
-            ids=[document_id],
-            embeddings=embeddings,
-            documents=[text],
-            metadatas=[metadata],
-        )
+        if hasattr(
+            self._collection._client, "max_batch_size"
+        ):  # for Chroma 0.4.10 and above
+            from chromadb.utils.batch_utils import create_batches
+
+            for batch in create_batches(
+                api=self._collection._client,
+                ids=ids,
+                metadatas=metadata,
+                documents=text,
+                embeddings=embeddings,
+            ):
+                self._collection.update(
+                    ids=batch[0],
+                    embeddings=batch[1],
+                    documents=batch[3],
+                    metadatas=batch[2],
+                )
+        else:
+            self._collection.update(
+                ids=ids,
+                embeddings=embeddings,
+                documents=text,
+                metadatas=metadata,
+            )
 
     @classmethod
     def from_texts(
@@ -401,6 +595,7 @@ class Chroma(VectorStore):
         persist_directory: Optional[str] = None,
         client_settings: Optional[chromadb.config.Settings] = None,
         client: Optional[chromadb.Client] = None,
+        collection_metadata: Optional[Dict] = None,
         **kwargs: Any,
     ) -> Chroma:
         """Create a Chroma vectorstore from a raw documents.
@@ -416,6 +611,8 @@ class Chroma(VectorStore):
             metadatas (Optional[List[dict]]): List of metadatas. Defaults to None.
             ids (Optional[List[str]]): List of document IDs. Defaults to None.
             client_settings (Optional[chromadb.config.Settings]): Chroma client settings
+            collection_metadata (Optional[Dict]): Collection configurations.
+                                                  Defaults to None.
 
         Returns:
             Chroma: Chroma vectorstore.
@@ -426,8 +623,29 @@ class Chroma(VectorStore):
             persist_directory=persist_directory,
             client_settings=client_settings,
             client=client,
+            collection_metadata=collection_metadata,
+            **kwargs,
         )
-        chroma_collection.add_texts(texts=texts, metadatas=metadatas, ids=ids)
+        if ids is None:
+            ids = [str(uuid.uuid1()) for _ in texts]
+        if hasattr(
+            chroma_collection._client, "max_batch_size"
+        ):  # for Chroma 0.4.10 and above
+            from chromadb.utils.batch_utils import create_batches
+
+            for batch in create_batches(
+                api=chroma_collection._client,
+                ids=ids,
+                metadatas=metadatas,
+                documents=texts,
+            ):
+                chroma_collection.add_texts(
+                    texts=batch[3] if batch[3] else [],
+                    metadatas=batch[2] if batch[2] else None,
+                    ids=batch[0],
+                )
+        else:
+            chroma_collection.add_texts(texts=texts, metadatas=metadatas, ids=ids)
         return chroma_collection
 
     @classmethod
@@ -440,6 +658,7 @@ class Chroma(VectorStore):
         persist_directory: Optional[str] = None,
         client_settings: Optional[chromadb.config.Settings] = None,
         client: Optional[chromadb.Client] = None,  # Add this line
+        collection_metadata: Optional[Dict] = None,
         **kwargs: Any,
     ) -> Chroma:
         """Create a Chroma vectorstore from a list of documents.
@@ -454,6 +673,9 @@ class Chroma(VectorStore):
             documents (List[Document]): List of documents to add to the vectorstore.
             embedding (Optional[Embeddings]): Embedding function. Defaults to None.
             client_settings (Optional[chromadb.config.Settings]): Chroma client settings
+            collection_metadata (Optional[Dict]): Collection configurations.
+                                                  Defaults to None.
+
         Returns:
             Chroma: Chroma vectorstore.
         """
@@ -468,6 +690,8 @@ class Chroma(VectorStore):
             persist_directory=persist_directory,
             client_settings=client_settings,
             client=client,
+            collection_metadata=collection_metadata,
+            **kwargs,
         )
 
     def delete(self, ids: Optional[List[str]] = None, **kwargs: Any) -> None:

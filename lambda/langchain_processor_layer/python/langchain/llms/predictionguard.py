@@ -1,19 +1,18 @@
-"""Wrapper around Prediction Guard APIs."""
 import logging
 from typing import Any, Dict, List, Optional
-
-from pydantic import Extra, root_validator
 
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.llms.utils import enforce_stop_tokens
+from langchain.pydantic_v1 import Extra, root_validator
 from langchain.utils import get_from_dict_or_env
 
 logger = logging.getLogger(__name__)
 
 
 class PredictionGuard(LLM):
-    """Wrapper around Prediction Guard large language models.
+    """Prediction Guard large language models.
+
     To use, you should have the ``predictionguard`` python package installed, and the
     environment variable ``PREDICTIONGUARD_TOKEN`` set with your access token, or pass
     it as a named parameter to the constructor. To use Prediction Guard's API along

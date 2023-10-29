@@ -10,7 +10,7 @@
 r"""
 .. dialect:: sqlite
     :name: SQLite
-    :full_support: 3.21, 3.28+
+    :full_support: 3.36.0
     :normal_support: 3.12+
     :best_effort: 3.7.16+
 
@@ -843,7 +843,7 @@ Reflecting internal schema tables
 ----------------------------------
 
 Reflection methods that return lists of tables will omit so-called
-"SQLite internal schema object" names, which are referred towards by SQLite
+"SQLite internal schema object" names, which are considered by SQLite
 as any object name that is prefixed with ``sqlite_``.  An example of
 such an object is the ``sqlite_sequence`` table that's generated when
 the ``AUTOINCREMENT`` column parameter is used.   In order to return
@@ -1317,6 +1317,9 @@ class SQLiteCompiler(compiler.SQLCompiler):
 
     def visit_char_length_func(self, fn, **kw):
         return "length%s" % self.function_argspec(fn)
+
+    def visit_aggregate_strings_func(self, fn, **kw):
+        return "group_concat%s" % self.function_argspec(fn)
 
     def visit_cast(self, cast, **kwargs):
         if self.dialect.supports_cast:
@@ -2444,10 +2447,16 @@ class SQLiteDialect(default.DefaultDialect):
             if table_data is None:
                 # system tables, etc.
                 return
+
+            # note that we already have the FKs from PRAGMA above.  This whole
+            # regexp thing is trying to locate additional detail about the
+            # FKs, namely the name of the constraint and other options.
+            # so parsing the columns is really about matching it up to what
+            # we already have.
             FK_PATTERN = (
                 r"(?:CONSTRAINT (\w+) +)?"
                 r"FOREIGN KEY *\( *(.+?) *\) +"
-                r'REFERENCES +(?:(?:"(.+?)")|([a-z0-9_]+)) *\((.+?)\) *'
+                r'REFERENCES +(?:(?:"(.+?)")|([a-z0-9_]+)) *\( *((?:(?:"[^"]+"|[a-z0-9_]+) *(?:, *)?)+)\) *'  # noqa: E501
                 r"((?:ON (?:DELETE|UPDATE) "
                 r"(?:SET NULL|SET DEFAULT|CASCADE|RESTRICT|NO ACTION) *)*)"
                 r"((?:NOT +)?DEFERRABLE)?"

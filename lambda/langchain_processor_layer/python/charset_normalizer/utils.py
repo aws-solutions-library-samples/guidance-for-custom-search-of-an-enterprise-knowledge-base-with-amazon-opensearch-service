@@ -70,15 +70,6 @@ def is_latin(character: str) -> bool:
 
 
 @lru_cache(maxsize=UTF8_MAXIMAL_ALLOCATION)
-def is_ascii(character: str) -> bool:
-    try:
-        character.encode("ascii")
-    except UnicodeEncodeError:
-        return False
-    return True
-
-
-@lru_cache(maxsize=UTF8_MAXIMAL_ALLOCATION)
 def is_punctuation(character: str) -> bool:
     character_category: str = unicodedata.category(character)
 
@@ -105,7 +96,7 @@ def is_symbol(character: str) -> bool:
     if character_range is None:
         return False
 
-    return "Forms" in character_range
+    return "Forms" in character_range and character_category != "Lo"
 
 
 @lru_cache(maxsize=UTF8_MAXIMAL_ALLOCATION)
@@ -115,28 +106,22 @@ def is_emoticon(character: str) -> bool:
     if character_range is None:
         return False
 
-    return "Emoticons" in character_range
+    return "Emoticons" in character_range or "Pictographs" in character_range
 
 
 @lru_cache(maxsize=UTF8_MAXIMAL_ALLOCATION)
 def is_separator(character: str) -> bool:
-    if character.isspace() or character in {"｜", "+", ",", ";", "<", ">"}:
+    if character.isspace() or character in {"｜", "+", "<", ">"}:
         return True
 
     character_category: str = unicodedata.category(character)
 
-    return "Z" in character_category
+    return "Z" in character_category or character_category in {"Po", "Pd", "Pc"}
 
 
 @lru_cache(maxsize=UTF8_MAXIMAL_ALLOCATION)
 def is_case_variable(character: str) -> bool:
     return character.islower() != character.isupper()
-
-
-def is_private_use_only(character: str) -> bool:
-    character_category: str = unicodedata.category(character)
-
-    return character_category == "Co"
 
 
 @lru_cache(maxsize=UTF8_MAXIMAL_ALLOCATION)
@@ -205,7 +190,7 @@ def is_unprintable(character: str) -> bool:
     )
 
 
-def any_specified_encoding(sequence: bytes, search_zone: int = 4096) -> Optional[str]:
+def any_specified_encoding(sequence: bytes, search_zone: int = 8192) -> Optional[str]:
     """
     Extract using ASCII-only decoder any specified encoding in the first n-bytes.
     """

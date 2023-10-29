@@ -1,15 +1,13 @@
 from typing import List, Optional, Type
 
-from pydantic import BaseModel, Field
-
-from langchain.callbacks.manager import (
-    AsyncCallbackManagerForToolRun,
-    CallbackManagerForToolRun,
-)
+from langchain.callbacks.manager import CallbackManagerForToolRun
+from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools.office365.base import O365BaseTool
 
 
 class CreateDraftMessageSchema(BaseModel):
+    """Input for SendMessageTool."""
+
     body: str = Field(
         ...,
         description="The message body to include in the draft.",
@@ -33,6 +31,8 @@ class CreateDraftMessageSchema(BaseModel):
 
 
 class O365CreateDraftMessage(O365BaseTool):
+    """Tool for creating a draft email in Office 365."""
+
     name: str = "create_email_draft"
     description: str = (
         "Use this tool to create a draft email with the provided message fields."
@@ -65,14 +65,3 @@ class O365CreateDraftMessage(O365BaseTool):
 
         output = "Draft created: " + str(message)
         return output
-
-    async def _arun(
-        self,
-        message: str,
-        to: List[str],
-        subject: str,
-        cc: Optional[List[str]] = None,
-        bcc: Optional[List[str]] = None,
-        run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
-    ) -> str:
-        raise NotImplementedError(f"The tool {self.name} does not support async yet.")

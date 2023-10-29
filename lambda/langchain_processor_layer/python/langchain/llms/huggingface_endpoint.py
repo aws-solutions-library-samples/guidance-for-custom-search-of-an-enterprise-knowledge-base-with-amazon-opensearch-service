@@ -1,19 +1,18 @@
-"""Wrapper around HuggingFace APIs."""
 from typing import Any, Dict, List, Mapping, Optional
 
 import requests
-from pydantic import Extra, root_validator
 
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.llms.utils import enforce_stop_tokens
+from langchain.pydantic_v1 import Extra, root_validator
 from langchain.utils import get_from_dict_or_env
 
 VALID_TASKS = ("text2text-generation", "text-generation", "summarization")
 
 
 class HuggingFaceEndpoint(LLM):
-    """Wrapper around HuggingFaceHub Inference Endpoints.
+    """HuggingFace Endpoint models.
 
     To use, you should have the ``huggingface_hub`` python package installed, and the
     environment variable ``HUGGINGFACEHUB_API_TOKEN`` set with your API token, or pass
@@ -40,7 +39,7 @@ class HuggingFaceEndpoint(LLM):
     """Task to call the model with.
     Should be a task that returns `generated_text` or `summary_text`."""
     model_kwargs: Optional[dict] = None
-    """Key word arguments to pass to the model."""
+    """Keyword arguments to pass to the model."""
 
     huggingfacehub_api_token: Optional[str] = None
 
@@ -70,7 +69,7 @@ class HuggingFaceEndpoint(LLM):
                 ) from e
 
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import huggingface_hub python package. "
                 "Please install it with `pip install huggingface_hub`."
             )
@@ -137,8 +136,10 @@ class HuggingFaceEndpoint(LLM):
                 f"Error raised by inference API: {generated_text['error']}"
             )
         if self.task == "text-generation":
-            # Text generation return includes the starter text.
-            text = generated_text[0]["generated_text"][len(prompt) :]
+            text = generated_text[0]["generated_text"]
+            # Remove prompt if included in generated text.
+            if text.startswith(prompt):
+                text = text[len(prompt) :]
         elif self.task == "text2text-generation":
             text = generated_text[0]["generated_text"]
         elif self.task == "summarization":

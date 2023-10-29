@@ -2,12 +2,12 @@
 
 These evaluators are useful for evaluating the
 output of a language model or chain against
-custom criteria or rubric.
+specified criteria or rubric.
 
 Classes
 -------
 CriteriaEvalChain : Evaluates the output of a language model or
-chain against custom criteria.
+chain against specified criteria.
 
 Examples
 --------
@@ -27,7 +27,7 @@ Using a pre-defined criterion:
 Using a custom criterion:
 
 >>> from langchain.llms import OpenAI
->>> from langchain.evaluation.criteria import CriteriaEvalChain
+>>> from langchain.evaluation.criteria import LabeledCriteriaEvalChain
 
 >>> llm = OpenAI()
 >>> criteria = {
@@ -36,13 +36,21 @@ Using a custom criterion:
             " not present in the input or reference?"
         ),
     }
->>> chain = CriteriaEvalChain.from_llm(
+>>> chain = LabeledCriteriaEvalChain.from_llm(
         llm=llm,
         criteria=criteria,
-        requires_reference=True,
         )
-"""
+>>> chain.evaluate_strings(
+        prediction="The answer to life is 42.",
+        reference="It's commonly known that the answer to life is 42.",
+        input="Please summarize the following: The answer to life, the universe, and everything is unknowable.",
+    )
+"""  # noqa: E501
 
-from langchain.evaluation.criteria.eval_chain import CriteriaEvalChain
+from langchain.evaluation.criteria.eval_chain import (
+    Criteria,
+    CriteriaEvalChain,
+    LabeledCriteriaEvalChain,
+)
 
-__all__ = ["CriteriaEvalChain"]
+__all__ = ["CriteriaEvalChain", "LabeledCriteriaEvalChain", "Criteria"]

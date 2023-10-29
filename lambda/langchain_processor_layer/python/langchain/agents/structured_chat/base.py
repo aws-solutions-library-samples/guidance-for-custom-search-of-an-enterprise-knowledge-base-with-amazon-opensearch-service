@@ -1,14 +1,11 @@
 import re
 from typing import Any, List, Optional, Sequence, Tuple
 
-from pydantic import Field
-
 from langchain.agents.agent import Agent, AgentOutputParser
 from langchain.agents.structured_chat.output_parser import (
     StructuredChatOutputParserWithRetries,
 )
 from langchain.agents.structured_chat.prompt import FORMAT_INSTRUCTIONS, PREFIX, SUFFIX
-from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.base import BaseCallbackManager
 from langchain.chains.llm import LLMChain
 from langchain.prompts.chat import (
@@ -16,16 +13,21 @@ from langchain.prompts.chat import (
     HumanMessagePromptTemplate,
     SystemMessagePromptTemplate,
 )
+from langchain.pydantic_v1 import Field
 from langchain.schema import AgentAction, BasePromptTemplate
+from langchain.schema.language_model import BaseLanguageModel
 from langchain.tools import BaseTool
 
 HUMAN_MESSAGE_TEMPLATE = "{input}\n\n{agent_scratchpad}"
 
 
 class StructuredChatAgent(Agent):
+    """Structured Chat Agent."""
+
     output_parser: AgentOutputParser = Field(
         default_factory=StructuredChatOutputParserWithRetries
     )
+    """Output parser for the agent."""
 
     @property
     def observation_prefix(self) -> str:

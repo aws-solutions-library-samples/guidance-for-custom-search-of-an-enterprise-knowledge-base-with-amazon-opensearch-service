@@ -273,7 +273,7 @@ def _generative(fn: _Fn) -> _Fn:
 
     """
 
-    @util.decorator  # type: ignore
+    @util.decorator
     def _generative(
         fn: _Fn, self: _SelfGenerativeType, *args: Any, **kw: Any
     ) -> _SelfGenerativeType:
@@ -299,7 +299,7 @@ def _exclusive_against(*names: str, **kw: Any) -> Callable[[_Fn], _Fn]:
         for name in names
     ]
 
-    @util.decorator  # type: ignore
+    @util.decorator
     def check(fn, *args, **kw):
         # make pylance happy by not including "self" in the argument
         # list
@@ -315,7 +315,7 @@ def _exclusive_against(*names: str, **kw: Any) -> Callable[[_Fn], _Fn]:
                 raise exc.InvalidRequestError(msg)
         return fn(self, *args, **kw)
 
-    return check  # type: ignore
+    return check
 
 
 def _clone(element, **kw):
@@ -331,6 +331,15 @@ def _expand_cloned(
     """
     # TODO: cython candidate
     return itertools.chain(*[x._cloned_set for x in elements])
+
+
+def _de_clone(
+    elements: Iterable[_CLE],
+) -> Iterable[_CLE]:
+    for x in elements:
+        while x._is_clone_of is not None:
+            x = x._is_clone_of
+        yield x
 
 
 def _cloned_intersection(a: Iterable[_CLE], b: Iterable[_CLE]) -> Set[_CLE]:

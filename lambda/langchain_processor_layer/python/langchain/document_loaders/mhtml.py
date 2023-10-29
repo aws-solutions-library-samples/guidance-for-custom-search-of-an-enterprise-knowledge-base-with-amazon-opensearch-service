@@ -1,5 +1,3 @@
-"""Load MHTML files, enriching metadata with page title."""
-
 import email
 import logging
 from typing import Dict, List, Union
@@ -11,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class MHTMLLoader(BaseLoader):
-    """Loader that uses beautiful soup to parse HTML files."""
+    """Parse `MHTML` files with `BeautifulSoup`."""
 
     def __init__(
         self,
@@ -24,10 +22,11 @@ class MHTMLLoader(BaseLoader):
         to pass to the BeautifulSoup object.
 
         Args:
-            file_path: The path to the file to load.
+            file_path: Path to file to load.
             open_encoding: The encoding to use when opening the file.
-            bs_kwargs: soup kwargs to pass to the BeautifulSoup object.
-            get_text_separator: The separator to use when getting text from the soup.
+            bs_kwargs: Any kwargs to pass to the BeautifulSoup object.
+            get_text_separator: The separator to use when getting the text
+                from the soup.
         """
         try:
             import bs4  # noqa:F401
@@ -53,7 +52,7 @@ class MHTMLLoader(BaseLoader):
             message = email.message_from_string(f.read())
             parts = message.get_payload()
 
-            if type(parts) is not list:
+            if not isinstance(parts, list):
                 parts = [message]
 
             for part in parts:

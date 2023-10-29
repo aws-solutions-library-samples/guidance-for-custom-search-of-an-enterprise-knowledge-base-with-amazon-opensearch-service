@@ -257,7 +257,9 @@ class AsyncConnection(
             AsyncEngine._retrieve_proxy_for_target(target.engine), target
         )
 
-    async def start(self, is_ctxmanager: bool = False) -> AsyncConnection:
+    async def start(
+        self, is_ctxmanager: bool = False  # noqa: U100
+    ) -> AsyncConnection:
         """Start this :class:`_asyncio.AsyncConnection` object's context
         outside of using a Python ``with:`` block.
 
@@ -475,6 +477,18 @@ class AsyncConnection(
 
         """
         await greenlet_spawn(self._proxied.close)
+
+    async def aclose(self) -> None:
+        """A synonym for :meth:`_asyncio.AsyncConnection.close`.
+
+        The :meth:`_asyncio.AsyncConnection.aclose` name is specifically
+        to support the Python standard library ``@contextlib.aclosing``
+        context manager function.
+
+        .. versionadded:: 2.0.20
+
+        """
+        await self.close()
 
     async def exec_driver_sql(
         self,
@@ -805,8 +819,8 @@ class AsyncConnection(
             yield result.scalars()
 
     async def run_sync(
-        self, fn: Callable[..., Any], *arg: Any, **kw: Any
-    ) -> Any:
+        self, fn: Callable[..., _T], *arg: Any, **kw: Any
+    ) -> _T:
         """Invoke the given synchronous (i.e. not async) callable,
         passing a synchronous-style :class:`_engine.Connection` as the first
         argument.
@@ -1430,7 +1444,9 @@ def _get_sync_engine_or_connection(
 
 
 @inspection._inspects(AsyncConnection)
-def _no_insp_for_async_conn_yet(subject: AsyncConnection) -> NoReturn:
+def _no_insp_for_async_conn_yet(
+    subject: AsyncConnection,  # noqa: U100
+) -> NoReturn:
     raise exc.NoInspectionAvailable(
         "Inspection on an AsyncConnection is currently not supported. "
         "Please use ``run_sync`` to pass a callable where it's possible "
@@ -1440,7 +1456,9 @@ def _no_insp_for_async_conn_yet(subject: AsyncConnection) -> NoReturn:
 
 
 @inspection._inspects(AsyncEngine)
-def _no_insp_for_async_engine_xyet(subject: AsyncEngine) -> NoReturn:
+def _no_insp_for_async_engine_xyet(
+    subject: AsyncEngine,  # noqa: U100
+) -> NoReturn:
     raise exc.NoInspectionAvailable(
         "Inspection on an AsyncEngine is currently not supported. "
         "Please obtain a connection then use ``conn.run_sync`` to pass a "

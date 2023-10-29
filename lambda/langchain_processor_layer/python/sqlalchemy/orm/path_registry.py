@@ -57,9 +57,9 @@ else:
 
 
 _SerializedPath = List[Any]
-
+_StrPathToken = str
 _PathElementType = Union[
-    str, "_InternalEntityType[Any]", "MapperProperty[Any]"
+    _StrPathToken, "_InternalEntityType[Any]", "MapperProperty[Any]"
 ]
 
 # the representation is in fact
@@ -70,6 +70,8 @@ _PathElementType = Union[
 # chopped at odd intervals as well so this is less flexible
 _PathRepresentation = Tuple[_PathElementType, ...]
 
+# NOTE: these names are weird since the array is 0-indexed,
+# the "_Odd" entries are at 0, 2, 4, etc
 _OddPathRepresentation = Sequence["_InternalEntityType[Any]"]
 _EvenPathRepresentation = Sequence[Union["MapperProperty[Any]", str]]
 
@@ -154,6 +156,9 @@ class PathRegistry(HasCacheKey):
     def _path_for_compare(self) -> Optional[_PathRepresentation]:
         return self.path
 
+    def odd_element(self, index: int) -> _InternalEntityType[Any]:
+        return self.path[index]  # type: ignore
+
     def set(self, attributes: Dict[Any, Any], key: Any, value: Any) -> None:
         log.debug("set '%s' on path '%s' to '%s'", key, self, value)
         attributes[(key, self.natural_path)] = value
@@ -180,7 +185,7 @@ class PathRegistry(HasCacheKey):
         return id(self)
 
     @overload
-    def __getitem__(self, entity: str) -> TokenRegistry:
+    def __getitem__(self, entity: _StrPathToken) -> TokenRegistry:
         ...
 
     @overload
@@ -204,7 +209,11 @@ class PathRegistry(HasCacheKey):
     def __getitem__(
         self,
         entity: Union[
-            str, int, slice, _InternalEntityType[Any], MapperProperty[Any]
+            _StrPathToken,
+            int,
+            slice,
+            _InternalEntityType[Any],
+            MapperProperty[Any],
         ],
     ) -> Union[
         TokenRegistry,
@@ -355,7 +364,7 @@ class CreatesToken(PathRegistry):
     is_aliased_class: bool
     is_root: bool
 
-    def token(self, token: str) -> TokenRegistry:
+    def token(self, token: _StrPathToken) -> TokenRegistry:
         if token.endswith(f":{_WILDCARD_TOKEN}"):
             return TokenRegistry(self, token)
         elif token.endswith(f":{_DEFAULT_TOKEN}"):
@@ -385,7 +394,7 @@ class RootRegistry(CreatesToken):
     ) -> Union[TokenRegistry, AbstractEntityRegistry]:
         if entity in PathToken._intern:
             if TYPE_CHECKING:
-                assert isinstance(entity, str)
+                assert isinstance(entity, _StrPathToken)
             return TokenRegistry(self, PathToken._intern[entity])
         else:
             try:
@@ -433,10 +442,10 @@ class TokenRegistry(PathRegistry):
 
     inherit_cache = True
 
-    token: str
+    token: _StrPathToken
     parent: CreatesToken
 
-    def __init__(self, parent: CreatesToken, token: str):
+    def __init__(self, parent: CreatesToken, token: _StrPathToken):
         token = PathToken.intern(token)
 
         self.token = token
@@ -449,6 +458,7 @@ class TokenRegistry(PathRegistry):
     is_token = True
 
     def generate_for_superclasses(self) -> Iterator[PathRegistry]:
+        # NOTE: this method is no longer used.  consider removal
         parent = self.parent
         if is_root(parent):
             yield self
@@ -473,6 +483,35 @@ class TokenRegistry(PathRegistry):
                 yield TokenRegistry(parent.parent[ent], self.token)
         else:
             yield self
+
+    def _generate_natural_for_superclasses(
+        self,
+    ) -> Iterator[_PathRepresentation]:
+        parent = self.parent
+        if is_root(parent):
+            yield self.natural_path
+            return
+
+        if TYPE_CHECKING:
+            assert isinstance(parent, AbstractEntityRegistry)
+        for mp_ent in parent.mapper.iterate_to_root():
+            yield TokenRegistry(parent.parent[mp_ent], self.token).natural_path
+        if (
+            parent.is_aliased_class
+            and cast(
+                "AliasedInsp[Any]",
+                parent.entity,
+            )._is_with_polymorphic
+        ):
+            yield self.natural_path
+            for ent in cast(
+                "AliasedInsp[Any]", parent.entity
+            )._with_polymorphic_entities:
+                yield (
+                    TokenRegistry(parent.parent[ent], self.token).natural_path
+                )
+        else:
+            yield self.natural_path
 
     def _getitem(self, entity: Any) -> Any:
         try:
@@ -589,7 +628,7 @@ class PropRegistry(PathRegistry):
 
         self._wildcard_path_loader_key = (
             "loader",
-            parent.path + self.prop._wildcard_token,  # type: ignore
+            parent.natural_path + self.prop._wildcard_token,
         )
         self._default_path_loader_key = self.prop._default_path_loader_key
         self._loader_key = ("loader", self.natural_path)
@@ -691,7 +730,7 @@ class AbstractEntityRegistry(CreatesToken):
 
     @property
     def root_entity(self) -> _InternalEntityType[Any]:
-        return cast("_InternalEntityType[Any]", self.path[0])
+        return self.odd_element(0)
 
     @property
     def entity_path(self) -> PathRegistry:

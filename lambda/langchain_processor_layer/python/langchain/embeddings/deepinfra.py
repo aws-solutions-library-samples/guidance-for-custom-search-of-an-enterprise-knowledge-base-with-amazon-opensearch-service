@@ -1,16 +1,16 @@
 from typing import Any, Dict, List, Mapping, Optional
 
 import requests
-from pydantic import BaseModel, Extra, root_validator
 
-from langchain.embeddings.base import Embeddings
+from langchain.pydantic_v1 import BaseModel, Extra, root_validator
+from langchain.schema.embeddings import Embeddings
 from langchain.utils import get_from_dict_or_env
 
 DEFAULT_MODEL_ID = "sentence-transformers/clip-ViT-B-32"
 
 
 class DeepInfraEmbeddings(BaseModel, Embeddings):
-    """Wrapper around Deep Infra's embedding inference service.
+    """Deep Infra's embedding inference service.
 
     To use, you should have the
     environment variable ``DEEPINFRA_API_TOKEN`` set with your API token, or pass
@@ -111,7 +111,7 @@ class DeepInfraEmbeddings(BaseModel, Embeddings):
         Returns:
             List of embeddings, one for each text.
         """
-        instruction_pairs = [f"{self.query_instruction}{text}" for text in texts]
+        instruction_pairs = [f"{self.embed_instruction}{text}" for text in texts]
         embeddings = self._embed(instruction_pairs)
         return embeddings
 

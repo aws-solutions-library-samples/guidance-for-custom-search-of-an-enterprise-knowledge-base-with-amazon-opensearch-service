@@ -1,18 +1,22 @@
-"""Wrapper around text-generation-webui."""
+import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, AsyncIterator, Dict, Iterator, List, Optional
 
 import requests
-from pydantic import Field
 
-from langchain.callbacks.manager import CallbackManagerForLLMRun
+from langchain.callbacks.manager import (
+    AsyncCallbackManagerForLLMRun,
+    CallbackManagerForLLMRun,
+)
 from langchain.llms.base import LLM
+from langchain.pydantic_v1 import Field
+from langchain.schema.output import GenerationChunk
 
 logger = logging.getLogger(__name__)
 
 
 class TextGen(LLM):
-    """Wrapper around the text-generation-webui model.
+    """text-generation-webui models.
 
     To use, you should have the text-generation-webui installed, a model loaded,
     and --api added as a command-line option.
@@ -20,7 +24,7 @@ class TextGen(LLM):
     Suggested installation, use one-click installer for your OS:
     https://github.com/oobabooga/text-generation-webui#one-click-installers
 
-    Paremeters below taken from text-generation-webui api example:
+    Parameters below taken from text-generation-webui api example:
     https://github.com/oobabooga/text-generation-webui/blob/main/api-examples/api-example.py
 
     Example:
@@ -32,6 +36,9 @@ class TextGen(LLM):
 
     model_url: str
     """The full URL to the textgen webui including http[s]://host:port """
+
+    preset: Optional[str] = None
+    """The preset to use in the textgen webui """
 
     max_new_tokens: Optional[int] = 250
     """The maximum number of tokens to generate."""
@@ -107,7 +114,7 @@ class TextGen(LLM):
     """A list of strings to stop generation when encountered."""
 
     streaming: bool = False
-    """Whether to stream the results, token by token (currently unimplemented)."""
+    """Whether to stream the results, token by token."""
 
     @property
     def _default_params(self) -> Dict[str, Any]:
@@ -148,7 +155,7 @@ class TextGen(LLM):
 
     def _get_parameters(self, stop: Optional[List[str]] = None) -> Dict[str, Any]:
         """
-        Performs sanity check, preparing paramaters in format needed by textgen.
+        Performs sanity check, preparing parameters in format needed by textgen.
 
         Args:
             stop (Optional[List[str]]): List of stop sequences for textgen.
@@ -162,10 +169,13 @@ class TextGen(LLM):
         if self.stopping_strings and stop is not None:
             raise ValueError("`stop` found in both the input and default params.")
 
-        params = self._default_params
+        if self.preset is None:
+            params = self._default_params
+        else:
+            params = {"preset": self.preset}
 
         # then sets it as configured, or default to an empty list:
-        params["stop"] = self.stopping_strings or stop or []
+        params["stopping_strings"] = self.stopping_strings or stop or []
 
         return params
 
@@ -193,19 +203,216 @@ class TextGen(LLM):
                 llm("Write a story about llamas.")
         """
         if self.streaming:
-            raise ValueError("`streaming` option currently unsupported.")
+            combined_text_output = ""
+            for chunk in self._stream(
+                prompt=prompt, stop=stop, run_manager=run_manager, **kwargs
+            ):
+                combined_text_output += chunk.text
+            result = combined_text_output
 
-        url = f"{self.model_url}/api/v1/generate"
-        params = self._get_parameters(stop)
-        request = params.copy()
-        request["prompt"] = prompt
-        response = requests.post(url, json=request)
-
-        if response.status_code == 200:
-            result = response.json()["results"][0]["text"]
-            print(prompt + result)
         else:
-            print(f"ERROR: response: {response}")
-            result = ""
+            url = f"{self.model_url}/api/v1/generate"
+            params = self._get_parameters(stop)
+            request = params.copy()
+            request["prompt"] = prompt
+            response = requests.post(url, json=request)
+
+            if response.status_code == 200:
+                result = response.json()["results"][0]["text"]
+            else:
+                print(f"ERROR: response: {response}")
+                result = ""
 
         return result
+
+    async def _acall(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> str:
+        """Call the textgen web API and return the output.
+
+        Args:
+            prompt: The prompt to use for generation.
+            stop: A list of strings to stop generation when encountered.
+
+        Returns:
+            The generated text.
+
+        Example:
+            .. code-block:: python
+
+                from langchain.llms import TextGen
+                llm = TextGen(model_url="http://localhost:5000")
+                llm("Write a story about llamas.")
+        """
+        if self.streaming:
+            combined_text_output = ""
+            async for chunk in self._astream(
+                prompt=prompt, stop=stop, run_manager=run_manager, **kwargs
+            ):
+                combined_text_output += chunk.text
+            result = combined_text_output
+
+        else:
+            url = f"{self.model_url}/api/v1/generate"
+            params = self._get_parameters(stop)
+            request = params.copy()
+            request["prompt"] = prompt
+            response = requests.post(url, json=request)
+
+            if response.status_code == 200:
+                result = response.json()["results"][0]["text"]
+            else:
+                print(f"ERROR: response: {response}")
+                result = ""
+
+        return result
+
+    def _stream(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> Iterator[GenerationChunk]:
+        """Yields results objects as they are generated in real time.
+
+        It also calls the callback manager's on_llm_new_token event with
+        similar parameters to the OpenAI LLM class method of the same name.
+
+        Args:
+            prompt: The prompts to pass into the model.
+            stop: Optional list of stop words to use when generating.
+
+        Returns:
+            A generator representing the stream of tokens being generated.
+
+        Yields:
+            A dictionary like objects containing a string token and metadata.
+            See text-generation-webui docs and below for more.
+
+        Example:
+            .. code-block:: python
+
+                from langchain.llms import TextGen
+                llm = TextGen(
+                    model_url = "ws://localhost:5005"
+                    streaming=True
+                )
+                for chunk in llm.stream("Ask 'Hi, how are you?' like a pirate:'",
+                        stop=["'","\n"]):
+                    print(chunk, end='', flush=True)
+
+        """
+        try:
+            import websocket
+        except ImportError:
+            raise ImportError(
+                "The `websocket-client` package is required for streaming."
+            )
+
+        params = {**self._get_parameters(stop), **kwargs}
+
+        url = f"{self.model_url}/api/v1/stream"
+
+        request = params.copy()
+        request["prompt"] = prompt
+
+        websocket_client = websocket.WebSocket()
+
+        websocket_client.connect(url)
+
+        websocket_client.send(json.dumps(request))
+
+        while True:
+            result = websocket_client.recv()
+            result = json.loads(result)
+
+            if result["event"] == "text_stream":
+                chunk = GenerationChunk(
+                    text=result["text"],
+                    generation_info=None,
+                )
+                yield chunk
+            elif result["event"] == "stream_end":
+                websocket_client.close()
+                return
+
+            if run_manager:
+                run_manager.on_llm_new_token(token=chunk.text)
+
+    async def _astream(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[GenerationChunk]:
+        """Yields results objects as they are generated in real time.
+
+        It also calls the callback manager's on_llm_new_token event with
+        similar parameters to the OpenAI LLM class method of the same name.
+
+        Args:
+            prompt: The prompts to pass into the model.
+            stop: Optional list of stop words to use when generating.
+
+        Returns:
+            A generator representing the stream of tokens being generated.
+
+        Yields:
+            A dictionary like objects containing a string token and metadata.
+            See text-generation-webui docs and below for more.
+
+        Example:
+            .. code-block:: python
+
+                from langchain.llms import TextGen
+                llm = TextGen(
+                    model_url = "ws://localhost:5005"
+                    streaming=True
+                )
+                for chunk in llm.stream("Ask 'Hi, how are you?' like a pirate:'",
+                        stop=["'","\n"]):
+                    print(chunk, end='', flush=True)
+
+        """
+        try:
+            import websocket
+        except ImportError:
+            raise ImportError(
+                "The `websocket-client` package is required for streaming."
+            )
+
+        params = {**self._get_parameters(stop), **kwargs}
+
+        url = f"{self.model_url}/api/v1/stream"
+
+        request = params.copy()
+        request["prompt"] = prompt
+
+        websocket_client = websocket.WebSocket()
+
+        websocket_client.connect(url)
+
+        websocket_client.send(json.dumps(request))
+
+        while True:
+            result = websocket_client.recv()
+            result = json.loads(result)
+
+            if result["event"] == "text_stream":
+                chunk = GenerationChunk(
+                    text=result["text"],
+                    generation_info=None,
+                )
+                yield chunk
+            elif result["event"] == "stream_end":
+                websocket_client.close()
+                return
+
+            if run_manager:
+                await run_manager.on_llm_new_token(token=chunk.text)

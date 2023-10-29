@@ -1,3 +1,4 @@
+import math
 import sys
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
@@ -124,6 +125,19 @@ def cases() -> Iterable[Case]:
     yield Case(at.IsAscii[str], ['123', 'foo bar'], ['£100', '😊', 'whatever 👀'])
 
     yield Case(Annotated[int, at.Predicate(lambda x: x % 2 == 0)], [0, 2, 4], [1, 3, 5])
+
+    yield Case(at.IsFinite[float], [1.23], [math.nan, math.inf, -math.inf])
+    yield Case(at.IsNotFinite[float], [math.nan, math.inf], [1.23])
+    yield Case(at.IsNan[float], [math.nan], [1.23, math.inf])
+    yield Case(at.IsNotNan[float], [1.23, math.inf], [math.nan])
+    yield Case(at.IsInfinite[float], [math.inf], [math.nan, 1.23])
+    yield Case(at.IsNotInfinite[float], [math.nan, 1.23], [math.inf])
+
+    # check stacked predicates
+    yield Case(at.IsInfinite[Annotated[float, at.Predicate(lambda x: x > 0)]], [math.inf], [-math.inf, 1.23, math.nan])
+
+    # doc
+    yield Case(Annotated[int, at.doc("A number")], [1, 2], [])
 
     # custom GroupedMetadata
     class MyCustomGroupedMetadata(at.GroupedMetadata):

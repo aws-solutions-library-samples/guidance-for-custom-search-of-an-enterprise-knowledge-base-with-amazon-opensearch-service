@@ -373,7 +373,7 @@ class SimpleResultMetaData(ResultMetaData):
         indexes: Sequence[int]
         new_keys: Sequence[str]
         extra: Sequence[Any]
-        indexes, new_keys, extra = zip(*metadata_for_keys)  # type: ignore
+        indexes, new_keys, extra = zip(*metadata_for_keys)
 
         if self._translated_indexes:
             indexes = [self._translated_indexes[idx] for idx in indexes]
@@ -459,7 +459,7 @@ class ResultInternal(InPlaceGenerative, Generic[_R]):
             else:
                 _proc = Row
 
-                def process_row(  # type: ignore
+                def process_row(
                     metadata: ResultMetaData,
                     processors: Optional[_ProcessorsType],
                     key_to_index: Mapping[_KeyType, int],
@@ -1243,7 +1243,7 @@ class Result(_WithKeys, ResultInternal[Row[_TP]]):
 
             :attr:`_engine.Result.t` - shorter synonym
 
-            :attr:`_engine.Row.t` - :class:`_engine.Row` version
+            :attr:`_engine.Row._t` - :class:`_engine.Row` version
 
         """
 
@@ -1379,6 +1379,11 @@ class Result(_WithKeys, ResultInternal[Row[_TP]]):
         .. versionadded:: 1.4
 
         :return: a list of :class:`_engine.Row` objects.
+
+        .. seealso::
+
+            :ref:`engine_stream_results` - How to stream a large result set
+            without loading it completely in python.
 
         """
 

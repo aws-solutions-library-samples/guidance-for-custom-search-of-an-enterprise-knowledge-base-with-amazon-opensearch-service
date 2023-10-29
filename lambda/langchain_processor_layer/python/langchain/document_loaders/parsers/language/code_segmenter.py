@@ -3,6 +3,8 @@ from typing import List
 
 
 class CodeSegmenter(ABC):
+    """Abstract class for the code segmenter."""
+
     def __init__(self, code: str):
         self.code = code
 
@@ -11,8 +13,8 @@ class CodeSegmenter(ABC):
 
     @abstractmethod
     def simplify_code(self) -> str:
-        raise NotImplementedError  # pragma: no cover
+        raise NotImplementedError()  # pragma: no cover
 
     @abstractmethod
     def extract_functions_classes(self) -> List[str]:
-        raise NotImplementedError  # pragma: no cover
+        raise NotImplementedError()  # pragma: no cover

@@ -1,28 +1,23 @@
-"""Wrapper around SingleStore DB."""
-
 from __future__ import annotations
 
-import enum
 import json
-from typing import Any, ClassVar, Collection, Iterable, List, Optional, Tuple, Type
+import re
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Type,
+)
 
 from sqlalchemy.pool import QueuePool
 
-from langchain.callbacks.manager import (
-    AsyncCallbackManagerForRetrieverRun,
-    CallbackManagerForRetrieverRun,
-)
 from langchain.docstore.document import Document
-from langchain.embeddings.base import Embeddings
-from langchain.vectorstores.base import VectorStore, VectorStoreRetriever
-
-
-class DistanceStrategy(str, enum.Enum):
-    """Enumerator of the Distance strategies for SingleStoreDB."""
-
-    EUCLIDEAN_DISTANCE = "EUCLIDEAN_DISTANCE"
-    DOT_PRODUCT = "DOT_PRODUCT"
-
+from langchain.schema.embeddings import Embeddings
+from langchain.schema.vectorstore import VectorStore, VectorStoreRetriever
+from langchain.vectorstores.utils import DistanceStrategy
 
 DEFAULT_DISTANCE_STRATEGY = DistanceStrategy.DOT_PRODUCT
 
@@ -33,8 +28,7 @@ ORDERING_DIRECTIVE: dict = {
 
 
 class SingleStoreDB(VectorStore):
-    """
-    This class serves as a Pythonic interface to the SingleStore DB database.
+    """`SingleStore DB` vector store.
 
     The prerequisite for using this class is the installation of the ``singlestoredb``
     Python package.
@@ -187,26 +181,22 @@ class SingleStoreDB(VectorStore):
 
         self.embedding = embedding
         self.distance_strategy = distance_strategy
-        self.table_name = table_name
-        self.content_field = content_field
-        self.metadata_field = metadata_field
-        self.vector_field = vector_field
+        self.table_name = self._sanitize_input(table_name)
+        self.content_field = self._sanitize_input(content_field)
+        self.metadata_field = self._sanitize_input(metadata_field)
+        self.vector_field = self._sanitize_input(vector_field)
 
-        """Pass the rest of the kwargs to the connection."""
+        # Pass the rest of the kwargs to the connection.
         self.connection_kwargs = kwargs
 
-        """Add program name and version to connection attributes."""
+        # Add program name and version to connection attributes.
         if "conn_attrs" not in self.connection_kwargs:
             self.connection_kwargs["conn_attrs"] = dict()
-        if "program_name" not in self.connection_kwargs["conn_attrs"]:
-            self.connection_kwargs["conn_attrs"][
-                "program_name"
-            ] = "langchain python sdk"
-            self.connection_kwargs["conn_attrs"][
-                "program_version"
-            ] = "0.0.205"  # the version of SingleStoreDB VectorStore implementation
 
-        """Create connection pool."""
+        self.connection_kwargs["conn_attrs"]["_connector_name"] = "langchain python sdk"
+        self.connection_kwargs["conn_attrs"]["_connector_version"] = "1.0.1"
+
+        # Create connection pool.
         self.connection_pool = QueuePool(
             self._get_connection,
             max_overflow=max_overflow,
@@ -214,6 +204,17 @@ class SingleStoreDB(VectorStore):
             timeout=timeout,
         )
         self._create_table()
+
+    @property
+    def embeddings(self) -> Embeddings:
+        return self.embedding
+
+    def _sanitize_input(self, input_str: str) -> str:
+        # Remove characters that are not alphanumeric or underscores
+        return re.sub(r"[^a-zA-Z0-9_]", "", input_str)
+
+    def _select_relevance_score_fn(self) -> Callable[[float], float]:
+        return self._max_inner_product_relevance_score_fn
 
     def _create_table(self: SingleStoreDB) -> None:
         """Create table if it doesn't exist."""
@@ -343,8 +344,9 @@ class SingleStoreDB(VectorStore):
             def build_where_clause(
                 where_clause_values: List[Any],
                 sub_filter: dict,
-                prefix_args: List[str] = [],
+                prefix_args: Optional[List[str]] = None,
             ) -> None:
+                prefix_args = prefix_args or []
                 for key in sub_filter.keys():
                     if isinstance(sub_filter[key], dict):
                         build_where_clause(
@@ -371,7 +373,9 @@ class SingleStoreDB(VectorStore):
                     FROM {} {} ORDER BY __score {} LIMIT %s""".format(
                         self.content_field,
                         self.metadata_field,
-                        self.distance_strategy,
+                        self.distance_strategy.name
+                        if isinstance(self.distance_strategy, DistanceStrategy)
+                        else self.distance_strategy,
                         self.vector_field,
                         self.table_name,
                         where_clause,
@@ -439,29 +443,6 @@ class SingleStoreDB(VectorStore):
         instance.add_texts(texts, metadatas, embedding.embed_documents(texts), **kwargs)
         return instance
 
-    def as_retriever(self, **kwargs: Any) -> SingleStoreDBRetriever:
-        return SingleStoreDBRetriever(vectorstore=self, **kwargs)
 
-
-class SingleStoreDBRetriever(VectorStoreRetriever):
-    """Retriever for SingleStoreDB vector stores."""
-
-    vectorstore: SingleStoreDB
-    k: int = 4
-    allowed_search_types: ClassVar[Collection[str]] = ("similarity",)
-
-    def _get_relevant_documents(
-        self, query: str, *, run_manager: Optional[CallbackManagerForRetrieverRun]
-    ) -> List[Document]:
-        if self.search_type == "similarity":
-            docs = self.vectorstore.similarity_search(query, k=self.k)
-        else:
-            raise ValueError(f"search_type of {self.search_type} not allowed.")
-        return docs
-
-    async def _aget_relevant_documents(
-        self, query: str, *, run_manager: Optional[AsyncCallbackManagerForRetrieverRun]
-    ) -> List[Document]:
-        raise NotImplementedError(
-            "SingleStoreDBVectorStoreRetriever does not support async"
-        )
+# SingleStoreDBRetriever is not needed, but we keep it for backwards compatibility
+SingleStoreDBRetriever = VectorStoreRetriever

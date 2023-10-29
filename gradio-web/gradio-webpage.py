@@ -3,18 +3,18 @@ import json
 import gradio as gr
 from datetime import datetime
 
-#Fill in your correct configuration
+#Fill in your configuration
 invoke_url = ''
 bedrock_url = ''
 
-chinese_index = ''
-english_index = ''
+chinese_index = 'smart_search_qa_test'
+english_index = 'smart_search_qa_test'
 
-cn_embedding_endpoint = ''
-cn_llm_endpoint = ''
+cn_embedding_endpoint = 'huggingface-inference-eb'
+cn_llm_endpoint = 'pytorch-inference-llm-v1'
 
-en_embedding_endpoint = ''
-en_llm_endpoint = ''
+en_embedding_endpoint = 'huggingface-inference-eb'
+en_llm_endpoint = 'pytorch-inference-llm-v1'
 
 llama2_llm_endpoint = ''
 
@@ -92,12 +92,12 @@ Human: Use the following pieces of context to answer the question at the end. If
 
 Question: {question}
 Assistant:
-"""       
-
+"""
 
 api = invoke_url + '/langchain_processor_qa?query='
+bedrock_url += '/bedrock?'
 
-def get_answer(task_type,question,session_id,language,model_type,prompt,search_engine,index,top_k,temperature,score_type_checklist):
+def get_answer(task_type,question,sessionId,language,modelType,prompt,searchEngine,index,searchMethod,vecTopK,txtTopK,vecDocsScoreThresholds,txtDocsScoreThresholds,score_type_checklist):
     
     question=question.replace('AWS','亚马逊云科技').replace('aws','亚马逊云科技').replace('Aws','亚马逊云科技')
     print('question:',question)
@@ -106,7 +106,8 @@ def get_answer(task_type,question,session_id,language,model_type,prompt,search_e
         url = api + question
     else:
         url = api + "hello"
-
+    
+    url += '&requestType=https'
     #task type: qa,chat
     if task_type == "Knowledge base Q&A":
         task = 'qa'
@@ -116,38 +117,37 @@ def get_answer(task_type,question,session_id,language,model_type,prompt,search_e
 
     if language == "english":
         url += '&language=english'
-        url += ('&embedding_endpoint_name='+en_embedding_endpoint)
-        if model_type == "llama2(english)":
-            url += ('&llm_embedding_name='+llama2_llm_endpoint)
+        url += ('&embeddingEndpoint='+en_embedding_endpoint)
+        if modelType == "llama2(english)":
+            url += ('&sagemakerEndpoint='+llama2_llm_endpoint)
         else:
-            url += ('&llm_embedding_name='+en_llm_endpoint)
+            url += ('&sagemakerEndpoint='+en_llm_endpoint)
     elif language == "chinese":
         url += '&language=chinese'
-        url += ('&embedding_endpoint_name='+cn_embedding_endpoint)
-        url += ('&llm_embedding_name='+cn_llm_endpoint)
+        url += ('&embeddingEndpoint='+cn_embedding_endpoint)
+        url += ('&sagemakerEndpoint='+cn_llm_endpoint)
      
     elif language == "chinese-tc":
         url += '&language=chinese-tc'
-        url += ('&embedding_endpoint_name='+cn_embedding_endpoint)
-        url += ('&llm_embedding_name='+cn_llm_endpoint)
+        url += ('&embeddingEndpoint='+cn_embedding_endpoint)
+        url += ('&sagemakerEndpoint='+cn_llm_endpoint)
     
-    if len(session_id) > 0:
-        url += ('&session_id='+session_id)
+    if len(sessionId) > 0:
+        url += ('&sessionId='+sessionId)
     
-    if model_type == "claude2":
-        url += ('&model_type=bedrock')
-        url += ('&bedrock_api_url='+bedrock_url)
-        url += ('&bedrock_model_id=anthropic.claude-v2')
-    elif model_type == "titan(english)":
-        url += ('&model_type=bedrock')
-        url += ('&bedrock_api_url='+bedrock_url)
-        url += ('&bedrock_model_id=amazon.titan-tg1-large')
-    elif model_type == "llama2(english)":
-        url += ('&model_type=llama2')
+    if modelType == "claude2_api":
+        url += ('&modelType=bedrock_api')
+        url += ('&urlOrApiKey='+bedrock_url)
+        url += ('&modelName=anthropic.claude-v2')
+    elif modelType == "claude2":
+        url += ('&modelType=bedrock')
+        url += ('&modelName=anthropic.claude-v2')
+    elif modelType == "llama2(english)":
+        url += ('&modelType=llama2')
 
     if len(prompt) > 0:
         url += ('&prompt='+prompt)
-    elif model_type == "claude2":
+    elif modelType == "claude2":
         if task_type == "Knowledge base Q&A":
             if language == "english":
                 url += ('&prompt='+claude_rag_prompt_english)
@@ -163,8 +163,8 @@ def get_answer(task_type,question,session_id,language,model_type,prompt,search_e
             elif language == "chinese-tc":
                 url += ('&prompt='+claude_chat_prompt_cn_tc)
 
-    if search_engine == "OpenSearch":
-        url += ('&search_engine=opensearch')
+    if searchEngine == "OpenSearch":
+        url += ('&searchEngine=opensearch')
         if len(index) > 0:
             url += ('&index='+index)
         else:
@@ -173,19 +173,30 @@ def get_answer(task_type,question,session_id,language,model_type,prompt,search_e
             elif language == "english" and len(english_index) >0:
                 url += ('&index='+english_index)
 
-    elif search_engine == "Kendra":
-        url += ('&search_engine=kendra')
+    elif searchEngine == "Kendra":
+        url += ('&searchEngine=kendra')
         if len(index) > 0:
             url += ('&kendra_index_id='+index)
 
-    if int(top_k) > 0:
-        url += ('&top_k='+str(top_k))
+    if int(vecTopK) > 0:
+        url += ('&topK='+str(vecTopK))
 
-    if float(temperature) > 0.01:
-        url += ('&temperature='+str(temperature))
+    url += ('&searchMethod='+searchMethod)
+
+    if int(txtTopK) > 0:
+        url += ('&txtDocsNum='+str(txtTopK))
+
+    if float(vecDocsScoreThresholds) > 0:
+        url += ('&vecDocsScoreThresholds='+str(vecDocsScoreThresholds))
+
+    if float(txtDocsScoreThresholds) > 0:
+        url += ('&txtDocsScoreThresholds='+str(txtDocsScoreThresholds))
 
     for score_type in score_type_checklist:
-        url += ('&cal_' + score_type +'=true')
+        if score_type == "query_answer_score":
+            url += ('&isCheckedScoreQA=true')
+        elif score_type == "answer_docs_score":
+            url += ('&isCheckedScoreAD=true')
 
     print("url:",url)
 
@@ -196,11 +207,12 @@ def get_answer(task_type,question,session_id,language,model_type,prompt,search_e
     print("request takes time:",request_time)
 
     result = response.text
+    print('result0:',result)
     
     result = json.loads(result)
     print('result:',result)
     
-    answer = result['suggestion_answer']
+    answer = result['text']
     source_list = []
     if 'source_list' in result.keys():
         source_list = result['source_list']
@@ -230,53 +242,46 @@ def get_answer(task_type,question,session_id,language,model_type,prompt,search_e
     
     confidence = ""
     query_docs_score = -1
-    if 'query_docs_score' in result.keys():
-        query_docs_score =  float(result['query_docs_score'])
+    if 'scoreQueryDoc' in result.keys():
+        query_docs_score =  float(result['scoreQueryDoc'])
     if query_docs_score >= 0:
         confidence += ("query_docs_score:" + str(query_docs_score) + '\n')
 
     query_answer_score = -1
-    if 'query_answer_score' in result.keys():
-        query_answer_score =  float(result['query_answer_score'])
+    if 'scoreQueryAnswer' in result.keys():
+        query_answer_score =  float(result['scoreQueryAnswer'])
     if query_answer_score >= 0:
         confidence += ("query_answer_score:" + str(query_answer_score) + '\n')
 
     answer_docs_score = -1
-    if 'answer_docs_score' in result.keys():
-        answer_docs_score =  float(result['answer_docs_score'])
+    if 'scoreAnswerDoc' in result.keys():
+        answer_docs_score =  float(result['scoreAnswerDoc'])
     if answer_docs_score >= 0:
         confidence += ("answer_docs_score:" + str(answer_docs_score) + '\n')
-
-    docs_list_overlap_score = -1
-    if 'docs_list_overlap_score' in result.keys():
-        docs_list_overlap_score =  float(result['docs_list_overlap_score'])
-    if docs_list_overlap_score >= 0:
-        confidence += ("docs_list_overlap_score:" + str(docs_list_overlap_score) + '\n')
-
 
     return answer,confidence,source_str,url,request_time
     
     
-def get_summarize(texts,language,model_type,prompt):
+def get_summarize(texts,language,modelType,prompt):
 
     url = api + texts
     url += '&task=summarize'
+    url += '&requestType=https'
 
     if language == "english":
         url += '&language=english'
-        url += ('&embedding_endpoint_name='+en_embedding_endpoint)
-        url += ('&llm_embedding_name='+en_llm_endpoint)
+        url += ('&embeddingEndpoint='+en_embedding_endpoint)
+        url += ('&sagemakerEndpoint='+en_llm_endpoint)
         
     elif language == "chinese":
         url += '&language=chinese'
-        url += ('&embedding_endpoint_name='+cn_embedding_endpoint)
-        url += ('&llm_embedding_name='+cn_llm_endpoint)
+        url += ('&embeddingEndpoint='+cn_embedding_endpoint)
+        url += ('&sagemakerEndpoint='+cn_llm_endpoint)
 
-    if model_type == "claude2":
-        url += ('&model_type=bedrock')
-        url += ('&bedrock_api_url='+bedrock_url)
-        url += ('&bedrock_model_id=anthropic.claude-v2')
-
+    if modelType == "claude2":
+        url += ('&modelType=bedrock')
+        url += ('&urlOrApiKey='+bedrock_url)
+        url += ('&modelName=anthropic.claude-v2')
 
     if len(prompt) > 0:
         url += ('&prompt='+prompt)
@@ -294,9 +299,6 @@ def get_summarize(texts,language,model_type,prompt):
     
     answer = result['summarize']
 
-    # if language == 'english' and answer.find('The Question and Answer are:') > 0:
-    #     answer=answer.split('The Question and Answer are:')[-1].strip()
-
     return answer
 
 demo = gr.Blocks(title="AWS Intelligent Q&A Solution Guide")
@@ -312,19 +314,24 @@ with demo:
                 with gr.Column():
                     qa_task_radio = gr.Radio(["Knowledge base Q&A","Chat"],value="Knowledge base Q&A",label="Task")
                     query_textbox = gr.Textbox(label="Query")
-                    session_id_textbox = gr.Textbox(label="Session ID")
+                    sessionId_textbox = gr.Textbox(label="Session ID")
                     qa_button = gr.Button("Summit")
 
                     qa_language_radio = gr.Radio(["chinese","chinese-tc", "english"],value="chinese",label="Language")
-                    qa_model_type_radio = gr.Radio(["claude2","titan(english)", "llama2(english)","other"],value="other",label="Model type")
+                    qa_modelType_radio = gr.Radio(["claude2","claude2_api", "llama2(english)","other"],value="other",label="Model type")
                     qa_prompt_textbox = gr.Textbox(label="Prompt( must include {context} and {question} )",placeholder=chinese_prompt,lines=2)
-                    qa_search_engine_radio = gr.Radio(["OpenSearch","Kendra"],value="OpenSearch",label="Search engine")
+                    qa_searchEngine_radio = gr.Radio(["OpenSearch","Kendra"],value="OpenSearch",label="Search engine")
                     qa_index_textbox = gr.Textbox(label="OpenSearch index OR Kendra index id")
                     # qa_em_ep_textbox = gr.Textbox(label="Embedding Endpoint")
                     
-                    qa_top_k_slider = gr.Slider(label="Top_k of source text to LLM",value=1, minimum=1, maximum=20, step=1)
-                    qa_temperature_slider = gr.Slider(label="Temperature parameter of LLM",value=0.01, minimum=0.01, maximum=1, step=0.01)
-                    score_type_checklist = gr.CheckboxGroup(["query_answer_score", "answer_docs_score","docs_list_overlap_score"],value=["query_answer_score"],label="Confidence score type")
+                    search_method_radio = gr.Radio(["vector","text","mix"],value="vector",label="Search Method")
+                    vec_topK_slider = gr.Slider(label="The number of related documents by vector search",value=1, minimum=1, maximum=10, step=1)
+                    txt_topK_slider = gr.Slider(label="The number of related documents by text search",value=1, minimum=1, maximum=10, step=1)
+                    vec_score_thresholds_radio = gr.Slider(label="Vector search score thresholds",value=0.01, minimum=0.01, maximum=1, step=0.01)
+                    txt_score_thresholds_radio = gr.Slider(label="Text search score thresholds",value=0.01, minimum=0.01, maximum=1, step=0.01)
+
+                    # qa_temperature_slider = gr.Slider(label="Temperature parameter of LLM",value=0.01, minimum=0.01, maximum=1, step=0.01)
+                    score_type_checklist = gr.CheckboxGroup(["query_answer_score", "answer_docs_score"],value=["query_answer_score"],label="Confidence score type")
 
                 with gr.Column():
                     qa_output = [gr.outputs.Textbox(label="Answer"), gr.outputs.Textbox(label="Confidence"), gr.outputs.Textbox(label="Source"), gr.outputs.Textbox(label="Url"), gr.outputs.Textbox(label="Request time")]
@@ -336,13 +343,14 @@ with demo:
                     text_input = gr.Textbox(label="Input texts",lines=4)
                     summarize_button = gr.Button("Summit")
                     sm_language_radio = gr.Radio(["chinese", "english"],value="chinese",label="Language")
-                    sm_model_type_radio = gr.Radio(["claude2","other"],value="other",label="Model type")
+                    sm_modelType_radio = gr.Radio(["claude2","other"],value="other",label="Model type")
                     sm_prompt_textbox = gr.Textbox(label="Prompt",lines=4, placeholder=chinses_summarize_prompt)
                 with gr.Column():
                     text_output = gr.Textbox()
             
-    qa_button.click(get_answer, inputs=[qa_task_radio,query_textbox,session_id_textbox,qa_language_radio,qa_model_type_radio,qa_prompt_textbox,qa_search_engine_radio,qa_index_textbox,qa_top_k_slider,qa_temperature_slider,score_type_checklist], outputs=qa_output)
-    summarize_button.click(get_summarize, inputs=[text_input,sm_language_radio,sm_model_type_radio,sm_prompt_textbox], outputs=text_output)
+    qa_button.click(get_answer, inputs=[qa_task_radio,query_textbox,sessionId_textbox,qa_language_radio,qa_modelType_radio,qa_prompt_textbox,qa_searchEngine_radio,qa_index_textbox,\
+        search_method_radio,vec_topK_slider,txt_topK_slider,vec_score_thresholds_radio,txt_score_thresholds_radio,score_type_checklist], outputs=qa_output)
+    summarize_button.click(get_summarize, inputs=[text_input,sm_language_radio,sm_modelType_radio,sm_prompt_textbox], outputs=text_output)
 
 # demo.launch()
 demo.launch(share=True)

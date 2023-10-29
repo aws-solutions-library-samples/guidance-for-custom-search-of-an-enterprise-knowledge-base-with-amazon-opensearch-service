@@ -1,4 +1,3 @@
-"""Vertex Matching Engine implementation of the vector store."""
 from __future__ import annotations
 
 import json
@@ -7,21 +6,23 @@ import time
 import uuid
 from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Type
 
-from langchain.docstore.document import Document
-from langchain.embeddings import TensorflowHubEmbeddings
-from langchain.embeddings.base import Embeddings
-from langchain.vectorstores.base import VectorStore
+from langchain.schema.document import Document
+from langchain.schema.embeddings import Embeddings
+from langchain.schema.vectorstore import VectorStore
+from langchain.utilities.vertexai import get_client_info
 
 if TYPE_CHECKING:
     from google.cloud import storage
     from google.cloud.aiplatform import MatchingEngineIndex, MatchingEngineIndexEndpoint
     from google.oauth2.service_account import Credentials
 
+    from langchain.embeddings import TensorflowHubEmbeddings
+
 logger = logging.getLogger()
 
 
 class MatchingEngine(VectorStore):
-    """Vertex Matching Engine implementation of the vector store.
+    """`Google Vertex AI Matching Engine` vector store.
 
     While the embeddings are stored in the Matching Engine, the embedded
     documents will be stored in GCS.
@@ -84,6 +85,10 @@ class MatchingEngine(VectorStore):
         self.credentials = credentials
         self.gcs_bucket_name = gcs_bucket_name
 
+    @property
+    def embeddings(self) -> Embeddings:
+        return self.embedding
+
     def _validate_google_libraries_installation(self) -> None:
         """Validates that Google libraries that are needed are installed."""
         try:
@@ -112,15 +117,24 @@ class MatchingEngine(VectorStore):
         Returns:
             List of ids from adding the texts into the vectorstore.
         """
+        texts = list(texts)
+        if metadatas is not None and len(texts) != len(metadatas):
+            raise ValueError(
+                "texts and metadatas do not have the same length. Received "
+                f"{len(texts)} texts and {len(metadatas)} metadatas."
+            )
         logger.debug("Embedding documents.")
-        embeddings = self.embedding.embed_documents(list(texts))
+        embeddings = self.embedding.embed_documents(texts)
         jsons = []
         ids = []
         # Could be improved with async.
-        for embedding, text in zip(embeddings, texts):
+        for idx, (embedding, text) in enumerate(zip(embeddings, texts)):
             id = str(uuid.uuid4())
             ids.append(id)
-            jsons.append({"id": id, "embedding": embedding})
+            json_: dict = {"id": id, "embedding": embedding}
+            if metadatas is not None:
+                json_["metadata"] = metadatas[idx]
+            jsons.append(json)
             self._upload_to_gcs(text, f"documents/{id}")
 
         logger.debug(f"Uploaded {len(ids)} documents to GCS.")
@@ -171,11 +185,19 @@ class MatchingEngine(VectorStore):
         logger.debug(f"Embedding query {query}.")
         embedding_query = self.embedding.embed_documents([query])
 
-        response = self.endpoint.match(
-            deployed_index_id=self._get_index_id(),
-            queries=embedding_query,
-            num_neighbors=k,
-        )
+        # If the endpoint is public we use the find_neighbors function.
+        if self.endpoint._public_match_client:
+            response = self.endpoint.find_neighbors(
+                deployed_index_id=self._get_index_id(),
+                queries=embedding_query,
+                num_neighbors=k,
+            )
+        else:
+            response = self.endpoint.match(
+                deployed_index_id=self._get_index_id(),
+                queries=embedding_query,
+                num_neighbors=k,
+            )
 
         if len(response) == 0:
             return []
@@ -185,7 +207,7 @@ class MatchingEngine(VectorStore):
         results = []
 
         # I'm only getting the first one because queries receives an array
-        # and the similarity_search method only recevies one query. This
+        # and the similarity_search method only receives one query. This
         # means that the match method will always return an array with only
         # one element.
         for doc in response[0]:
@@ -398,7 +420,11 @@ class MatchingEngine(VectorStore):
 
         from google.cloud import storage
 
-        return storage.Client(credentials=credentials, project=project_id)
+        return storage.Client(
+            credentials=credentials,
+            project=project_id,
+            client_info=get_client_info(module="vertex-ai-matching-engine"),
+        )
 
     @classmethod
     def _init_aiplatform(
@@ -432,10 +458,13 @@ class MatchingEngine(VectorStore):
         )
 
     @classmethod
-    def _get_default_embeddings(cls) -> TensorflowHubEmbeddings:
+    def _get_default_embeddings(cls) -> "TensorflowHubEmbeddings":
         """This function returns the default embedding.
 
         Returns:
             Default TensorflowHubEmbeddings to use.
         """
+
+        from langchain.embeddings import TensorflowHubEmbeddings
+
         return TensorflowHubEmbeddings()

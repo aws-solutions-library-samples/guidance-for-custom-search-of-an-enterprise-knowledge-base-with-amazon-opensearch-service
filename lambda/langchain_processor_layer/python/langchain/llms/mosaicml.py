@@ -1,12 +1,11 @@
-"""Wrapper around MosaicML APIs."""
 from typing import Any, Dict, List, Mapping, Optional
 
 import requests
-from pydantic import Extra, root_validator
 
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.llms.utils import enforce_stop_tokens
+from langchain.pydantic_v1 import Extra, root_validator
 from langchain.utils import get_from_dict_or_env
 
 INSTRUCTION_KEY = "### Instruction:"
@@ -28,7 +27,7 @@ PROMPT_FOR_GENERATION_FORMAT = """{intro}
 
 
 class MosaicML(LLM):
-    """Wrapper around MosaicML's LLM inference service.
+    """MosaicML LLM service.
 
     To use, you should have the
     environment variable ``MOSAICML_API_TOKEN`` set with your API token, or pass
@@ -54,7 +53,7 @@ class MosaicML(LLM):
     inject_instruction_format: bool = False
     """Whether to inject the instruction format into the prompt."""
     model_kwargs: Optional[dict] = None
-    """Key word arguments to pass to the model."""
+    """Keyword arguments to pass to the model."""
     retry_sleep: float = 1.0
     """How long to try sleeping for if a rate limit is encountered"""
 
@@ -122,7 +121,7 @@ class MosaicML(LLM):
 
         prompt = self._transform_prompt(prompt)
 
-        payload = {"input_strings": [prompt]}
+        payload = {"inputs": [prompt]}
         payload.update(_model_kwargs)
         payload.update(kwargs)
 
@@ -139,14 +138,8 @@ class MosaicML(LLM):
             raise ValueError(f"Error raised by inference endpoint: {e}")
 
         try:
-            parsed_response = response.json()
-
-            if "error" in parsed_response:
-                # if we get rate limited, try sleeping for 1 second
-                if (
-                    not is_retry
-                    and "rate limit exceeded" in parsed_response["error"].lower()
-                ):
+            if response.status_code == 429:
+                if not is_retry:
                     import time
 
                     time.sleep(self.retry_sleep)
@@ -154,42 +147,35 @@ class MosaicML(LLM):
                     return self._call(prompt, stop, run_manager, is_retry=True)
 
                 raise ValueError(
-                    f"Error raised by inference API: {parsed_response['error']}"
+                    f"Error raised by inference API: rate limit exceeded.\nResponse: "
+                    f"{response.text}"
                 )
+
+            parsed_response = response.json()
 
             # The inference API has changed a couple of times, so we add some handling
             # to be robust to multiple response formats.
             if isinstance(parsed_response, dict):
-                if "data" in parsed_response:
-                    output_item = parsed_response["data"]
-                elif "output" in parsed_response:
-                    output_item = parsed_response["output"]
+                output_keys = ["data", "output", "outputs"]
+                for key in output_keys:
+                    if key in parsed_response:
+                        output_item = parsed_response[key]
+                        break
                 else:
                     raise ValueError(
-                        f"No key data or output in response: {parsed_response}"
+                        f"No valid key ({', '.join(output_keys)}) in response:"
+                        f" {parsed_response}"
                     )
-
                 if isinstance(output_item, list):
                     text = output_item[0]
                 else:
                     text = output_item
-            elif isinstance(parsed_response, list):
-                first_item = parsed_response[0]
-                if isinstance(first_item, str):
-                    text = first_item
-                elif isinstance(first_item, dict):
-                    if "output" in parsed_response:
-                        text = first_item["output"]
-                    else:
-                        raise ValueError(
-                            f"No key data or output in response: {parsed_response}"
-                        )
-                else:
-                    raise ValueError(f"Unexpected response format: {parsed_response}")
             else:
                 raise ValueError(f"Unexpected response type: {parsed_response}")
 
-            text = text[len(prompt) :]
+            # Older versions of the API include the input in the output response
+            if text.startswith(prompt):
+                text = text[len(prompt) :]
 
         except requests.exceptions.JSONDecodeError as e:
             raise ValueError(

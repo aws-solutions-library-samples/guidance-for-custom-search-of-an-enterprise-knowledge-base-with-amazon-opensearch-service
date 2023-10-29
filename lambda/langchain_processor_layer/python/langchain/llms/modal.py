@@ -1,19 +1,18 @@
-"""Wrapper around Modal API."""
 import logging
 from typing import Any, Dict, List, Mapping, Optional
 
 import requests
-from pydantic import Extra, Field, root_validator
 
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.llms.utils import enforce_stop_tokens
+from langchain.pydantic_v1 import Extra, Field, root_validator
 
 logger = logging.getLogger(__name__)
 
 
 class Modal(LLM):
-    """Wrapper around Modal large language models.
+    """Modal large language models.
 
     To use, you should have the ``modal-client`` python package installed.
 
@@ -51,7 +50,7 @@ class Modal(LLM):
                 if field_name in extra:
                     raise ValueError(f"Found {field_name} supplied twice.")
                 logger.warning(
-                    f"""{field_name} was transfered to model_kwargs.
+                    f"""{field_name} was transferred to model_kwargs.
                     Please confirm that {field_name} is what you intended."""
                 )
                 extra[field_name] = values.pop(field_name)
@@ -92,7 +91,7 @@ class Modal(LLM):
             if prompt in response.json()["prompt"]:
                 response_json = response.json()
         except KeyError:
-            raise ValueError("LangChain requires 'prompt' key in response.")
+            raise KeyError("LangChain requires 'prompt' key in response.")
         text = response_json["prompt"]
         if stop is not None:
             # I believe this is required since the stop tokens

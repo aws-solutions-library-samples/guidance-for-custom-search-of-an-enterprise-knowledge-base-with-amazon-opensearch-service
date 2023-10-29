@@ -137,7 +137,6 @@ class Field(FieldABC):
     #  to exist as attributes on the objects to serialize. Set this to False
     #  for those fields
     _CHECK_ATTRIBUTE = True
-    _creation_index = 0  # Used for sorting
 
     #: Default error messages for various kinds of errors. The keys in this dictionary
     #: are passed to `Field.make_error`. The values are error messages passed to
@@ -157,9 +156,9 @@ class Field(FieldABC):
         default: typing.Any = missing_,
         data_key: str | None = None,
         attribute: str | None = None,
-        validate: None
-        | (
-            typing.Callable[[typing.Any], typing.Any]
+        validate: (
+            None
+            | typing.Callable[[typing.Any], typing.Any]
             | typing.Iterable[typing.Callable[[typing.Any], typing.Any]]
         ) = None,
         required: bool = False,
@@ -226,9 +225,6 @@ class Field(FieldABC):
                 RemovedInMarshmallow4Warning,
                 stacklevel=2,
             )
-
-        self._creation_index = Field._creation_index
-        Field._creation_index += 1
 
         # Collect default error message from self and parent classes
         messages = {}  # type: dict[str, str]
@@ -920,8 +916,7 @@ class UUID(String):
         try:
             if isinstance(value, bytes) and len(value) == 16:
                 return uuid.UUID(bytes=value)
-            else:
-                return uuid.UUID(value)
+            return uuid.UUID(value)
         except (ValueError, AttributeError, TypeError) as error:
             raise self.make_error("invalid_uuid") from error
 
@@ -1281,28 +1276,21 @@ class DateTime(Field):
         format_func = self.SERIALIZATION_FUNCS.get(data_format)
         if format_func:
             return format_func(value)
-        else:
-            return value.strftime(data_format)
+        return value.strftime(data_format)
 
     def _deserialize(self, value, attr, data, **kwargs) -> dt.datetime:
         if not value:  # Falsy values, e.g. '', None, [] are not valid
             raise self.make_error("invalid", input=value, obj_type=self.OBJ_TYPE)
         data_format = self.format or self.DEFAULT_FORMAT
         func = self.DESERIALIZATION_FUNCS.get(data_format)
-        if func:
-            try:
+        try:
+            if func:
                 return func(value)
-            except (TypeError, AttributeError, ValueError) as error:
-                raise self.make_error(
-                    "invalid", input=value, obj_type=self.OBJ_TYPE
-                ) from error
-        else:
-            try:
-                return self._make_object_from_format(value, data_format)
-            except (TypeError, AttributeError, ValueError) as error:
-                raise self.make_error(
-                    "invalid", input=value, obj_type=self.OBJ_TYPE
-                ) from error
+            return self._make_object_from_format(value, data_format)
+        except (TypeError, AttributeError, ValueError) as error:
+            raise self.make_error(
+                "invalid", input=value, obj_type=self.OBJ_TYPE
+            ) from error
 
     @staticmethod
     def _make_object_from_format(value, data_format) -> dt.datetime:
@@ -1525,9 +1513,8 @@ class TimeDelta(Field):
             delta = utils.timedelta_to_microseconds(value)
             unit = utils.timedelta_to_microseconds(base_unit)
             return delta // unit
-        else:
-            assert self.serialization_type is float
-            return value.total_seconds() / base_unit.total_seconds()
+        assert self.serialization_type is float
+        return value.total_seconds() / base_unit.total_seconds()
 
     def _deserialize(self, value, attr, data, **kwargs):
         try:
@@ -1710,6 +1697,7 @@ class Url(String):
         self,
         *,
         relative: bool = False,
+        absolute: bool = True,
         schemes: types.StrSequenceOrSet | None = None,
         require_tld: bool = True,
         **kwargs,
@@ -1717,10 +1705,12 @@ class Url(String):
         super().__init__(**kwargs)
 
         self.relative = relative
+        self.absolute = absolute
         self.require_tld = require_tld
         # Insert validation into self.validators so that multiple errors can be stored.
         validator = validate.URL(
             relative=self.relative,
+            absolute=self.absolute,
             schemes=schemes,
             require_tld=self.require_tld,
             error=self.error_messages["invalid"],
@@ -2024,14 +2014,14 @@ class Function(Field):
 
     def __init__(
         self,
-        serialize: None
-        | (
-            typing.Callable[[typing.Any], typing.Any]
+        serialize: (
+            None
+            | typing.Callable[[typing.Any], typing.Any]
             | typing.Callable[[typing.Any, dict], typing.Any]
         ) = None,
-        deserialize: None
-        | (
-            typing.Callable[[typing.Any], typing.Any]
+        deserialize: (
+            None
+            | typing.Callable[[typing.Any], typing.Any]
             | typing.Callable[[typing.Any, dict], typing.Any]
         ) = None,
         **kwargs,
@@ -2057,8 +2047,7 @@ class Function(Field):
                 msg = f"No context available for Function field {attr!r}"
                 raise ValidationError(msg)
             return func(value, self.parent.context)
-        else:
-            return func(value)
+        return func(value)
 
 
 class Constant(Field):

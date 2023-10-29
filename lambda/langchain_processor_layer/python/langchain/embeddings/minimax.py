@@ -1,11 +1,9 @@
-"""Wrapper around MiniMax APIs."""
 from __future__ import annotations
 
 import logging
 from typing import Any, Callable, Dict, List, Optional
 
 import requests
-from pydantic import BaseModel, Extra, root_validator
 from tenacity import (
     before_sleep_log,
     retry,
@@ -13,7 +11,8 @@ from tenacity import (
     wait_exponential,
 )
 
-from langchain.embeddings.base import Embeddings
+from langchain.pydantic_v1 import BaseModel, Extra, root_validator
+from langchain.schema.embeddings import Embeddings
 from langchain.utils import get_from_dict_or_env
 
 logger = logging.getLogger(__name__)
@@ -47,7 +46,7 @@ def embed_with_retry(embeddings: MiniMaxEmbeddings, *args: Any, **kwargs: Any) -
 
 
 class MiniMaxEmbeddings(BaseModel, Embeddings):
-    """Wrapper around MiniMax's embedding inference service.
+    """MiniMax's embedding service.
 
     To use, you should have the environment variable ``MINIMAX_GROUP_ID`` and
     ``MINIMAX_API_KEY`` set with your API token, or pass it as a named parameter to

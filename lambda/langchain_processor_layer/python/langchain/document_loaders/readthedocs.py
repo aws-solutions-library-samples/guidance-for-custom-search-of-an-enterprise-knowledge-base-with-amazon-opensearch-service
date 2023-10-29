@@ -1,13 +1,12 @@
-"""Loader that loads ReadTheDocs documentation directory dump."""
 from pathlib import Path
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Sequence, Tuple, Union
 
 from langchain.docstore.document import Document
 from langchain.document_loaders.base import BaseLoader
 
 
 class ReadTheDocsLoader(BaseLoader):
-    """Loader that loads ReadTheDocs documentation directory dump."""
+    """Load `ReadTheDocs` documentation directory."""
 
     def __init__(
         self,
@@ -15,12 +14,13 @@ class ReadTheDocsLoader(BaseLoader):
         encoding: Optional[str] = None,
         errors: Optional[str] = None,
         custom_html_tag: Optional[Tuple[str, dict]] = None,
+        patterns: Sequence[str] = ("*.htm", "*.html"),
         **kwargs: Optional[Any]
     ):
         """
         Initialize ReadTheDocsLoader
 
-        The loader loops over all files under `path` and extract the actual content of
+        The loader loops over all files under `path` and extracts the actual content of
         the files by retrieving main html tags. Default main html tags include
         `<main id="main-content>`, <`div role="main>`, and `<article role="main">`. You
         can also define your own html tags by passing custom_html_tag, e.g.
@@ -31,10 +31,12 @@ class ReadTheDocsLoader(BaseLoader):
         Args:
             path: The location of pulled readthedocs folder.
             encoding: The encoding with which to open the documents.
-            errors: Specifies how encoding and decoding errors are to be handled—this
+            errors: Specify how encoding and decoding errors are to be handled—this
                 cannot be used in binary mode.
             custom_html_tag: Optional custom html tag to retrieve the content from
                 files.
+            patterns: The file patterns to load, passed to `glob.rglob`.
+            kwargs: named arguments passed to `bs4.BeautifulSoup`.
         """
         try:
             from bs4 import BeautifulSoup
@@ -55,18 +57,20 @@ class ReadTheDocsLoader(BaseLoader):
         self.encoding = encoding
         self.errors = errors
         self.custom_html_tag = custom_html_tag
+        self.patterns = patterns
         self.bs_kwargs = kwargs
 
     def load(self) -> List[Document]:
         """Load documents."""
         docs = []
-        for p in self.file_path.rglob("*"):
-            if p.is_dir():
-                continue
-            with open(p, encoding=self.encoding, errors=self.errors) as f:
-                text = self._clean_data(f.read())
-            metadata = {"source": str(p)}
-            docs.append(Document(page_content=text, metadata=metadata))
+        for file_pattern in self.patterns:
+            for p in self.file_path.rglob(file_pattern):
+                if p.is_dir():
+                    continue
+                with open(p, encoding=self.encoding, errors=self.errors) as f:
+                    text = self._clean_data(f.read())
+                metadata = {"source": str(p)}
+                docs.append(Document(page_content=text, metadata=metadata))
         return docs
 
     def _clean_data(self, data: str) -> str:

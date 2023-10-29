@@ -1,14 +1,13 @@
-"""Wrapper around Aviary"""
 import dataclasses
 import os
 from typing import Any, Dict, List, Mapping, Optional, Union, cast
 
 import requests
-from pydantic import Extra, root_validator
 
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.llms.utils import enforce_stop_tokens
+from langchain.pydantic_v1 import Extra, root_validator
 from langchain.utils import get_from_dict_or_env
 
 TIMEOUT = 60
@@ -16,6 +15,13 @@ TIMEOUT = 60
 
 @dataclasses.dataclass
 class AviaryBackend:
+    """Aviary backend.
+
+    Attributes:
+        backend_url: The URL for the Aviary backend.
+        bearer: The bearer token for the Aviary backend.
+    """
+
     backend_url: str
     bearer: str
 
@@ -77,18 +83,26 @@ def get_completions(
 
 
 class Aviary(LLM):
-    """Allow you to use an Aviary.
+    """Aviary hosted models.
 
     Aviary is a backend for hosted models. You can
     find out more about aviary at
     http://github.com/ray-project/aviary
 
     To get a list of the models supported on an
-    aviary, follow the instructions on the web site to
+    aviary, follow the instructions on the website to
     install the aviary CLI and then use:
     `aviary models`
 
-    AVIARY_URL and AVIARY_TOKEN environement variables must be set.
+    AVIARY_URL and AVIARY_TOKEN environment variables must be set.
+
+    Attributes:
+        model: The name of the model to use. Defaults to "amazon/LightGPT".
+        aviary_url: The URL for the Aviary backend. Defaults to None.
+        aviary_token: The bearer token for the Aviary backend. Defaults to None.
+        use_prompt_format: If True, the prompt template for the model will be ignored.
+            Defaults to True.
+        version: API version to use for Aviary. Defaults to None.
 
     Example:
         .. code-block:: python

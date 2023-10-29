@@ -4,8 +4,8 @@ from typing import Any, Optional, Sequence
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_types import AgentType
 from langchain.agents.loading import AGENT_TO_CLASS, load_agent
-from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.base import BaseCallbackManager
+from langchain.schema.language_model import BaseLanguageModel
 from langchain.tools.base import BaseTool
 
 
@@ -30,9 +30,9 @@ def initialize_agent(
         callback_manager: CallbackManager to use. Global callback manager is used if
             not provided. Defaults to None.
         agent_path: Path to serialized agent to use.
-        agent_kwargs: Additional key word arguments to pass to the underlying agent
+        agent_kwargs: Additional keyword arguments to pass to the underlying agent
         tags: Tags to apply to the traced runs.
-        **kwargs: Additional key word arguments passed to the agent executor
+        **kwargs: Additional keyword arguments passed to the agent executor
 
     Returns:
         An agent executor

@@ -323,9 +323,7 @@ class Selectable(ReturnsRows):
         object, returning a copy of this :class:`_expression.FromClause`.
 
         """
-        return util.preloaded.sql_util.ClauseAdapter(alias).traverse(  # type: ignore  # noqa: E501
-            self
-        )
+        return util.preloaded.sql_util.ClauseAdapter(alias).traverse(self)
 
     def corresponding_column(
         self, column: KeyedColumnElement[Any], require_embedded: bool = False
@@ -1420,7 +1418,7 @@ class Join(roles.DMLTableRole, FromClause):
                 continue
             for fk in sorted(
                 b.foreign_keys,
-                key=lambda fk: fk.parent._creation_order,  # type: ignore
+                key=lambda fk: fk.parent._creation_order,
             ):
                 if (
                     consider_as_foreign_keys is not None
@@ -1441,7 +1439,7 @@ class Join(roles.DMLTableRole, FromClause):
             if left is not b:
                 for fk in sorted(
                     left.foreign_keys,
-                    key=lambda fk: fk.parent._creation_order,  # type: ignore
+                    key=lambda fk: fk.parent._creation_order,
                 ):
                     if (
                         consider_as_foreign_keys is not None
@@ -2436,7 +2434,7 @@ class HasCTE(roles.HasCTERole, SelectsRows):
             SELECT t.c1, t.c2
             FROM t
 
-        Above, the "anon_1" CTE is not referred towards in the SELECT
+        Above, the "anon_1" CTE is not referenced in the SELECT
         statement, however still accomplishes the task of running an INSERT
         statement.
 
@@ -3151,7 +3149,7 @@ class Values(roles.InElementRole, Generative, LateralFromClause):
 
     __visit_name__ = "values"
 
-    _data: Tuple[List[Tuple[Any, ...]], ...] = ()
+    _data: Tuple[Sequence[Tuple[Any, ...]], ...] = ()
 
     _unnamed: bool
     _traverse_internals: _TraverseInternalsType = [
@@ -3169,6 +3167,7 @@ class Values(roles.InElementRole, Generative, LateralFromClause):
     ):
         super().__init__()
         self._column_args = columns
+
         if name is None:
             self._unnamed = True
             self.name = _anonymous_label.safe_construct(id(self), "anon")
@@ -3234,7 +3233,7 @@ class Values(roles.InElementRole, Generative, LateralFromClause):
         return self
 
     @_generative
-    def data(self, values: List[Tuple[Any, ...]]) -> Self:
+    def data(self, values: Sequence[Tuple[Any, ...]]) -> Self:
         """Return a new :class:`_expression.Values` construct,
         adding the given data to the data list.
 
@@ -3262,6 +3261,13 @@ class Values(roles.InElementRole, Generative, LateralFromClause):
 
     def _populate_column_collection(self) -> None:
         for c in self._column_args:
+            if c.table is not None and c.table is not self:
+                _, c = c._make_proxy(self)
+            else:
+                # if the column was used in other contexts, ensure
+                # no memoizations of other FROM clauses.
+                # see test_values.py -> test_auto_proxy_select_direct_col
+                c._reset_memoizations()
             self._columns.add(c)
             c.table = self
 
@@ -3294,7 +3300,7 @@ class ScalarValues(roles.InElementRole, GroupedElement, ColumnElement[Any]):
     def __init__(
         self,
         columns: Sequence[ColumnClause[Any]],
-        data: Tuple[List[Tuple[Any, ...]], ...],
+        data: Tuple[Sequence[Tuple[Any, ...]], ...],
         literal_binds: bool,
     ):
         super().__init__()
@@ -4744,7 +4750,7 @@ class SelectState(util.MemoizedSlots, CompileState):
         Dict[str, ColumnElement[Any]],
     ]:
         with_cols: Dict[str, ColumnElement[Any]] = {
-            c._tq_label or c.key: c  # type: ignore
+            c._tq_label or c.key: c
             for c in self.statement._all_selected_columns
             if c._allow_label_resolve
         }
@@ -5012,7 +5018,7 @@ class _MemoizedSelectEntities(
         c.__dict__ = {k: v for k, v in self.__dict__.items()}
 
         c._is_clone_of = self.__dict__.get("_is_clone_of", self)
-        return c  # type: ignore
+        return c
 
     @classmethod
     def _generate_for_statement(cls, select_stmt: Select[Any]) -> None:
@@ -6200,6 +6206,18 @@ class Select(
         :class:`_expression.ColumnElement` objects that are in the
         :attr:`_expression.FromClause.c` collection of the from element.
 
+        A use case for the :attr:`_sql.Select.selected_columns` collection is
+        to allow the existing columns to be referenced when adding additional
+        criteria, e.g.::
+
+            def filter_on_id(my_select, id):
+                return my_select.where(my_select.selected_columns['id'] == id)
+
+            stmt = select(MyModel)
+
+            # adds "WHERE id=:param" to the statement
+            stmt = filter_on_id(stmt, 42)
+
         .. note::
 
             The :attr:`_sql.Select.selected_columns` collection does not
@@ -6708,7 +6726,7 @@ class Exists(UnaryExpression[bool]):
         )
         return e
 
-    def select_from(self, *froms: FromClause) -> Self:
+    def select_from(self, *froms: _FromClauseArgument) -> Self:
         """Return a new :class:`_expression.Exists` construct,
         applying the given
         expression to the :meth:`_expression.Select.select_from`

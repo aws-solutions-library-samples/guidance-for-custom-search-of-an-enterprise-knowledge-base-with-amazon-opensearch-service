@@ -3,18 +3,17 @@ import logging
 from time import perf_counter
 from typing import Any, Dict, Optional, Tuple
 
-from pydantic import Field, validator
-
 from langchain.callbacks.manager import (
     AsyncCallbackManagerForToolRun,
     CallbackManagerForToolRun,
 )
 from langchain.chains.llm import LLMChain
+from langchain.chat_models.openai import _import_tiktoken
+from langchain.pydantic_v1 import Field, validator
 from langchain.tools.base import BaseTool
 from langchain.tools.powerbi.prompt import (
     BAD_REQUEST_RESPONSE,
     DEFAULT_FEWSHOT_EXAMPLES,
-    QUESTION_TO_QUERY,
     RETRY_RESPONSE,
 )
 from langchain.utilities.powerbi import PowerBIDataset, json_to_md
@@ -25,18 +24,19 @@ logger = logging.getLogger(__name__)
 class QueryPowerBITool(BaseTool):
     """Tool for querying a Power BI Dataset."""
 
-    name = "query_powerbi"
-    description = """
+    name: str = "query_powerbi"
+    description: str = """
     Input to this tool is a detailed question about the dataset, output is a result from the dataset. It will try to answer the question using the dataset, and if it cannot, it will ask for clarification.
 
     Example Input: "How many rows are in table1?"
     """  # noqa: E501
     llm_chain: LLMChain
     powerbi: PowerBIDataset = Field(exclude=True)
-    template: Optional[str] = QUESTION_TO_QUERY
     examples: Optional[str] = DEFAULT_FEWSHOT_EXAMPLES
     session_cache: Dict[str, Any] = Field(default_factory=dict, exclude=True)
     max_iterations: int = 5
+    output_token_limit: int = 4000
+    tiktoken_model_name: Optional[str] = None  # "cl100k_base"
 
     class Config:
         """Configuration for this pydantic object."""
@@ -48,16 +48,12 @@ class QueryPowerBITool(BaseTool):
         cls, llm_chain: LLMChain
     ) -> LLMChain:
         """Make sure the LLM chain has the correct input variables."""
-        if llm_chain.prompt.input_variables != [
-            "tool_input",
-            "tables",
-            "schemas",
-            "examples",
-        ]:
-            raise ValueError(
-                "LLM chain for QueryPowerBITool must have input variables ['tool_input', 'tables', 'schemas', 'examples'], found %s",  # noqa: C0301 E501 # pylint: disable=C0301
-                llm_chain.prompt.input_variables,
-            )
+        for var in llm_chain.prompt.input_variables:
+            if var not in ["tool_input", "tables", "schemas", "examples"]:
+                raise ValueError(
+                    "LLM chain for QueryPowerBITool must have input variables ['tool_input', 'tables', 'schemas', 'examples'], found %s",  # noqa: C0301 E501 # pylint: disable=C0301
+                    llm_chain.prompt.input_variables,
+                )
         return llm_chain
 
     def _check_cache(self, tool_input: str) -> Optional[str]:
@@ -87,6 +83,7 @@ class QueryPowerBITool(BaseTool):
                 tables=self.powerbi.get_table_names(),
                 schemas=self.powerbi.get_schemas(),
                 examples=self.examples,
+                callbacks=run_manager.get_child() if run_manager else None,
             )
         except Exception as exc:  # pylint: disable=broad-except
             self.session_cache[tool_input] = f"Error on call to LLM: {exc}"
@@ -94,7 +91,7 @@ class QueryPowerBITool(BaseTool):
         if query == "I cannot answer this":
             self.session_cache[tool_input] = query
             return self.session_cache[tool_input]
-        logger.info("PBI Query: %s", query)
+        logger.info("PBI Query:\n%s", query)
         start_time = perf_counter()
         pbi_result = self.powerbi.run(command=query)
         end_time = perf_counter()
@@ -131,7 +128,7 @@ class QueryPowerBITool(BaseTool):
         """Execute the query, return the results or an error message."""
         if cache := self._check_cache(tool_input):
             logger.debug("Found cached result for %s: %s", tool_input, cache)
-            return cache
+            return f"{cache}, from cache, you have already asked this question."
         try:
             logger.info("Running PBI Query Tool with input: %s", tool_input)
             query = await self.llm_chain.apredict(
@@ -139,6 +136,7 @@ class QueryPowerBITool(BaseTool):
                 tables=self.powerbi.get_table_names(),
                 schemas=self.powerbi.get_schemas(),
                 examples=self.examples,
+                callbacks=run_manager.get_child() if run_manager else None,
             )
         except Exception as exc:  # pylint: disable=broad-except
             self.session_cache[tool_input] = f"Error on call to LLM: {exc}"
@@ -154,10 +152,10 @@ class QueryPowerBITool(BaseTool):
         logger.debug("PBI Result: %s", pbi_result)
         logger.debug(f"PBI Query duration: {end_time - start_time:0.6f}")
         result, error = self._parse_output(pbi_result)
-        if error is not None and "TokenExpired" in error:
+        if error is not None and ("TokenExpired" in error or "TokenError" in error):
             self.session_cache[
                 tool_input
-            ] = "Authentication token expired or invalid, please try reauthenticate."
+            ] = "Authentication token expired or invalid, please try to reauthenticate or check the scope of the credential."  # noqa: E501
             return self.session_cache[tool_input]
 
         iterations = kwargs.get("iterations", 0)
@@ -177,10 +175,24 @@ class QueryPowerBITool(BaseTool):
 
     def _parse_output(
         self, pbi_result: Dict[str, Any]
-    ) -> Tuple[Optional[str], Optional[str]]:
+    ) -> Tuple[Optional[str], Optional[Any]]:
         """Parse the output of the query to a markdown table."""
         if "results" in pbi_result:
-            return json_to_md(pbi_result["results"][0]["tables"][0]["rows"]), None
+            rows = pbi_result["results"][0]["tables"][0]["rows"]
+            if len(rows) == 0:
+                logger.info("0 records in result, query was valid.")
+                return (
+                    None,
+                    "0 rows returned, this might be correct, but please validate if all filter values were correct?",  # noqa: E501
+                )
+            result = json_to_md(rows)
+            too_long, length = self._result_too_large(result)
+            if too_long:
+                return (
+                    f"Result too large, please try to be more specific or use the `TOPN` function. The result is {length} tokens long, the limit is {self.output_token_limit} tokens.",  # noqa: E501
+                    None,
+                )
+            return result, None
 
         if "error" in pbi_result:
             if (
@@ -189,14 +201,24 @@ class QueryPowerBITool(BaseTool):
             ):
                 return None, pbi_result["error"]["pbi.error"]["details"][0]["detail"]
             return None, pbi_result["error"]
-        return None, "Unknown error"
+        return None, pbi_result
+
+    def _result_too_large(self, result: str) -> Tuple[bool, int]:
+        """Tokenize the output of the query."""
+        if self.tiktoken_model_name:
+            tiktoken_ = _import_tiktoken()
+            encoding = tiktoken_.encoding_for_model(self.tiktoken_model_name)
+            length = len(encoding.encode(result))
+            logger.info("Result length: %s", length)
+            return length > self.output_token_limit, length
+        return False, 0
 
 
 class InfoPowerBITool(BaseTool):
     """Tool for getting metadata about a PowerBI Dataset."""
 
-    name = "schema_powerbi"
-    description = """
+    name: str = "schema_powerbi"
+    description: str = """
     Input to this tool is a comma-separated list of tables, output is the schema and sample rows for those tables.
     Be sure that the tables actually exist by calling list_tables_powerbi first!
 
@@ -228,8 +250,8 @@ class InfoPowerBITool(BaseTool):
 class ListPowerBITool(BaseTool):
     """Tool for getting tables names."""
 
-    name = "list_tables_powerbi"
-    description = "Input is an empty string, output is a comma separated list of tables in the database."  # noqa: E501 # pylint: disable=C0301
+    name: str = "list_tables_powerbi"
+    description: str = "Input is an empty string, output is a comma separated list of tables in the database."  # noqa: E501 # pylint: disable=C0301
     powerbi: PowerBIDataset = Field(exclude=True)
 
     class Config:

@@ -71,6 +71,7 @@ if typing.TYPE_CHECKING:
     from types import ModuleType
 
     from .base import Engine
+    from .cursor import ResultFetchStrategy
     from .interfaces import _CoreMultiExecuteParams
     from .interfaces import _CoreSingleExecuteParams
     from .interfaces import _DBAPICursorDescription
@@ -135,7 +136,7 @@ class DefaultDialect(Dialect):
 
     # most DBAPIs happy with this for execute().
     # not cx_oracle.
-    execute_sequence_format = tuple  # type: ignore
+    execute_sequence_format = tuple
 
     supports_schemas = True
     supports_views = True
@@ -618,7 +619,7 @@ class DefaultDialect(Dialect):
         # inherits the docstring from interfaces.Dialect.create_connect_args
         opts = url.translate_connect_args()
         opts.update(url.query)
-        return [[], opts]
+        return ([], opts)
 
     def set_engine_execution_options(
         self, engine: Engine, opts: Mapping[str, Any]
@@ -964,12 +965,21 @@ class DefaultDialect(Dialect):
         self.set_isolation_level(dbapi_conn, level)
 
     def reset_isolation_level(self, dbapi_conn):
-        # default_isolation_level is read from the first connection
-        # after the initial set of 'isolation_level', if any, so is
-        # the configured default of this dialect.
-        self._assert_and_set_isolation_level(
-            dbapi_conn, self.default_isolation_level
-        )
+        if self._on_connect_isolation_level is not None:
+            assert (
+                self._on_connect_isolation_level == "AUTOCOMMIT"
+                or self._on_connect_isolation_level
+                == self.default_isolation_level
+            )
+            self._assert_and_set_isolation_level(
+                dbapi_conn, self._on_connect_isolation_level
+            )
+        else:
+            assert self.default_isolation_level is not None
+            self._assert_and_set_isolation_level(
+                dbapi_conn,
+                self.default_isolation_level,
+            )
 
     def normalize_name(self, name):
         if name is None:
@@ -1844,7 +1854,7 @@ class DefaultExecutionContext(ExecutionContext):
     def _setup_dml_or_text_result(self):
         compiled = cast(SQLCompiler, self.compiled)
 
-        strategy = self.cursor_fetch_strategy
+        strategy: ResultFetchStrategy = self.cursor_fetch_strategy
 
         if self.isinsert:
             if (
@@ -1873,9 +1883,15 @@ class DefaultExecutionContext(ExecutionContext):
             strategy = _cursor.BufferedRowCursorFetchStrategy(
                 self.cursor, self.execution_options
             )
-        cursor_description = (
-            strategy.alternate_cursor_description or self.cursor.description
-        )
+
+        if strategy is _cursor._NO_CURSOR_DML:
+            cursor_description = None
+        else:
+            cursor_description = (
+                strategy.alternate_cursor_description
+                or self.cursor.description
+            )
+
         if cursor_description is None:
             strategy = _cursor._NO_CURSOR_DML
         elif self._num_sentinel_cols:
@@ -2223,7 +2239,7 @@ class DefaultExecutionContext(ExecutionContext):
             and compile_state._has_multi_parameters
         ):
             if column._is_multiparam_column:
-                index = column.index + 1  # type: ignore
+                index = column.index + 1
                 d = {column.original.key: parameters[column.key]}
             else:
                 d = {column.key: parameters[column.key]}
@@ -2295,7 +2311,7 @@ class DefaultExecutionContext(ExecutionContext):
                     param[param_key] = arg
                 elif is_callable:
                     self.current_column = c
-                    param[param_key] = arg(self)  # type: ignore
+                    param[param_key] = arg(self)
                 else:
                     val = fallback(c)
                     if val is not None:
