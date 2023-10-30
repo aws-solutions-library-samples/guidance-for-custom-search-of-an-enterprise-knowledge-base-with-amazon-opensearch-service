@@ -179,7 +179,7 @@ class NotebookStack(cdk.Stack):
         instance_type="ml.m5.xlarge",
         lifecycle_config_name='ss-config',
         # default_code_repository="https://github.com/aws-solutions-library-samples/guidance-for-custom-search-of-an-enterprise-knowledge-base-on-aws.git",
-        volume_size_in_gb=30)
+        volume_size_in_gb=80)
 
 
 
