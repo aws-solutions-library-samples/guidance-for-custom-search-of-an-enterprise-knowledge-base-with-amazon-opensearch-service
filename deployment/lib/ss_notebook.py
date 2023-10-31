@@ -176,7 +176,7 @@ class NotebookStack(cdk.Stack):
         cfn_notebook_instance = _sagemaker.CfnNotebookInstance(self,"SmartSearchNotebook",
         notebook_instance_name="SmartSearchNotebook",
         role_arn=self.notebook_job_role.role_arn,
-        instance_type="ml.m5.xlarge",
+        instance_type="ml.t3.medium",
         lifecycle_config_name='ss-config',
         # default_code_repository="https://github.com/aws-solutions-library-samples/guidance-for-custom-search-of-an-enterprise-knowledge-base-on-aws.git",
         volume_size_in_gb=30)
