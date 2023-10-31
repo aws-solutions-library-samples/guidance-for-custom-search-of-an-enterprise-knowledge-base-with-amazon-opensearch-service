@@ -211,7 +211,7 @@ def lambda_handler(event, context):
                 prompt_template = CHINESE_CHAT_PROMPT_TEMPLATE
             elif language == "english":
                 prompt_template = ENGLISH_CHAT_PROMPT_TEMPLATE
-                if model_type == 'llama2':    
+                if modelType == 'llama2':    
                     prompt_template = EN_CHAT_PROMPT_LLAMA2
             if "prompt" in evt_body.keys():
                 prompt_template = evt_body['prompt']  
