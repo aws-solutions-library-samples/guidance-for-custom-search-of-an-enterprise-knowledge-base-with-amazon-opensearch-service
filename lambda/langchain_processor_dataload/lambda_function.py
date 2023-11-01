@@ -30,12 +30,46 @@ def lambda_handler(event, context):
     print("event:",event)
     print("host:",host)
     print("region:",region)
-    print("index:",index)
+    #print("index:",index)
     print("language:",language)
     print("username:",username)
     print("password:",password)
     
+    #try:
+    #    dataload = SmartSearchDataload()
+    #    dataload.init_cfg(index,
+    #                     username,
+    #                     password,
+    #                     host,
+    #                     port,
+    #                     EMBEDDING_ENDPOINT_NAME,
+    #                     region,
+    #                     language=language
+    #                     )
+    #                 
+    #
+    #    bucket_name = event['Records'][0]['s3']['bucket']['name']
+    #    file_name = urllib.parse.unquote_plus(event['Records'][0]['s3']['object']['key'], encoding='utf-8')
+    #    local_file = "{}/{}".format('/tmp', file_name.split("/")[-1])
+    
+    #   print("bucket_name:",bucket_name)
+    #    print("file_name:",file_name)
+    #    print("local_file:",local_file)
+    
     try:
+        bucket_name = event['Records'][0]['s3']['bucket']['name']
+        file_name = urllib.parse.unquote_plus(event['Records'][0]['s3']['object']['key'], encoding='utf-8')
+        local_file = "{}/{}".format('/tmp', file_name.split("/")[-1])
+        index =  os.environ.get('index')
+        
+        if len(file_name.split("/")[-2]) > 3:
+            index = file_name.split("/")[-2]
+            
+        print("bucket_name:",bucket_name)
+        print("file_name:",file_name)
+        print("index:",index)
+        print("local_file:",local_file)
+
         dataload = SmartSearchDataload()
         dataload.init_cfg(index,
                          username,
@@ -46,16 +80,7 @@ def lambda_handler(event, context):
                          region,
                          language=language
                          )
-                     
-
-        bucket_name = event['Records'][0]['s3']['bucket']['name']
-        file_name = urllib.parse.unquote_plus(event['Records'][0]['s3']['object']['key'], encoding='utf-8')
-        local_file = "{}/{}".format('/tmp', file_name.split("/")[-1])
-    
-        print("bucket_name:",bucket_name)
-        print("file_name:",file_name)
-        print("local_file:",local_file)
-    
+        
         size = int(event['Records'][0]['s3']['object']['size'])
         loaded_files = []
         if size > 0:    

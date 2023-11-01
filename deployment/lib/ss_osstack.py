@@ -49,9 +49,9 @@ class OpenSearchStack(Stack):
       #       ),],
       capacity={
         "master_nodes": 0,
-        "master_node_instance_type": "m5.xlarge.search",
+        "master_node_instance_type": "m5.large.search",
         "data_nodes": 1,
-        "data_node_instance_type": "m5.xlarge.search"
+        "data_node_instance_type": "m5.large.search"
       },
       ebs={
         "volume_size": 20,

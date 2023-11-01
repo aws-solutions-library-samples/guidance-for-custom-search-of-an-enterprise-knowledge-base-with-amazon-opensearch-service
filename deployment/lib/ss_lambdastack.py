@@ -18,6 +18,8 @@ from aws_cdk import (
     ContextProvider,
     RemovalPolicy
 )
+from aws_cdk.aws_apigatewayv2_integrations_alpha import WebSocketLambdaIntegration
+from aws_cdk import aws_apigatewayv2_alpha as apigwv2
 import os
 
 binary_media_types = ["multipart/form-data"]
@@ -136,7 +138,102 @@ class LambdaStack(Stack):
                             endpoint_types=[apigw.EndpointType.REGIONAL],
                             binary_media_types=binary_media_types
                             )
+        
+        ###########
 
+        websocket_table = dynamodb.Table(self, "websocket",
+                            partition_key=dynamodb.Attribute(name="id",
+                                                                type=dynamodb.AttributeType.STRING),
+                            removal_policy=RemovalPolicy.DESTROY
+                            )
+        
+        _websocket_policy = _iam.PolicyStatement(
+            actions=[
+                'lambda:*',
+                'apigateway:*',
+                'dynamodb:*',
+                'logs:*',
+            ],
+            resources=['*']  #现在比较大
+        )
+        websocket_role = _iam.Role(
+            self, 'websocket_role',
+            assumed_by=_iam.ServicePrincipal('lambda.amazonaws.com')
+        )
+        websocket_role.add_to_policy(_websocket_policy)
+
+        websocket_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonDynamoDBFullAccess")
+        )
+
+        table_name = websocket_table.table_name 
+
+        connect_function_name = 'websocket_connect'
+        websocketconnect = _lambda.Function(
+            self, connect_function_name,
+            function_name=connect_function_name,
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            role=websocket_role,
+            code=_lambda.Code.from_asset('../lambda/' + connect_function_name),
+            handler='lambda_function' + '.lambda_handler',
+        )
+        websocketconnect.add_environment("TABLE_NAME", table_name) 
+
+        disconnect_function_name = 'websocket_disconnect'
+        websocketdisconnect = _lambda.Function(
+            self, disconnect_function_name,
+            function_name=disconnect_function_name,
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            role=websocket_role,
+            code=_lambda.Code.from_asset('../lambda/' + disconnect_function_name),
+            handler='lambda_function' + '.lambda_handler',
+        )
+        websocketdisconnect.add_environment("TABLE_NAME", table_name) 
+
+        default_function_name = 'websocket_default'
+        websocketdefault = _lambda.Function(
+            self, default_function_name,
+            function_name=default_function_name,
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            role=websocket_role,
+            code=_lambda.Code.from_asset('../lambda/' + disconnect_function_name),
+            handler='lambda_function' + '.lambda_handler',
+        )
+        websocketdefault.add_environment("TABLE_NAME", table_name) 
+
+        search_function_name = 'websocket_search'
+        websocketsearch = _lambda.Function(
+            self, search_function_name,
+            function_name=search_function_name,
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            role=websocket_role,
+            code=_lambda.Code.from_asset('../lambda/' + search_function_name),
+            handler='lambda_function' + '.lambda_handler',
+        )
+        websocketsearch.add_environment("TABLE_NAME", table_name) 
+        websocketsearch.add_environment("DIR_NAME", "search") 
+        ###########
+
+
+        web_socket_api = apigwv2.WebSocketApi(self, "websocketapi")
+        apigwv2.WebSocketStage(self, "prod",
+            web_socket_api=web_socket_api,
+            stage_name="prod",
+            auto_deploy=True
+        )
+        web_socket_api.add_route("search",
+            integration=WebSocketLambdaIntegration("SearchIntegration", websocketsearch)
+        )
+        web_socket_api.add_route("$connect",
+            integration=WebSocketLambdaIntegration("SearchIntegration", websocketconnect)
+        )
+        web_socket_api.add_route("$disconnect",
+            integration=WebSocketLambdaIntegration("SearchIntegration", websocketdisconnect)
+        )
+        web_socket_api.add_route("$default",
+            integration=WebSocketLambdaIntegration("SearchIntegration", websocketdefault)
+        )
+        #################################
  
 
         if 'knn_faq' in func_selection:
@@ -217,6 +314,10 @@ class LambdaStack(Stack):
             self.opensearch_search_knn_doc_lambda = self.define_lambda_function('opensearch-search-knn-doc',
                                                                                 knn_lambda_role, timeout=60)
             self.opensearch_search_knn_doc_lambda.add_environment("host", host)
+            #################################################
+            self.opensearch_search_knn_doc_lambda.add_environment("domain_name", web_socket_api.api_id)
+            self.opensearch_search_knn_doc_lambda.add_environment("region", os.getenv('AWS_REGION', 'us-west-2'))
+
             # search_knn_doc_resource
             search_knn_doc_resource = api.root.add_resource(
                 'search_knn_doc',
@@ -290,6 +391,7 @@ class LambdaStack(Stack):
                     'secretsmanager:SecretsManagerReadWrite',
                     'kendra:DescribeIndex',
                     'kendra:Query',
+                    'execute-api:*', ##############
                     'bedrock:*'
                 ],
                 resources=['*']  # 可根据需求进行更改
@@ -302,7 +404,9 @@ class LambdaStack(Stack):
                     'lambda:AWSLambdaBasicExecutionRole',
                     'secretsmanager:SecretsManagerReadWrite',
                     'es:ESHttpPost',
-                    'bedrock:*'
+                    'bedrock:*',
+                    'execute-api:*' ##############
+
                 ],
                 resources=['*']  # 可同时使用opensearch和kendra
             )
@@ -411,6 +515,41 @@ class LambdaStack(Stack):
         chat_table.grant_read_write_data(dynamodb_role)
         langchain_processor_qa_function.add_environment("dynamodb_table_name", chat_table.table_name)
         cdk.CfnOutput(self, 'chat_table_name', value=chat_table.table_name, export_name='ChatTableName')
+
+    def create_apigw_resource_method_for_knowledge_base_handler(self, api, knowledge_base_handler_function):
+
+        knowledge_base_handler_resource = api.root.add_resource(
+            'knowledge_base_handler',
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_methods=['GET', 'OPTIONS'],
+                allow_origins=apigw.Cors.ALL_ORIGINS)
+        )
+
+        knowledge_base_handler_integration = apigw.LambdaIntegration(
+            knowledge_base_handler_function,
+            proxy=True,
+            integration_responses=[
+                apigw.IntegrationResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': "'*'"
+                    }
+                )
+            ]
+        )
+
+        knowledge_base_handler_resource.add_method(
+            'GET',
+            knowledge_base_handler_integration,
+            method_responses=[
+                apigw.MethodResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': True
+                    }
+                )
+            ]
+        )
         
     def create_file_upload_prerequisites(self, api, search_engine_key):
         # Now hardcode for testing first
@@ -575,6 +714,55 @@ class LambdaStack(Stack):
             "integration.request.path.sub_prefix": "method.request.path.sub_prefix",
         }
 
+        """
+        6. Create Lambda for list all indices from OpenSearch for front-end
+        """
+        function_name = 'knowledge_base_handler'
+
+        _knowledge_base_role_policy = _iam.PolicyStatement(
+            actions=[
+                's3:AmazonS3FullAccess',
+                'lambda:AWSLambdaBasicExecutionRole',
+                'secretsmanager:SecretsManagerReadWrite'
+            ],
+            resources=['*']  # 可根据需求进行更改
+        )
+        knowledge_base_handler_role = _iam.Role(
+            self, 'knowledge_base_handler_role',
+            assumed_by=_iam.ServicePrincipal('lambda.amazonaws.com')
+        )
+        knowledge_base_handler_role.add_to_policy(_data_load_role_policy)
+
+        knowledge_base_handler_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
+        )
+
+        knowledge_base_handler_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("SecretsManagerReadWrite")
+        )
+
+        knowledge_base_handler_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonS3FullAccess")
+        )
+
+        knowledge_base_handler_function = _lambda.Function(
+            self, function_name,
+            function_name=function_name,
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            role=knowledge_base_handler_role,
+            layers=[self.langchain_processor_qa_layer],
+            code=_lambda.Code.from_asset('../lambda/' + function_name),
+            handler='lambda_function' + '.lambda_handler',
+            timeout=Duration.minutes(10),
+            reserved_concurrent_executions=20
+        )
+        knowledge_base_handler_function.add_environment("host", search_engine_key)
+
+        self.create_apigw_resource_method_for_knowledge_base_handler(
+                api=api,
+                knowledge_base_handler_function=knowledge_base_handler_function
+            )
+        
         # Create Integration Options
         """
         Covering:
