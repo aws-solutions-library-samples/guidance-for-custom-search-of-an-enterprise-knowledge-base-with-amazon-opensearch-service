@@ -1,4 +1,5 @@
 import boto3
+import json
 
 def get_session_info(table_name, session_id):
 

@@ -419,6 +419,10 @@ class LambdaStack(Stack):
         langchain_processor_role.add_managed_policy(
             _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaRole")
         )
+        
+        langchain_processor_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
+        )
 
         langchain_processor_role.add_managed_policy(
             _iam.ManagedPolicy.from_aws_managed_policy_name("SecretsManagerReadWrite")
