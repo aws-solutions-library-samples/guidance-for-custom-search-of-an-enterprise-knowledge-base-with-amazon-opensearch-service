@@ -1,11 +1,11 @@
 import boto3
 import json
 
-def get_session_info(table_name, session_id):
 
+def get_session_info(table_name, session_id):
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table(table_name)
-    
+
     session_result = ""
     response = table.get_item(Key={'session-id': session_id})
     if "Item" in response.keys():
@@ -14,10 +14,9 @@ def get_session_info(table_name, session_id):
         session_result = ""
 
     return session_result
-    
-    
-def update_session_info(table_name, session_id, question, answer, intention):
 
+
+def update_session_info(table_name, session_id, question, answer, intention):
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table(table_name)
     session_result = ""
@@ -35,7 +34,7 @@ def update_session_info(table_name, session_id, question, answer, intention):
     response = table.put_item(
         Item={
             'session-id': session_id,
-            'content': content
+            'content': content,
         }
     )
 

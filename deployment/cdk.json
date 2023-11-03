@@ -57,7 +57,10 @@
     "embedding_endpoint_name": "huggingface-inference-eb",
     "llm_endpoint_name": "pytorch-inference-llm-v1",
     "language": "chinese",
-    "model_type":"other"
+    "model_type":"other",
+    "enable_content_moderation": false,
+    "content_moderation_api_cn": "https://gtf.ai.xingzheai.cn/v2.0/game_chat_ban/detect_text",
+    "content_moderation_api": "https://gtf.ai.xingzheai.cn/v2.0/game_chat_ban/detect_text"
   }
 }
 

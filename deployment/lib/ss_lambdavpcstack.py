@@ -35,19 +35,19 @@ class LambdaVPCStack(Stack):
         else:
             host = search_engine_key
 
-       # To support VPC deployment by sf 
+        # To support VPC deployment by sf
         vpc_name = self.node.try_get_context('vpc_name')
         if vpc_name != "undefined":
             subnet_name = self.node.try_get_context("subnet_name")
             subnet_id = self.node.try_get_context("subnet_id")
             zone_id = self.node.try_get_context("zone_id")
-            private_subnet = aws_ec2.Subnet.from_subnet_attributes(self,subnet_name, availability_zone = zone_id, subnet_id = subnet_id)
-            vpc_subnets_selection = aws_ec2.SubnetSelection(subnets = [private_subnet])
-        else: 
+            private_subnet = aws_ec2.Subnet.from_subnet_attributes(self, subnet_name, availability_zone=zone_id,
+                                                                   subnet_id=subnet_id)
+            vpc_subnets_selection = aws_ec2.SubnetSelection(subnets=[private_subnet])
+        else:
             private_subnet = vpc.select_subnets(subnet_name='Private')
-            vpc_subnets_selection = aws_ec2.SubnetSelection(subnets = [private_subnet])
+            vpc_subnets_selection = aws_ec2.SubnetSelection(subnets=[private_subnet])
         # End of VPC deployment  
-
 
         # get CloudFormation parameter
 
@@ -135,7 +135,11 @@ class LambdaVPCStack(Stack):
             xgb_lambda_role.add_to_policy(xgb_policy_statement)
 
         if 'langchain_processor_qa' in func_selection:
-            langchain_qa_func = self.create_langchain_qa_func(search_engine_key=search_engine_key, vpc =vpc, vpc_subnets = vpc_subnets_selection)
+            langchain_qa_func = self.create_langchain_qa_func(search_engine_key=search_engine_key, vpc=vpc,
+                                                              vpc_subnets=vpc_subnets_selection)
+
+        content_moderation_func = self.create_content_moderation_func(vpc=vpc,
+                                                                      vpc_subnets=vpc_subnets_selection)
 
         # api gateway resource
         api = apigw.RestApi(self, 'smartsearch-api',
@@ -146,28 +150,27 @@ class LambdaVPCStack(Stack):
                             endpoint_types=[apigw.EndpointType.REGIONAL]
                             )
 
-
         #
         user_model = api.add_model("UserModel",
-                                        schema=apigw.JsonSchema(
-                                            type=apigw.JsonSchemaType.OBJECT,
-                                            properties={
-                                                "ind": apigw.JsonSchema(
-                                                    type=apigw.JsonSchemaType.STRING
-                                                ),
-                                                "knn": apigw.JsonSchema(
-                                                    type=apigw.JsonSchemaType.STRING
-                                                ),
-                                                "ml": apigw.JsonSchema(
-                                                    type=apigw.JsonSchemaType.STRING
-                                                ),
-                                                "q": apigw.JsonSchema(
-                                                    type=apigw.JsonSchemaType.STRING
-                                                )
-                                            },
-                                            required=["ind", "knn", "q"]
-                                        )
-                                        )
+                                   schema=apigw.JsonSchema(
+                                       type=apigw.JsonSchemaType.OBJECT,
+                                       properties={
+                                           "ind": apigw.JsonSchema(
+                                               type=apigw.JsonSchemaType.STRING
+                                           ),
+                                           "knn": apigw.JsonSchema(
+                                               type=apigw.JsonSchemaType.STRING
+                                           ),
+                                           "ml": apigw.JsonSchema(
+                                               type=apigw.JsonSchemaType.STRING
+                                           ),
+                                           "q": apigw.JsonSchema(
+                                               type=apigw.JsonSchemaType.STRING
+                                           )
+                                       },
+                                       required=["ind", "knn", "q"]
+                                   )
+                                   )
         #
         #     search_knn_resource.add_method(
         #         'GET',
@@ -237,7 +240,10 @@ class LambdaVPCStack(Stack):
             self.open_search_xgb_train_deploy_lambda = self.define_lambda_function('open-search_xgb_train_deploy',
                                                                                    xgb_lambda_role)
         if ('knn_doc' in func_selection):
-            self.opensearch_search_knn_doc_lambda = self.define_lambda_function('opensearch-search-knn-doc',knn_lambda_role,vpc =vpc,  vpc_subnets = vpc_subnets_selection,timeout= 60)
+            self.opensearch_search_knn_doc_lambda = self.define_lambda_function('opensearch-search-knn-doc',
+                                                                                knn_lambda_role, vpc=vpc,
+                                                                                vpc_subnets=vpc_subnets_selection,
+                                                                                timeout=60)
             self.opensearch_search_knn_doc_lambda.add_environment("host", host)
             # search_knn_doc_resource
             search_knn_doc_resource = api.root.add_resource(
@@ -280,6 +286,13 @@ class LambdaVPCStack(Stack):
             )
 
         self.create_file_upload_prerequisites(api, search_engine_key, vpc, vpc_subnets_selection)
+
+        self.create_apigw_resource_method_for_content_moderation(
+            api=api,
+            func=content_moderation_func
+        )
+
+        self.apigw = api
 
     def define_lambda_function(self, function_name, role, vpc=None, vpc_subnets=None, timeout=10):
         lambda_function = _lambda.Function(
@@ -336,7 +349,6 @@ class LambdaVPCStack(Stack):
                 resources=['*']  # 可同时使用opensearch和kendra
             )
 
-
         langchain_processor_role = _iam.Role(
             self, 'langchain_processor_role',
             assumed_by=_iam.ServicePrincipal('lambda.amazonaws.com')
@@ -358,7 +370,7 @@ class LambdaVPCStack(Stack):
             langchain_processor_role.add_managed_policy(
                 _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonKendraFullAccess")
             )
-        
+
         # add langchain processor for smart query and answer
         function_name_qa = 'langchain_processor_qa'
         langchain_processor_qa_function = _lambda.Function(
@@ -442,12 +454,13 @@ class LambdaVPCStack(Stack):
         chat_table.grant_read_write_data(dynamodb_role)
         langchain_processor_qa_function.add_environment("dynamodb_table_name", chat_table.table_name)
         cdk.CfnOutput(self, 'chat_table_name', value=chat_table.table_name, export_name='ChatTableName')
+
     def create_file_upload_prerequisites(self, api, search_engine_key, vpc=None, vpc_subnets=None):
         # Now hardcode for testing first
         ACCOUNT = os.getenv('AWS_ACCOUNT_ID', '')
         REGION = os.getenv('AWS_REGION', '')
         bucket_for_uploaded_files = "intelligent-search-data-bucket" + "-" + ACCOUNT + "-" + REGION
-        execution_role_name = self.node.try_get_context("execution_role_name")+REGION
+        execution_role_name = self.node.try_get_context("execution_role_name") + REGION
         index = self.node.try_get_context("index")
         language = self.node.try_get_context("language")
         embedding_endpoint_name = self.node.try_get_context("embedding_endpoint_name")
@@ -563,7 +576,7 @@ class LambdaVPCStack(Stack):
         data_load_function.add_environment("language", language)
         data_load_function.add_environment("embedding_endpoint_name", embedding_endpoint_name)
         data_load_function.add_environment("search_engine_opensearch", str(search_engine_opensearch))
-        
+
         """
         4. Update S3 file notification with Lambda
           prefix is {BUCKET_NAME}/source_data/
@@ -657,3 +670,54 @@ class LambdaVPCStack(Stack):
                 )
             ]
         )
+
+    def create_content_moderation_func(self, vpc=None, vpc_subnets=None):
+        _api_url_suffix = "_cn" if 'cn-' in os.getenv('AWS_REGION', '') else ""
+        content_moderation_api = self.node.try_get_context(f"content_moderation_api{_api_url_suffix}")
+        # content_moderation_token = self.node.try_get_context("content_moderation_account_token_in_base64")
+        content_moderation_result_table = self.node.try_get_context("content_moderation_result_table")
+
+        _content_moderation_role_policy = _iam.PolicyStatement(
+            actions=[
+                'lambda:AWSLambdaBasicExecutionRole',
+                'secretsmanager:GetSecretValue',
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:DescribeLogGroups",
+                "logs:DescribeLogStreams",
+                "logs:PutLogEvents",
+                "logs:GetLogEvents",
+                "logs:FilterLogEvents"
+            ],
+            resources=['*']
+        )
+
+        content_moderation_role = _iam.Role(
+            self, 'content_moderation_role',
+            assumed_by=_iam.ServicePrincipal('lambda.amazonaws.com')
+        )
+        content_moderation_role.add_to_policy(_content_moderation_role_policy)
+
+        content_moderation_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
+        )
+
+        # add langchain processor for smart query and answer
+        function_name_content_moderation = 'content_moderation'
+        content_moderation_func = _lambda.Function(
+            self, function_name_content_moderation,
+            function_name=function_name_content_moderation,
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            role=content_moderation_role,
+            layers=[self.langchain_processor_qa_layer],
+            code=_lambda.Code.from_asset('../lambda/' + function_name_content_moderation),
+            handler='lambda_function' + '.lambda_handler',
+            memory_size=256,
+            vpc=vpc,
+            vpc_subnets=vpc_subnets,
+            timeout=Duration.minutes(10),
+            reserved_concurrent_executions=10
+        )
+        content_moderation_func.add_environment("content_moderation_api", content_moderation_api)
+
+        return content_moderation_func
