@@ -149,7 +149,7 @@ def lambda_handler(event, context):
     print('searchEngine:', searchEngine)
 
     # Acquire Secret/Token for Content Moderation
-    content_moderation_access_token = event['queryStringParameters']['tokenContentCheck']
+    content_moderation_access_token = evt_body['tokenContentCheck']
     _enable_content_moderation = True if content_moderation_access_token != "" else False
 
     print(f"_enable_content_moderation: {_enable_content_moderation}")
