@@ -1,0 +1,8 @@
+{
+  "extends": ["react-app", "prettier"],
+  "plugins": ["prettier"],
+  "rules": {
+    "prettier/prettier": "error",
+    "no-restricted-globals": ["warn", "event", "fdescribe"]
+  }
+}

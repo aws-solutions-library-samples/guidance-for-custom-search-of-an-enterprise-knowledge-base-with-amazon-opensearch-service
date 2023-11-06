@@ -1,0 +1,43 @@
+import { Box, Container, SpaceBetween } from '@cloudscape-design/components';
+import { readTimestamp } from 'src/utils';
+import StateLoading from '../StateLoading';
+import ChatIcon from './ChatIcon';
+import SessionChatsAI from './SessionChatsAI';
+import { StyledQ } from './StyledChatComponents';
+
+const SessionChats = ({ conversations }) => {
+  if (!conversations)
+    return <StateLoading headerText="Loading conversations..." />;
+
+  return (
+    <Container>
+      <SpaceBetween size="l">
+        {conversations.length === 0 ? (
+          <ConverstationPlaceholder />
+        ) : (
+          conversations.map(({ type, content }, i) =>
+            type === 'customer' ? (
+              // customer chat
+              <StyledQ key={i}>
+                <div className="icon">
+                  <ChatIcon />
+                </div>
+                <div className="text">{content.text}</div>
+                <div className="extra">{readTimestamp(content.timestamp)}</div>
+              </StyledQ>
+            ) : (
+              // robot chat
+              <SessionChatsAI content={content} key={i} />
+            )
+          )
+        )}
+      </SpaceBetween>
+    </Container>
+  );
+};
+
+export default SessionChats;
+
+function ConverstationPlaceholder() {
+  return <Box></Box>;
+}

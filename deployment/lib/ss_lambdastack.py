@@ -36,19 +36,18 @@ class LambdaStack(Stack):
         else:
             host = search_engine_key
 
-
         # get CloudFormation parameter
 
         func_selection = self.node.try_get_context("selection")
-        
+
         self.langchain_processor_qa_layer = _lambda.LayerVersion(
-          self, 'QALambdaLayer',
-          code=_lambda.Code.from_asset('../lambda/langchain_processor_layer'),
-          compatible_runtimes=[_lambda.Runtime.PYTHON_3_9],
-          description='QA Library'
+            self, 'QALambdaLayer',
+            code=_lambda.Code.from_asset('../lambda/langchain_processor_layer'),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_9],
+            description='QA Library'
         )
 
-        print("These functions are slected( configuration is in cdk.json context 'selection'):  ", func_selection)
+        print("These functions are selected (configuration is in cdk.json context 'selection'):  ", func_selection)
         # role and policy (smartsearch knn doc,opensearch-search-knn,knn_faq),all three function using same policy.
         if 'knn' in func_selection or 'knn_faq' in func_selection or 'knn_doc' in func_selection:
             knn_policy_statement = _iam.PolicyStatement(
@@ -128,7 +127,10 @@ class LambdaStack(Stack):
 
         if 'langchain_processor_qa' in func_selection:
             langchain_qa_func = self.create_langchain_qa_func(search_engine_key=search_engine_key)
-            
+
+        # Create Lambda Function for Content Moderation
+        content_moderation_func = self.create_content_moderation_func()
+
             
         # api gateway resource
         api = apigw.RestApi(self, 'smartsearch-api',
@@ -139,15 +141,15 @@ class LambdaStack(Stack):
                             endpoint_types=[apigw.EndpointType.REGIONAL],
                             binary_media_types=binary_media_types
                             )
-        
+
         ###########
 
         websocket_table = dynamodb.Table(self, "websocket",
-                            partition_key=dynamodb.Attribute(name="id",
-                                                                type=dynamodb.AttributeType.STRING),
-                            removal_policy=RemovalPolicy.DESTROY
-                            )
-        
+                                         partition_key=dynamodb.Attribute(name="id",
+                                                                          type=dynamodb.AttributeType.STRING),
+                                         removal_policy=RemovalPolicy.DESTROY
+                                         )
+
         _websocket_policy = _iam.PolicyStatement(
             actions=[
                 'lambda:*',
@@ -155,7 +157,7 @@ class LambdaStack(Stack):
                 'dynamodb:*',
                 'logs:*',
             ],
-            resources=['*']  #现在比较大
+            resources=['*']  # 现在比较大
         )
         websocket_role = _iam.Role(
             self, 'websocket_role',
@@ -167,7 +169,7 @@ class LambdaStack(Stack):
             _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonDynamoDBFullAccess")
         )
 
-        table_name = websocket_table.table_name 
+        table_name = websocket_table.table_name
 
         connect_function_name = 'websocket_connect'
         websocketconnect = _lambda.Function(
@@ -178,7 +180,7 @@ class LambdaStack(Stack):
             code=_lambda.Code.from_asset('../lambda/' + connect_function_name),
             handler='lambda_function' + '.lambda_handler',
         )
-        websocketconnect.add_environment("TABLE_NAME", table_name) 
+        websocketconnect.add_environment("TABLE_NAME", table_name)
 
         disconnect_function_name = 'websocket_disconnect'
         websocketdisconnect = _lambda.Function(
@@ -189,7 +191,7 @@ class LambdaStack(Stack):
             code=_lambda.Code.from_asset('../lambda/' + disconnect_function_name),
             handler='lambda_function' + '.lambda_handler',
         )
-        websocketdisconnect.add_environment("TABLE_NAME", table_name) 
+        websocketdisconnect.add_environment("TABLE_NAME", table_name)
 
         default_function_name = 'websocket_default'
         websocketdefault = _lambda.Function(
@@ -200,7 +202,7 @@ class LambdaStack(Stack):
             code=_lambda.Code.from_asset('../lambda/' + disconnect_function_name),
             handler='lambda_function' + '.lambda_handler',
         )
-        websocketdefault.add_environment("TABLE_NAME", table_name) 
+        websocketdefault.add_environment("TABLE_NAME", table_name)
 
         search_function_name = 'websocket_search'
         websocketsearch = _lambda.Function(
@@ -211,33 +213,31 @@ class LambdaStack(Stack):
             code=_lambda.Code.from_asset('../lambda/' + search_function_name),
             handler='lambda_function' + '.lambda_handler',
         )
-        websocketsearch.add_environment("TABLE_NAME", table_name) 
-        websocketsearch.add_environment("DIR_NAME", "search") 
+        websocketsearch.add_environment("TABLE_NAME", table_name)
+        websocketsearch.add_environment("DIR_NAME", "search")
         ###########
-
 
         web_socket_api = apigwv2.WebSocketApi(self, "websocketapi")
         apigwv2.WebSocketStage(self, "prod",
-            web_socket_api=web_socket_api,
-            stage_name="prod",
-            auto_deploy=True
-        )
+                               web_socket_api=web_socket_api,
+                               stage_name="prod",
+                               auto_deploy=True
+                               )
         web_socket_api.add_route("search",
-            integration=WebSocketLambdaIntegration("SearchIntegration", websocketsearch)
-        )
+                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketsearch)
+                                 )
         web_socket_api.add_route("$connect",
-            integration=WebSocketLambdaIntegration("SearchIntegration", websocketconnect)
-        )
+                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketconnect)
+                                 )
         web_socket_api.add_route("$disconnect",
-            integration=WebSocketLambdaIntegration("SearchIntegration", websocketdisconnect)
-        )
+                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketdisconnect)
+                                 )
         web_socket_api.add_route("$default",
-            integration=WebSocketLambdaIntegration("SearchIntegration", websocketdefault)
-        )
+                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketdefault)
+                                 )
 
         langchain_qa_func.add_environment("api_gw", web_socket_api.api_id)
         #################################
- 
 
         if 'knn_faq' in func_selection:
             self.opensearch_search_knn_faq_lambda = self.define_lambda_function('opensearch-search-knn-faq',
@@ -284,7 +284,6 @@ class LambdaStack(Stack):
                                            required=["ind", "knn", "q"]
                                        )
                                        )
-
 
             search_faq_resource.add_method(
                 'GET',
@@ -363,6 +362,48 @@ class LambdaStack(Stack):
 
         self.create_file_upload_prerequisites(api, search_engine_key)
 
+        self.create_apigw_resource_method_for_content_moderation(
+            api=api,
+            func=content_moderation_func
+        )
+
+        self.apigw = api
+
+    def create_apigw_resource_method_for_content_moderation(self, api, func):
+
+        content_moderation_resource = api.root.add_resource(
+            'content_moderation_check',
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_methods=['GET', 'OPTIONS'],
+                allow_origins=apigw.Cors.ALL_ORIGINS)
+        )
+
+        content_moderation_integraion = apigw.LambdaIntegration(
+            func,
+            proxy=True,
+            integration_responses=[
+                apigw.IntegrationResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': "'*'"
+                    }
+                )
+            ]
+        )
+
+        content_moderation_resource.add_method(
+            'GET',
+            content_moderation_integraion,
+            method_responses=[
+                apigw.MethodResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': True
+                    }
+                )
+            ]
+        )
+
     def define_lambda_function(self, function_name, role, timeout=10):
         lambda_function = _lambda.Function(
             self, function_name,
@@ -394,7 +435,7 @@ class LambdaStack(Stack):
                     'secretsmanager:SecretsManagerReadWrite',
                     'kendra:DescribeIndex',
                     'kendra:Query',
-                    'execute-api:*', ##############
+                    'execute-api:*',  ##############
                     'bedrock:*'
                 ],
                 resources=['*']  # 可根据需求进行更改
@@ -408,7 +449,7 @@ class LambdaStack(Stack):
                     'secretsmanager:SecretsManagerReadWrite',
                     'es:ESHttpPost',
                     'bedrock:*',
-                    'execute-api:*' ##############
+                    'execute-api:*'  ##############
 
                 ],
                 resources=['*']  # 可同时使用opensearch和kendra
@@ -421,6 +462,10 @@ class LambdaStack(Stack):
 
         langchain_processor_role.add_managed_policy(
             _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaRole")
+        )
+
+        langchain_processor_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
         )
 
         langchain_processor_role.add_managed_policy(
@@ -519,13 +564,48 @@ class LambdaStack(Stack):
         chat_table.grant_read_write_data(dynamodb_role)
         langchain_processor_qa_function.add_environment("dynamodb_table_name", chat_table.table_name)
         cdk.CfnOutput(self, 'chat_table_name', value=chat_table.table_name, export_name='ChatTableName')
-        
+
+    def create_apigw_resource_method_for_knowledge_base_handler(self, api, knowledge_base_handler_function):
+
+        knowledge_base_handler_resource = api.root.add_resource(
+            'knowledge_base_handler',
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_methods=['GET', 'OPTIONS'],
+                allow_origins=apigw.Cors.ALL_ORIGINS)
+        )
+
+        knowledge_base_handler_integration = apigw.LambdaIntegration(
+            knowledge_base_handler_function,
+            proxy=True,
+            integration_responses=[
+                apigw.IntegrationResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': "'*'"
+                    }
+                )
+            ]
+        )
+
+        knowledge_base_handler_resource.add_method(
+            'GET',
+            knowledge_base_handler_integration,
+            method_responses=[
+                apigw.MethodResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': True
+                    }
+                )
+            ]
+        )
+
     def create_file_upload_prerequisites(self, api, search_engine_key):
         # Now hardcode for testing first
         ACCOUNT = os.getenv('AWS_ACCOUNT_ID', '')
         REGION = os.getenv('AWS_REGION', '')
         bucket_for_uploaded_files = "intelligent-search-data-bucket" + "-" + ACCOUNT + "-" + REGION
-        execution_role_name = self.node.try_get_context("execution_role_name")+REGION
+        execution_role_name = self.node.try_get_context("execution_role_name") + REGION
         index = self.node.try_get_context("index")
         language = self.node.try_get_context("language")
         embedding_endpoint_name = self.node.try_get_context("embedding_endpoint_name")
@@ -619,8 +699,6 @@ class LambdaStack(Stack):
         data_load_role.add_managed_policy(
             _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonS3FullAccess")
         )
-        
-        
 
         data_load_function = _lambda.Function(
             self, function_name,
@@ -683,6 +761,55 @@ class LambdaStack(Stack):
             "integration.request.path.sub_prefix": "method.request.path.sub_prefix",
         }
 
+        """
+        6. Create Lambda for list all indices from OpenSearch for front-end
+        """
+        function_name = 'knowledge_base_handler'
+
+        _knowledge_base_role_policy = _iam.PolicyStatement(
+            actions=[
+                's3:AmazonS3FullAccess',
+                'lambda:AWSLambdaBasicExecutionRole',
+                'secretsmanager:SecretsManagerReadWrite'
+            ],
+            resources=['*']  # 可根据需求进行更改
+        )
+        knowledge_base_handler_role = _iam.Role(
+            self, 'knowledge_base_handler_role',
+            assumed_by=_iam.ServicePrincipal('lambda.amazonaws.com')
+        )
+        knowledge_base_handler_role.add_to_policy(_data_load_role_policy)
+
+        knowledge_base_handler_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
+        )
+
+        knowledge_base_handler_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("SecretsManagerReadWrite")
+        )
+
+        knowledge_base_handler_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonS3FullAccess")
+        )
+
+        knowledge_base_handler_function = _lambda.Function(
+            self, function_name,
+            function_name=function_name,
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            role=knowledge_base_handler_role,
+            layers=[self.langchain_processor_qa_layer],
+            code=_lambda.Code.from_asset('../lambda/' + function_name),
+            handler='lambda_function' + '.lambda_handler',
+            timeout=Duration.minutes(10),
+            reserved_concurrent_executions=20
+        )
+        knowledge_base_handler_function.add_environment("host", search_engine_key)
+
+        self.create_apigw_resource_method_for_knowledge_base_handler(
+            api=api,
+            knowledge_base_handler_function=knowledge_base_handler_function
+        )
+
         # Create Integration Options
         """
         Covering:
@@ -732,3 +859,52 @@ class LambdaStack(Stack):
                 )
             ]
         )
+
+    def create_content_moderation_func(self):
+        _api_url_suffix = "_cn" if 'cn-' in os.getenv('AWS_REGION', '') else ""
+        content_moderation_api = self.node.try_get_context(f"content_moderation_api{_api_url_suffix}")
+        # content_moderation_token = self.node.try_get_context("content_moderation_account_token_in_base64")
+        content_moderation_result_table = self.node.try_get_context("content_moderation_result_table")
+
+        _content_moderation_role_policy = _iam.PolicyStatement(
+            actions=[
+                'lambda:AWSLambdaBasicExecutionRole',
+                'secretsmanager:GetSecretValue',
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:DescribeLogGroups",
+                "logs:DescribeLogStreams",
+                "logs:PutLogEvents",
+                "logs:GetLogEvents",
+                "logs:FilterLogEvents"
+            ],
+            resources=['*']
+        )
+
+        content_moderation_role = _iam.Role(
+            self, 'content_moderation_role',
+            assumed_by=_iam.ServicePrincipal('lambda.amazonaws.com')
+        )
+        content_moderation_role.add_to_policy(_content_moderation_role_policy)
+
+        content_moderation_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
+        )
+
+        # add langchain processor for smart query and answer
+        function_name_content_moderation = 'content_moderation'
+        content_moderation_func = _lambda.Function(
+            self, function_name_content_moderation,
+            function_name=function_name_content_moderation,
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            role=content_moderation_role,
+            layers=[self.langchain_processor_qa_layer],
+            code=_lambda.Code.from_asset('../lambda/' + function_name_content_moderation),
+            handler='lambda_function' + '.lambda_handler',
+            memory_size=256,
+            timeout=Duration.minutes(10),
+            reserved_concurrent_executions=10
+        )
+        content_moderation_func.add_environment("content_moderation_api", content_moderation_api)
+
+        return content_moderation_func

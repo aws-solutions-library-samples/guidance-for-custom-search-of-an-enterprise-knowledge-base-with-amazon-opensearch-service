@@ -9,10 +9,11 @@ from langchain.memory import ConversationBufferMemory
 from langchain import LLMChain
 from langchain.llms import AmazonAPIGatewayBedrock
 import json
-
 import numpy as np
 from model import *
 from session import *
+
+
 
 class SmartSearchQA:
     
@@ -154,7 +155,7 @@ class SmartSearchQA:
         )
             
         output = chat_chain.predict(human_input=query)
-        
+
         if len(session_id) > 0:
             update_session_info(table_name, session_id, query, output, "chat")
         
@@ -182,7 +183,7 @@ class SmartSearchQA:
                                         txt_docs_num: int=0,
                                         response_if_no_docs_found: str="",
                                         vec_docs_score_thresholds: float =0,
-                                        txt_docs_score_thresholds: float =0
+                                        txt_docs_score_thresholds: float =0,
                                         ):
         
         prompt = PromptTemplate(template=prompt_template,
@@ -236,7 +237,7 @@ class SmartSearchQA:
         
         # if language == "english":
         #     answer = answer.split('Answer:')[-1]
-        
+
         if len(session_id) > 0:
             new_query=result['generated_question']
             update_session_info(table_name, session_id, new_query, answer, "qa")
@@ -249,7 +250,7 @@ class SmartSearchQA:
                                         table_name: str='',
                                         prompt_template: str = "",
                                         condense_question_prompt: str="",
-                                        top_k: int = 3
+                                        top_k: int = 3,
                                         ):
         history = []
         session_info = ""
