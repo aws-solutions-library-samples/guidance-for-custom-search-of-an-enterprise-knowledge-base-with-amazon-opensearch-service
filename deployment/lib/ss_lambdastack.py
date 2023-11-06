@@ -129,6 +129,7 @@ class LambdaStack(Stack):
         if 'langchain_processor_qa' in func_selection:
             langchain_qa_func = self.create_langchain_qa_func(search_engine_key=search_engine_key)
             
+            
         # api gateway resource
         api = apigw.RestApi(self, 'smartsearch-api',
                             # default_cors_preflight_options=apigw.CorsOptions(
@@ -233,6 +234,8 @@ class LambdaStack(Stack):
         web_socket_api.add_route("$default",
             integration=WebSocketLambdaIntegration("SearchIntegration", websocketdefault)
         )
+
+        langchain_qa_func.add_environment("api_gw", web_socket_api.api_id)
         #################################
  
 
@@ -446,13 +449,14 @@ class LambdaStack(Stack):
             timeout=Duration.minutes(10),
             reserved_concurrent_executions=50
         )
-        langchain_processor_qa_function.add_environment("host", search_engine_key)
+        langchain_processor_qa_function.add_environment("host", search_engine_key) 
         langchain_processor_qa_function.add_environment("index", index)
         langchain_processor_qa_function.add_environment("language", language)
         langchain_processor_qa_function.add_environment("embedding_endpoint_name", embedding_endpoint_name)
         langchain_processor_qa_function.add_environment("llm_endpoint_name", llm_endpoint_name)
         langchain_processor_qa_function.add_environment("search_engine_opensearch", str(search_engine_opensearch))
         langchain_processor_qa_function.add_environment("search_engine_kendra", str(search_engine_kendra))
+        
 
         return langchain_processor_qa_function
 

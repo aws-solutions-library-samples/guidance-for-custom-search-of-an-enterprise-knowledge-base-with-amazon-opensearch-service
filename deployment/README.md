@@ -33,7 +33,7 @@ npm install -g aws-cdk
 3. Bootstrap the CDK to provision all the infrastructure needed for the CDK to make changes to your AWS account
 
 ```
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 (precondition: you have installed pip via "sudo apt install python3-pip")
 
@@ -85,7 +85,7 @@ cdk synth
 ```
 If everything is good, then
 ```
-cdk deploy --all
+cdk deploy --all  --no-roll-back --require-approval never
 ```
 6. The CDK deployment will provide 3 CloudFormation stacks with relevant resouces like Lambda, API Gateway, OpenSearch instance and SageMaker notebook etc.
 

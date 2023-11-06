@@ -23,15 +23,15 @@ port = 443
 
 TOP_K = 2
 
-domain_name = 'tg4k9c6ol5'
+domain_name = os.environ.get('api_gw')
 stage = 'prod'
 
 
 def lambda_handler(event, context):
     
-    print("event:",event)
-    print("region:",region)
-    print('table name:',table_name)
+    # print("event:",event)
+    # print("region:",region)
+    # print('table name:',table_name)
     
     evt_para = {}
     if 'queryStringParameters' in event.keys():
