@@ -1,3 +1,4 @@
+import re
 import os
 import json
 import traceback
@@ -25,12 +26,20 @@ password = data.get('password')
 s3_res = boto3.resource('s3')
 s3_cli = boto3.client('s3')
 
+def get_string_after_source_data(text):
+    match = re.search(r'source_data/(.+)/(.+)', text)
+    if match:
+        index = match.group(1) 
+        print(f"uploading to index {index}")
+        return index
+    else:
+        return None
+
 def lambda_handler(event, context):
     
     print("event:",event)
     print("host:",host)
     print("region:",region)
-    #print("index:",index)
     print("language:",language)
     print("username:",username)
     print("password:",password)
@@ -60,11 +69,10 @@ def lambda_handler(event, context):
         bucket_name = event['Records'][0]['s3']['bucket']['name']
         file_name = urllib.parse.unquote_plus(event['Records'][0]['s3']['object']['key'], encoding='utf-8')
         local_file = "{}/{}".format('/tmp', file_name.split("/")[-1])
-        index =  os.environ.get('index')
-        
-        if len(file_name.split("/")[-2]) > 3:
-            index = file_name.split("/")[-2]
-            
+        index = get_string_after_source_data(file_name)
+        if not index:
+            index =  os.environ.get('index')
+
         print("bucket_name:",bucket_name)
         print("file_name:",file_name)
         print("index:",index)
