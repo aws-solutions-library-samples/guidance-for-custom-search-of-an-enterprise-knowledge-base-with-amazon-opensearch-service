@@ -36,7 +36,7 @@ class OpenSearchStack(Stack):
       domain_name=ops_domain_name,
       #XXX: Supported versions of OpenSearch and Elasticsearch
       # https://docs.aws.amazon.com/opensearch-service/latest/developerguide/what-is.html#choosing-version
-      version=aws_opensearchservice.EngineVersion.OPENSEARCH_1_3,
+      version=aws_opensearchservice.EngineVersion.OPENSEARCH_2_9,
       #XXX: Amazon OpenSearch Service - Current generation instance types
       # https://docs.aws.amazon.com/opensearch-service/latest/developerguide/supported-instance-types.html#latest-gen
       # access_policies=[_iam.PolicyStatement(
