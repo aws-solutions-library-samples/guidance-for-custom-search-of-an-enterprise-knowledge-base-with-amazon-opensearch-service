@@ -150,9 +150,10 @@ def lambda_handler(event, context):
     print('searchEngine:', searchEngine)
 
     # Acquire Secret/Token for Content Moderation
-    content_moderation_access_token = evt_body['tokenContentCheck']
+    content_moderation_access_token = ""
+    if "tokenContentCheck" in evt_body.keys():
+        content_moderation_access_token = evt_body['tokenContentCheck']
     _enable_content_moderation = True if content_moderation_access_token != "" else False
-
     print(f"_enable_content_moderation: {_enable_content_moderation}")
 
     username = None
@@ -223,7 +224,7 @@ def lambda_handler(event, context):
                 QUERY_VERIFIED_RESULT = _suggestion
                 response['body'] = json.dumps(
                     {
-                        'datetime': time.time(),
+                        'datetime': time.time() * 1000,
                         'text': query,
                         'contentCheckLabel': _reason,
                         'contentCheckSuggestion': _suggestion
