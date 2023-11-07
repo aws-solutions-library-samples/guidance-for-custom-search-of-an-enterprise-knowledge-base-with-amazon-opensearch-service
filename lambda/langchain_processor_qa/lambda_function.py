@@ -30,7 +30,7 @@ stage = 'prod'
 
 def lambda_handler(event, context):
     
-    # print("event:",event)
+    print("event:",event)
     # print("region:",region)
     # print('table name:',table_name)
     
@@ -48,6 +48,23 @@ def lambda_handler(event, context):
             evt_body = json.loads(event['body'])
     else:
         evt_body = evt_para
+
+    query = "hello"
+    if "query" in evt_body.keys():
+        query = evt_body['query'].strip()
+    elif "q" in evt_body.keys():
+        query = evt_body['q'].strip()
+    print('query:', query)
+
+    task = "search"
+    if "task" in evt_body.keys():
+        task = evt_body['task']
+    elif "action" in evt_body.keys():
+        task = evt_body['action']
+    print('task:', task)
+
+    if 'body' in event.keys() and requestType == 'websocket':
+        evt_body = evt_body['configs']
 
     index = INDEX
     if "index" in evt_body.keys():
@@ -126,7 +143,7 @@ def lambda_handler(event, context):
         name = evt_body['name']
 
     if "llmData" in evt_body.keys():
-        llmData = Dict(evt_body['llmData'])
+        llmData = dict(evt_body['llmData'])
         if "embeddingEndpoint" in llmData.keys():
             embeddingEndpoint = llmData['embeddingEndpoint']
         if "sagemakerEndpoint" in llmData.keys():
@@ -198,13 +215,6 @@ def lambda_handler(event, context):
                            bedrockMaxTokens
                            )
 
-        query = "hello"
-        if "query" in evt_body.keys():
-            query = evt_body['query'].strip()
-        elif "q" in evt_body.keys():
-            query = evt_body['q'].strip()
-        print('query:', query)
-
         QUERY_VERIFIED_RESULT = None
 
         # Verify if Query is illegal
@@ -236,11 +246,6 @@ def lambda_handler(event, context):
             contentCheckLabel = "Pass"
             contentCheckSuggestion = "Pass"
 
-            task = "qa"
-            if "task" in evt_body.keys():
-                task = evt_body['task']
-            print('task:', task)
-
             if task == "chat":
 
                 if language == "chinese":
@@ -249,7 +254,7 @@ def lambda_handler(event, context):
                     prompt_template = ENGLISH_CHAT_PROMPT_TEMPLATE
                     if modelType == 'llama2':
                         prompt_template = EN_CHAT_PROMPT_LLAMA2
-                if "prompt" in evt_body.keys():
+                if "prompt" in evt_body.keys() and len(evt_body['prompt']) > 0:
                     prompt_template = evt_body['prompt']
 
                 if modelType == 'llama2':
@@ -271,7 +276,7 @@ def lambda_handler(event, context):
                         'text': result
                     })
 
-            elif task == "qa":
+            elif task == "qa" or task == "search":
 
                 if language == "chinese":
                     prompt_template = CHINESE_PROMPT_TEMPLATE
@@ -288,7 +293,7 @@ def lambda_handler(event, context):
                         prompt_template = EN_CHAT_PROMPT_LLAMA2
                         condense_question_prompt = EN_CONDENSE_PROMPT_LLAMA2
                     responseIfNoDocsFound = "Can't find answer"
-                if "prompt" in evt_body.keys():
+                if "prompt" in evt_body.keys() and len(evt_body['prompt']) > 0:
                     prompt_template = evt_body['prompt']
 
                 topK = TOP_K
@@ -302,7 +307,7 @@ def lambda_handler(event, context):
                 print('searchMethod:', searchMethod)
 
                 txtDocsNum = 0
-                if "txtDocsNum" in evt_body.keys():
+                if "txtDocsNum" in evt_body.keys() and evt_body['txtDocsNum'] is not None:
                     txtDocsNum = int(evt_body['txtDocsNum'])
                 print('txtDocsNum:', txtDocsNum)
 
@@ -311,12 +316,12 @@ def lambda_handler(event, context):
                 print('responseIfNoDocsFound:', responseIfNoDocsFound)
 
                 vecDocsScoreThresholds = 0
-                if "vecDocsScoreThresholds" in evt_body.keys():
+                if "vecDocsScoreThresholds" in evt_body.keys() and evt_body['vecDocsScoreThresholds'] is not None:
                     vecDocsScoreThresholds = float(evt_body['vecDocsScoreThresholds'])
                 print('vecDocsScoreThresholds:', vecDocsScoreThresholds)
 
                 txtDocsScoreThresholds = 0
-                if "txtDocsScoreThresholds" in evt_body.keys():
+                if "txtDocsScoreThresholds" in evt_body.keys() and evt_body['txtDocsScoreThresholds'] is not None:
                     txtDocsScoreThresholds = float(evt_body['txtDocsScoreThresholds'])
                 print('txtDocsScoreThresholds:', txtDocsScoreThresholds)
 
@@ -374,6 +379,7 @@ def lambda_handler(event, context):
                 answer_docs_scores = []
                 if "isCheckedScoreAD" in evt_body.keys():
                     isCheckedScoreAD = bool(evt_body['isCheckedScoreAD'])
+                print('isCheckedScoreAD:',isCheckedScoreAD)
                 if isCheckedScoreAD:
                     cal_answer = answer
                     if language.find("chinese") >= 0 and len(answer) > 150:
