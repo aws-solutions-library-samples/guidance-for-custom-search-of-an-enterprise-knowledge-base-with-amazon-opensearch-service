@@ -214,12 +214,15 @@ def get_answer(task_type,question,sessionId,language,modelType,prompt,searchEngi
     
     answer = result['text']
     source_list = []
-    if 'source_list' in result.keys():
-        source_list = result['source_list']
+    if 'sourceData' in result.keys():
+        source_list = result['sourceData']
     
     print("answer:",answer)
+    print('source_list:',source_list)
 
     source_str = ""
+    query_docs_score_list = []
+    answer_docs_score_list = []
     for i in range(len(source_list)):
         item = source_list[i]
         print('item:',item)
@@ -233,19 +236,22 @@ def get_answer(task_type,question,sessionId,language,modelType,prompt,searchEngi
         except KeyError:
             source ="source:unknown"
             print("KeyError:source file not found")
-        score = "score:" + str(item['score'])
+        qd_score = "qd score:" + str(item['scoreQueryDoc'])
+        query_docs_score_list.append(item['scoreQueryDoc'])
+
+        ad_score = "ad score:" + str(item['scoreAnswerDoc'])
+        answer_docs_score_list.append(item['scoreAnswerDoc'])
+
         sentence = "sentence:" + item['sentence']
         paragraph = "paragraph:" + item['paragraph']
-        source_str += (_id + "      " + source + "      " + score + '\n')
+
+        source_str += (_id + "      " + source + "      " + qd_score + '\n')
         # source_str += sentence + '\n'
         source_str += paragraph + '\n\n'
     
     confidence = ""
-    query_docs_score = -1
-    if 'scoreQueryDoc' in result.keys():
-        query_docs_score =  float(result['scoreQueryDoc'])
-    if query_docs_score >= 0:
-        confidence += ("query_docs_score:" + str(query_docs_score) + '\n')
+    if len(list(query_docs_score_list)) >= 0 and float(query_docs_score_list[0]) > 0:
+        confidence += ("query_docs_score:" + str(query_docs_score_list) + '\n')
 
     query_answer_score = -1
     if 'scoreQueryAnswer' in result.keys():
@@ -254,10 +260,8 @@ def get_answer(task_type,question,sessionId,language,modelType,prompt,searchEngi
         confidence += ("query_answer_score:" + str(query_answer_score) + '\n')
 
     answer_docs_score = -1
-    if 'scoreAnswerDoc' in result.keys():
-        answer_docs_score =  float(result['scoreAnswerDoc'])
-    if answer_docs_score >= 0:
-        confidence += ("answer_docs_score:" + str(answer_docs_score) + '\n')
+    if len(list(answer_docs_score_list)) >= 0 and float(answer_docs_score_list[0]) > 0:
+        confidence += ("answer_docs_score:" + str(answer_docs_score_list) + '\n')
 
     return answer,confidence,source_str,url,request_time
     
