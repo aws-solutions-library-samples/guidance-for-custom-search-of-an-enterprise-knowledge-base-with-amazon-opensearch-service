@@ -439,29 +439,30 @@ def lambda_handler(event, context):
                         source["id"] = i
                         try:
                             source["title"] = os.path.split(source_docs[i].metadata['source'])[-1]
+                            source["titleLink"] = "http://#"
                         except KeyError:
                             print("KeyError found")
                         source["paragraph"] = source_docs[i].page_content.replace("\n", "")
                         source["sentence"] = sentences[i] if searchEngine == "opensearch" else source_docs[
                             i].page_content.replace("\n", "")
-                        if language.find("chinese") >= 0:
-                            source["score"] = float(query_docs_scores[i]) if searchEngine == "opensearch" else 1
+                        if searchEngine == "opensearch" and len(query_docs_scores) > 0:
+                            source["scoreQueryDoc"] = round(float(query_docs_scores[i]),3)
                         else:
-                            source["score"] = query_docs_scores[i] if searchEngine == "opensearch" else 1
-
+                            source["scoreQueryDoc"] = -1
+                            
+                        if searchEngine == "opensearch" and len(answer_docs_scores) > 0:
+                            source["scoreAnswerDoc"] = round(float(answer_docs_scores[i]),3)
+                        else:
+                            source["scoreAnswerDoc"] = -1
+                        
                         source_list.append(source)
-
-                    query_docs_score = query_docs_scores[0] if searchEngine == "opensearch" and len(
-                        query_docs_scores) > 0 else -1
-                    answer_docs_score = max(answer_docs_scores) if len(answer_docs_scores) > 0 else -1
+                    
                     response['body'] = json.dumps(
                         {
-                            'datetime': time.time() * 1000,
-                            'source_list': source_list,
+                            'timestamp': time.time() * 1000,
+                            'sourceData': source_list,
                             'text': answer,
-                            'scoreQueryDoc': str(query_docs_score),
-                            'scoreQueryAnswer': str(query_answer_score),
-                            'scoreAnswerDoc': str(answer_docs_score),
+                            'scoreQueryAnswer': str(round(query_answer_score,3)),
                             'contentCheckLabel': contentCheckLabel,
                             'contentCheckSuggestion': contentCheckSuggestion
 
@@ -493,6 +494,7 @@ def lambda_handler(event, context):
                     })
 
         if requestType == 'websocket':
+            print('response body',response['body'])
             connectionId = str(event.get('requestContext', {}).get('connectionId'))
             endpoint_url = F"https://{domain_name}.execute-api.{region}.amazonaws.com/{stage}"
             apigw_management = boto3.client('apigatewaymanagementapi',
