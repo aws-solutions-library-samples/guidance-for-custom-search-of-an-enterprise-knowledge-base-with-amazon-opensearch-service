@@ -18,6 +18,7 @@ en_llm_endpoint = 'pytorch-inference-llm-v1'
 
 llama2_llm_endpoint = ''
 
+responseIfNoDocsFound = ''
 
 #Modify the default prompt as needed
 chinese_prompt = """基于以下已知信息，简洁和专业的来回答用户的问题，并告知是依据哪些信息来进行回答的。
@@ -114,6 +115,9 @@ def get_answer(task_type,question,sessionId,language,modelType,prompt,searchEngi
     else:
         task = 'chat'
     url += ('&task='+task)
+    
+    if len(responseIfNoDocsFound) > 0:
+        url += ('&responseIfNoDocsFound='+responseIfNoDocsFound)
 
     if language == "english":
         url += '&language=english'
@@ -250,7 +254,7 @@ def get_answer(task_type,question,sessionId,language,modelType,prompt,searchEngi
         source_str += paragraph + '\n\n'
     
     confidence = ""
-    if len(list(query_docs_score_list)) >= 0 and float(query_docs_score_list[0]) > 0:
+    if len(list(query_docs_score_list)) > 0 and float(query_docs_score_list[0]) > 0:
         confidence += ("query_docs_score:" + str(query_docs_score_list) + '\n')
 
     query_answer_score = -1
@@ -260,7 +264,7 @@ def get_answer(task_type,question,sessionId,language,modelType,prompt,searchEngi
         confidence += ("query_answer_score:" + str(query_answer_score) + '\n')
 
     answer_docs_score = -1
-    if len(list(answer_docs_score_list)) >= 0 and float(answer_docs_score_list[0]) > 0:
+    if len(list(answer_docs_score_list)) > 0 and float(answer_docs_score_list[0]) > 0:
         confidence += ("answer_docs_score:" + str(answer_docs_score_list) + '\n')
 
     return answer,confidence,source_str,url,request_time
