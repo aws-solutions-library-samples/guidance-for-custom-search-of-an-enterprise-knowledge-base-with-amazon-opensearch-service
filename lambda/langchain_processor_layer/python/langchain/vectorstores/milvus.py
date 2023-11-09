@@ -248,7 +248,7 @@ class Milvus(VectorStore):
         from pymilvus.orm.types import infer_dtype_bydata
 
         # Determine embedding dim
-        dim = len(embeddings[0])
+        dim = len(embeddings[0][0])
         fields = []
         # Determine metadata schema
         if metadatas:
@@ -281,7 +281,7 @@ class Milvus(VectorStore):
         )
         # Create the vector field, supports binary or float vectors
         fields.append(
-            FieldSchema(self._vector_field, infer_dtype_bydata(embeddings[0]), dim=dim)
+            FieldSchema(self._vector_field, infer_dtype_bydata(embeddings[0][0]), dim=dim)
         )
 
         # Create the schema for the collection
@@ -422,9 +422,14 @@ class Milvus(VectorStore):
         from pymilvus import Collection, MilvusException
 
         texts = list(texts)
+        logger.debug(texts)
 
         try:
-            embeddings = self.embedding_func.embed_documents(texts)
+            embeddings = self.embedding_func.embed_documents(texts, metadatas)
+            logger.debug("embedding size is: %d"% len(embeddings))
+            logger.debug("milvus embedding vector list size is: %d" % len(embeddings[0]))
+            logger.debug("milvus embedding vector size is: %d" % len(embeddings[0][0]))
+            logger.debug(metadatas)
         except NotImplementedError:
             embeddings = [self.embedding_func.embed_query(x) for x in texts]
 
@@ -439,7 +444,7 @@ class Milvus(VectorStore):
         # Dict to hold all insert columns
         insert_dict: dict[str, list] = {
             self._text_field: texts,
-            self._vector_field: embeddings,
+            self._vector_field: embeddings[0],
         }
 
         # Collect the metadata into the insert dict.
@@ -452,6 +457,7 @@ class Milvus(VectorStore):
         # Total insert count
         vectors: list = insert_dict[self._vector_field]
         total_count = len(vectors)
+        logger.debug("Total insert count %d" % total_count)
 
         pks: list[str] = []
 
@@ -466,6 +472,7 @@ class Milvus(VectorStore):
                 res: Collection
                 res = self.col.insert(insert_list, timeout=timeout, **kwargs)
                 pks.extend(res.primary_keys)
+                logger.info("Success to insert batch starting at entity: %s/%s" % (i, total_count))
             except MilvusException as e:
                 logger.error(
                     "Failed to insert batch starting at entity: %s/%s", i, total_count
@@ -503,7 +510,8 @@ class Milvus(VectorStore):
         res = self.similarity_search_with_score(
             query=query, k=k, param=param, expr=expr, timeout=timeout, **kwargs
         )
-        return [doc for doc, _ in res]
+
+        return res
 
     def similarity_search_by_vector(
         self,
@@ -535,7 +543,8 @@ class Milvus(VectorStore):
         res = self.similarity_search_with_score_by_vector(
             embedding=embedding, k=k, param=param, expr=expr, timeout=timeout, **kwargs
         )
-        return [doc for doc, _ in res]
+
+        return res
 
     def similarity_search_with_score(
         self,
@@ -575,6 +584,7 @@ class Milvus(VectorStore):
         res = self.similarity_search_with_score_by_vector(
             embedding=embedding, k=k, param=param, expr=expr, timeout=timeout, **kwargs
         )
+
         return res
 
     def similarity_search_with_score_by_vector(
@@ -631,8 +641,9 @@ class Milvus(VectorStore):
         ret = []
         for result in res[0]:
             meta = {x: result.entity.get(x) for x in output_fields}
-            doc = Document(page_content=meta.pop(self._text_field), metadata=meta)
-            pair = (doc, result.score)
+            text = meta.pop(self._text_field)
+            doc = Document(page_content=text, metadata=meta)
+            pair = (doc, result.score, text)
             ret.append(pair)
 
         return ret

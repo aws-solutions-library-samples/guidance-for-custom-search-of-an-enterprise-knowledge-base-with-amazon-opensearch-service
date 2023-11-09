@@ -27,6 +27,9 @@ class SmartSearchQaStack(Stack):
         
         search_engine_opensearch = self.node.try_get_context("search_engine_opensearch")
         search_engine_kendra = self.node.try_get_context("search_engine_kendra")
+        search_engine_zilliz = self.node.try_get_context("search_engine_zilliz")
+        zilliz_endpoint = self.node.try_get_context("zilliz_endpoint")
+        zilliz_token = self.node.try_get_context("zilliz_token")
 
         # configure the lambda role
         _langchain_processor_role_policy = iam.PolicyStatement(
@@ -79,6 +82,9 @@ class SmartSearchQaStack(Stack):
         langchain_processor_qa_function.add_environment("llm_embedding_name", llm_embedding_name)
         langchain_processor_qa_function.add_environment("search_engine_opensearch", str(search_engine_opensearch))
         langchain_processor_qa_function.add_environment("search_engine_kendra", str(search_engine_kendra))
+        langchain_processor_qa_function.add_environment("search_engine_zilliz", str(search_engine_zilliz))
+        langchain_processor_qa_function.add_environment("zilliz_endpoint", str(zilliz_endpoint))
+        langchain_processor_qa_function.add_environment("zilliz_token", str(zilliz_token))
 
         qa_api = apigw.RestApi(self, 'smart-search-qa-api',
                                default_cors_preflight_options=apigw.CorsOptions(

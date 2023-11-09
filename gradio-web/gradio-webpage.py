@@ -182,6 +182,9 @@ def get_answer(task_type,question,sessionId,language,modelType,prompt,searchEngi
         if len(index) > 0:
             url += ('&kendra_index_id='+index)
 
+    elif searchEngine == "Zilliz":
+        url += ('&searchEngine=zilliz')
+
     if int(vecTopK) > 0:
         url += ('&topK='+str(vecTopK))
 
@@ -328,7 +331,7 @@ with demo:
                     qa_language_radio = gr.Radio(["chinese","chinese-tc", "english"],value="chinese",label="Language")
                     qa_modelType_radio = gr.Radio(["claude2","claude2_api", "llama2(english)","other"],value="other",label="Model type")
                     qa_prompt_textbox = gr.Textbox(label="Prompt( must include {context} and {question} )",placeholder=chinese_prompt,lines=2)
-                    qa_searchEngine_radio = gr.Radio(["OpenSearch","Kendra"],value="OpenSearch",label="Search engine")
+                    qa_searchEngine_radio = gr.Radio(["OpenSearch","Kendra","Zilliz"],value="OpenSearch",label="Search engine")
                     qa_index_textbox = gr.Textbox(label="OpenSearch index OR Kendra index id")
                     # qa_em_ep_textbox = gr.Textbox(label="Embedding Endpoint")
                     

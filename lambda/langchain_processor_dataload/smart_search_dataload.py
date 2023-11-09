@@ -16,6 +16,7 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain import SagemakerEndpoint
 from langchain.llms.sagemaker_endpoint import ContentHandlerBase
 from langchain.llms.sagemaker_endpoint import LLMContentHandler
+from langchain.vectorstores import Zilliz
 from chinese_text_splitter import ChineseTextSplitter
 import json
 from typing import Dict, List, Tuple, Optional,Any
@@ -23,6 +24,7 @@ from tqdm import tqdm
 from datetime import datetime
 import boto3
 import numpy as np
+
 
 def load_file(filepath,language,chunk_size: int=100, chunk_overlap: int=10):
     
@@ -97,6 +99,14 @@ def init_vector_store(embeddings,
     return vector_store
 
 
+def init_zilliz_vector_store(embeddings, zilliz_endpoint, zilliz_token, collection_name='rag'):
+
+    vector_store = Zilliz(embedding_function=embeddings,
+                          collection_name=collection_name,
+                          connection_args={'uri': zilliz_endpoint, 'token': zilliz_token, 'secure': True})
+    return vector_store
+
+
 class SmartSearchDataload:
     
     def init_cfg(self,
@@ -107,18 +117,28 @@ class SmartSearchDataload:
                  opensearch_port,
                  embedding_endpoint_name,
                  region,
+                 searchEngine,
+                 zilliz_endpoint,
+                 zilliz_token,
                  language: str = "chinese",
                 ):
         self.language = language
         self.embeddings = init_embeddings(embedding_endpoint_name,region,self.language)
-        self.vector_store = init_vector_store(self.embeddings,
-                                             opensearch_index_name,
-                                             opensearch_host,
-                                             opensearch_port,
-                                             opensearch_user_name,
-                                             opensearch_user_password)
+        if searchEngine == "opensearch":
+            print("init opensearch vector store")
+            self.vector_store = init_vector_store(self.embeddings,
+                                                  opensearch_index_name,
+                                                  opensearch_host,
+                                                  opensearch_port,
+                                                  opensearch_user_name,
+                                                  opensearch_user_password)
+        elif searchEngine == "zilliz":
+            print("init zilliz vector store")
+            self.vector_store = init_zilliz_vector_store(self.embeddings,
+                                                         zilliz_endpoint,
+                                                         zilliz_token)
 
-        
+
     def init_knowledge_vector(self,filepath: str or List[str], 
                                    bulk_size: int = 10000, 
                                    chunk_size: int=100, 
