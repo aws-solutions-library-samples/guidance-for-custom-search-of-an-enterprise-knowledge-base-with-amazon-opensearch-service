@@ -317,6 +317,9 @@ class LambdaVPCStack(Stack):
         language = self.node.try_get_context("language")
         search_engine_opensearch = self.node.try_get_context("search_engine_opensearch")
         search_engine_kendra = self.node.try_get_context("search_engine_kendra")
+        search_engine_zilliz = self.node.try_get_context("search_engine_zilliz")
+        zilliz_endpoint = self.node.try_get_context("zilliz_endpoint")
+        zilliz_token = self.node.try_get_context("zilliz_token")
         # configure the lambda role
         if search_engine_kendra:
             _langchain_processor_role_policy = _iam.PolicyStatement(
@@ -392,6 +395,9 @@ class LambdaVPCStack(Stack):
         langchain_processor_qa_function.add_environment("llm_endpoint_name", llm_endpoint_name)
         langchain_processor_qa_function.add_environment("search_engine_opensearch", str(search_engine_opensearch))
         langchain_processor_qa_function.add_environment("search_engine_kendra", str(search_engine_kendra))
+        langchain_processor_qa_function.add_environment("search_engine_zilliz", str(search_engine_zilliz))
+        langchain_processor_qa_function.add_environment("zilliz_endpoint", str(zilliz_endpoint))
+        langchain_processor_qa_function.add_environment("zilliz_token", str(zilliz_token))
 
         return langchain_processor_qa_function
 
@@ -465,6 +471,9 @@ class LambdaVPCStack(Stack):
         language = self.node.try_get_context("language")
         embedding_endpoint_name = self.node.try_get_context("embedding_endpoint_name")
         search_engine_opensearch = self.node.try_get_context("search_engine_opensearch")
+        search_engine_zilliz = self.node.try_get_context("search_engine_zilliz")
+        zilliz_endpoint = self.node.try_get_context("zilliz_endpoint")
+        zilliz_token = self.node.try_get_context("zilliz_token")
 
         CN_SUFFIX = "-cn" if "cn-" in REGION else ""
 
@@ -576,6 +585,9 @@ class LambdaVPCStack(Stack):
         data_load_function.add_environment("language", language)
         data_load_function.add_environment("embedding_endpoint_name", embedding_endpoint_name)
         data_load_function.add_environment("search_engine_opensearch", str(search_engine_opensearch))
+        data_load_function.add_environment("search_engine_zilliz", str(search_engine_zilliz))
+        data_load_function.add_environment("zilliz_endpoint", str(zilliz_endpoint))
+        data_load_function.add_environment("zilliz_token", str(zilliz_token))
 
         """
         4. Update S3 file notification with Lambda

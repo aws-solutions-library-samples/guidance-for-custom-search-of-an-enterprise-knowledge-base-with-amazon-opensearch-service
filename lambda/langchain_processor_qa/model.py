@@ -6,6 +6,7 @@ from langchain.llms import Bedrock
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.utils import enforce_stop_tokens
 from langchain.vectorstores import OpenSearchVectorSearch
+from langchain.vectorstores import Zilliz
 from typing import Dict, List, Optional,Any
 import json
 
@@ -46,6 +47,16 @@ def init_vector_store(embeddings,
         opensearch_url="aws-opensearch-url",
         hosts = [{'host': opensearch_host, 'port': opensearch_port}],
         http_auth = (opensearch_user_name, opensearch_user_password),
+    )
+    return vector_store
+
+
+#init zilliz cloud
+def init_zilliz_vector_store(embeddings, zilliz_endpoint, zilliz_token):
+
+    vector_store = Zilliz(embedding_function = embeddings,
+                          collection_name = 'rag',
+                          connection_args = {'uri':zilliz_endpoint, 'token':zilliz_token, 'secure':True}
     )
     return vector_store
 

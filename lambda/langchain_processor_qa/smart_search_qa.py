@@ -25,6 +25,8 @@ class SmartSearchQA:
                  opensearch_port,
                  embedding_endpoint_name,
                  region,
+                 zilliz_endpoint,
+                 zilliz_token,
                  llm_endpoint_name: str = 'pytorch-inference-llm-v1',
                  temperature: float = 0.01,
                  language: str = "chinese",
@@ -64,9 +66,10 @@ class SmartSearchQA:
             
         else:
             self.llm = init_model(llm_endpoint_name,region,temperature)
-        
+
         if self.search_engine == "opensearch":
-            self.embeddings = init_embeddings(embedding_endpoint_name,region,self.language)
+            self.embeddings = init_embeddings(embedding_endpoint_name, region, self.language)
+            print("init opensearch vector store")
             self.vector_store = init_vector_store(self.embeddings,
                                                  opensearch_index_name,
                                                  opensearch_or_kendra_host,
@@ -76,6 +79,12 @@ class SmartSearchQA:
         elif self.search_engine == "kendra":
             self.vector_store = None
             self.kendra_host = opensearch_or_kendra_host
+        elif self.search_engine == 'zilliz':
+            self.embeddings = init_embeddings(embedding_endpoint_name, region, self.language)
+            print("init zilliz vector store")
+            self.vector_store = init_zilliz_vector_store(self.embeddings,
+                                                         zilliz_endpoint,
+                                                         zilliz_token)
 
     def get_qa_relation_score(self,query,answer):
         
@@ -167,6 +176,8 @@ class SmartSearchQA:
             retriever = self.vector_store.as_retriever(search_kwargs={"k": top_k})
         elif self.search_engine == "kendra":
             retriever = AmazonKendraRetriever(index_id=self.kendra_host,top_k=top_k)
+        elif self.search_engine == "zilliz":
+            retriever = self.vector_store.as_retriever(search_kwargs={"k": top_k})
             
         return retriever
          
@@ -285,6 +296,8 @@ class SmartSearchQA:
             docs_with_scores = self.vector_store.similarity_search_with_score(new_question,k=top_k)
         elif self.search_engine == "kendra":
             docs_with_scores = retrieval_from_kendra(self.kendra_host,new_question,top_k)
+        elif self.search_engine == "zilliz":
+            docs_with_scores = self.vector_store.similarity_search_with_score(new_question, k=top_k)
         
         print('docs_with_scores:',docs_with_scores)
         docs = [doc[0] for doc in docs_with_scores]
