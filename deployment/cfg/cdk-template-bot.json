@@ -1,4 +1,4 @@
-{
+ {
   "app": "python3 app.py",
   "watch": {
     "include": [
@@ -45,6 +45,7 @@
     "notebook_deployment": true,
     "search_engine_opensearch":true,
     "search_engine_kendra":false,
+    "search_engine_zilliz":false,
     "execution_role_name": "custom-role-document-ai-upload-to-s3",
     "table_name": "FeedbackRecordsSEWCFAQ",
     "apigateway_name": "intelligent-search-file-management",

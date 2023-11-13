@@ -37,28 +37,28 @@
     "subnet_id": "subnet-1234",
     "zone_id": "use1-az4",
     "selection": [
+      "knn",
+      "knn_faq",
+      "feedback",
+      "post_selection",
+      "xgb_train",
+      "knn_doc",
       "langchain_processor_qa"
     ],
     "extension": [
       "nobot"   
     ],
     "notebook_deployment": true,
-    "search_engine_opensearch":true,
+    "search_engine_opensearch":false,
     "search_engine_kendra":false,
-    "search_engine_zilliz":false,
-    "zilliz_endpoint": "",
-    "zilliz_token": "",
+    "search_engine_zilliz":true,
     "execution_role_name": "custom-role-document-ai-upload-to-s3",
     "table_name": "FeedbackRecordsSEWCFAQ",
     "apigateway_name": "intelligent-search-file-management",
     "index": "smart_search_qa_test",
     "embedding_endpoint_name": "huggingface-inference-eb",
-    "llm_endpoint_name": "pytorch-inference-llm-v1",
-    "language": "chinese",
-    "model_type":"other",
-    "enable_content_moderation": false,
-    "content_moderation_api_cn": "https://gtf.ai.xingzheai.cn/v2.0/game_chat_ban/detect_text",
-    "content_moderation_api": "https://gtf.ai.xingzheai.cn/v2.0/game_chat_ban/detect_text"
+    "llm_embedding_name": "pytorch-inference-llm-v1",
+    "language": "chinese"
   }
 }
 

@@ -248,6 +248,7 @@ class BaseConversationalRetrievalChain(Chain):
         )
         vec_docs = []
         aos_docs = []
+        docs = []
         if search_method != "text":
             if accepts_run_manager:
                 vec_docs = self._get_docs(new_question, inputs, run_manager=_run_manager)

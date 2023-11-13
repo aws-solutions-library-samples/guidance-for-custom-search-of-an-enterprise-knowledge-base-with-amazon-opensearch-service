@@ -16,9 +16,12 @@ INDEX = os.environ.get('index')
 HOST = os.environ.get('host')
 LANGUAGE = os.environ.get('language')
 region = os.environ.get('AWS_REGION')
+zilliz_endpoint = os.environ.get('zilliz_endpoint')
+zilliz_token = os.environ.get('zilliz_token')
 table_name = os.environ.get('dynamodb_table_name')
 search_engine_opensearch = True if str(os.environ.get('search_engine_opensearch')).lower() == 'true' else False
 search_engine_kendra = True if str(os.environ.get('search_engine_kendra')).lower() == 'true' else False
+search_engine_zilliz = True if str(os.environ.get('search_engine_zilliz')).lower() == 'true' else False
 
 port = 443
 
@@ -161,6 +164,8 @@ def lambda_handler(event, context):
     searchEngine = "opensearch"
     if not search_engine_opensearch and search_engine_kendra:
         searchEngine = "kendra"
+    if not search_engine_opensearch and search_engine_zilliz:
+        searchEngine = "zilliz"
     if "searchEngine" in evt_body.keys():
         searchEngine = evt_body['searchEngine']
 
@@ -184,8 +189,8 @@ def lambda_handler(event, context):
         username = data.get('username')
         password = data.get('password')
     elif searchEngine == "kendra":
-        if "kendra_index_id" in evt_body.keys():
-            host = evt_body['kendra_index_id']
+        if "kendraIndexName" in evt_body.keys():
+            host = evt_body['kendraIndexName']
     print("host:", host)
 
     response = {
@@ -205,6 +210,8 @@ def lambda_handler(event, context):
                            port,
                            embeddingEndpoint,
                            region,
+                           zilliz_endpoint,
+                           zilliz_token,
                            sagemakerEndpoint,
                            temperature,
                            language,
@@ -362,13 +369,17 @@ def lambda_handler(event, context):
                     sentences = [doc[2] for doc in source_documents]
                 elif searchEngine == "kendra":
                     source_docs = source_documents
+                elif searchEngine == "zilliz":
+                    source_docs = [doc[0] for doc in source_documents]
+                    query_docs_scores = [doc[1] for doc in source_documents]
+                    sentences = [doc[2] for doc in source_documents]
 
                 # cal query_answer_score
                 isCheckedScoreQA = False
                 query_answer_score = -1
                 if "isCheckedScoreQA" in evt_body.keys():
                     isCheckedScoreQA = bool(evt_body['isCheckedScoreQA'])
-                if isCheckedScoreQA and searchEngine == "opensearch":
+                if isCheckedScoreQA and (searchEngine == "opensearch" or searchEngine == "zilliz"):
                     if language.find("chinese") >= 0 and len(answer) > 350:
                         answer = answer[:350]
                     query_answer_score = search_qa.get_qa_relation_score(query, answer)
@@ -402,17 +413,19 @@ def lambda_handler(event, context):
                         source = {}
                         source["_id"] = i
                         if language.find("chinese") >= 0:
-                            source["_score"] = float(query_docs_scores[i]) if searchEngine == "opensearch" else 1
+                            source["_score"] = float(query_docs_scores[i]) \
+                                if searchEngine == "opensearch" or searchEngine == "zilliz" else 1
                         else:
-                            source["_score"] = query_docs_scores[i] if searchEngine == "opensearch" else 1
+                            source["_score"] = query_docs_scores[i] \
+                                if searchEngine == "opensearch" or searchEngine == "zilliz" else 1
 
                         try:
                             source["title"] = os.path.split(source_docs[i].metadata['source'])[-1]
                         except KeyError:
                             print("KeyError,Source not found")
                             source["title"] = ''
-                        source["sentence"] = sentences[i] if searchEngine == "opensearch" else source_docs[
-                            i].page_content.replace("\n", "")
+                        source["sentence"] = sentences[i] if searchEngine == "opensearch" or searchEngine == "zilliz" \
+                            else source_docs[i].page_content.replace("\n", "")
                         source["paragraph"] = source_docs[i].page_content.replace("\n", "")
                         source["sentence_id"] = i
                         if 'row' in source_docs[i].metadata.keys():
@@ -443,14 +456,14 @@ def lambda_handler(event, context):
                         except KeyError:
                             print("KeyError found")
                         source["paragraph"] = source_docs[i].page_content.replace("\n", "")
-                        source["sentence"] = sentences[i] if searchEngine == "opensearch" else source_docs[
-                            i].page_content.replace("\n", "")
-                        if searchEngine == "opensearch" and len(query_docs_scores) > 0:
+                        source["sentence"] = sentences[i] if searchEngine == "opensearch" or searchEngine == "zilliz" \
+                            else source_docs[i].page_content.replace("\n", "")
+                        if (searchEngine == "opensearch" or searchEngine == "zilliz") and len(query_docs_scores) > 0:
                             source["scoreQueryDoc"] = round(float(query_docs_scores[i]),3)
                         else:
                             source["scoreQueryDoc"] = -1
                             
-                        if searchEngine == "opensearch" and len(answer_docs_scores) > 0:
+                        if (searchEngine == "opensearch" or searchEngine == "zilliz") and len(answer_docs_scores) > 0:
                             source["scoreAnswerDoc"] = round(float(answer_docs_scores[i]),3)
                         else:
                             source["scoreAnswerDoc"] = -1

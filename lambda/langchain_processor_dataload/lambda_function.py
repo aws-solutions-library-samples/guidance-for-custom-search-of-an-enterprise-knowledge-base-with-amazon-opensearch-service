@@ -13,6 +13,11 @@ host =  os.environ.get('host')
 index =  os.environ.get('index')
 region = os.environ.get('AWS_REGION')
 language = os.environ.get('language')
+search_engine_opensearch = True if str(os.environ.get('search_engine_opensearch')).lower() == 'true' else False
+search_engine_zilliz = True if str(os.environ.get('search_engine_zilliz')).lower() == 'true' else False
+zilliz_endpoint = os.environ.get('zilliz_endpoint')
+zilliz_token = os.environ.get('zilliz_token')
+
 port = 443
 bulk_size = 10000000
 
@@ -43,6 +48,14 @@ def lambda_handler(event, context):
     print("language:",language)
     print("username:",username)
     print("password:",password)
+    print("search_engine_zilliz:", search_engine_zilliz)
+    print("zilliz_endpoint:", zilliz_endpoint)
+    print("zilliz_token:", zilliz_token)
+
+    searchEngine = "opensearch"
+    if not search_engine_opensearch and search_engine_zilliz:
+        searchEngine = "zilliz"
+    print('searchEngine:', searchEngine)
     
     #try:
     #    dataload = SmartSearchDataload()
@@ -86,6 +99,9 @@ def lambda_handler(event, context):
                          port,
                          EMBEDDING_ENDPOINT_NAME,
                          region,
+                         searchEngine,
+                         zilliz_endpoint,
+                         zilliz_token,
                          language=language
                          )
         
