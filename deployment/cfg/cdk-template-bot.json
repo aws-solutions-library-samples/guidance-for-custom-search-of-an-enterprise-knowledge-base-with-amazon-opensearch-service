@@ -37,12 +37,6 @@
     "subnet_id": "subnet-0883f85429e43d167",
     "zone_id": "use1-az4",
     "selection": [
-      "knn",
-      "knn_faq",
-      "feedback",
-      "post_selection",
-      "xgb_train",
-      "knn_doc",
       "langchain_processor_qa"
     ],
     "extension": [
