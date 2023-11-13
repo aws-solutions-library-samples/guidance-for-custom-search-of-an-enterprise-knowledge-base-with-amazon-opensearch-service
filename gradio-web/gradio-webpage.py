@@ -180,7 +180,7 @@ def get_answer(task_type,question,sessionId,language,modelType,prompt,searchEngi
     elif searchEngine == "Kendra":
         url += ('&searchEngine=kendra')
         if len(index) > 0:
-            url += ('&kendra_index_id='+index)
+            url += ('&kendraIndexName='+index)
 
     elif searchEngine == "Zilliz":
         url += ('&searchEngine=zilliz')

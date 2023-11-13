@@ -206,6 +206,7 @@ class SmartSearchQA:
         if len(session_id) > 0 and len(table_name) > 0:
             session_info = get_session_info(table_name,session_id)
             if len(session_info) > 0:
+                session_info = session_info[-3:]
                 for item in session_info:
                     print("session info:",item[0]," ; ",item[1]," ; ",item[2])
                     if item[2] == "qa":
