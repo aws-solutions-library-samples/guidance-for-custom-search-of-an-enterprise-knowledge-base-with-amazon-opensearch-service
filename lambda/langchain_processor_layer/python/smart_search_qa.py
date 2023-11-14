@@ -77,7 +77,10 @@ def init_model(endpoint_name,
 
             def transform_input(self, prompt: str, model_kwargs: Dict) -> bytes:
                 print('prompt:',prompt)
-                input_str = json.dumps({"ask": prompt, **model_kwargs})
+                # input_str = json.dumps({"ask": prompt, **model_kwargs})
+                input_str = {"ask": prompt, "parameters": {"max_new_tokens": 500, "repetition_penalty":1}, **model_kwargs}
+                input_str = json.dumps(input_str)
+                print(input_str)
                 return input_str.encode('utf-8')
 
             def transform_output(self, output: bytes) -> str:
