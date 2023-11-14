@@ -6,7 +6,14 @@ from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.llms.utils import enforce_stop_tokens
 from langchain.pydantic_v1 import Extra
-
+import json
+import time
+import hashlib
+def calculate_md5(input_string):
+    md5 = hashlib.md5()
+    md5.update(input_string.encode('utf-8'))
+    encrypted = md5.hexdigest()
+    return encrypted
 
 class ContentHandlerAmazonAPIGateway:
     """Adapter to prepare the inputs from Langchain to a format
@@ -25,6 +32,26 @@ class ContentHandlerAmazonAPIGateway:
     def transform_output(cls, response: Any) -> str:
         return response.json()[0]["generated_text"]
 
+    @classmethod
+    def transform_input_baichuan(
+        cls, prompt: str, model_kwargs: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        input_format =  {
+            "model": model_kwargs['modelId'],
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        }
+        return input_format
+
+    @classmethod
+    def transform_output_baichuan(cls, response: Any) -> str:
+        print('response text:',json.loads(response.text))
+        return json.loads(response.text)['data']['messages'][0]['content']
+    
 
 class AmazonAPIGateway(LLM):
     """Amazon API Gateway to access LLM models hosted on AWS."""
@@ -85,7 +112,28 @@ class AmazonAPIGateway(LLM):
                 response = se("Tell me a joke.")
         """
         _model_kwargs = self.model_kwargs or {}
-        payload = self.content_handler.transform_input(prompt, _model_kwargs)
+        modelId = ''
+        if 'modelId' in _model_kwargs.keys():
+            modelId = _model_kwargs['modelId']
+        if modelId.find('Baichuan') >= 0:
+            payload = self.content_handler.transform_input_baichuan(prompt, _model_kwargs)
+            api_key = _model_kwargs['api_key']
+            secret_key = _model_kwargs['secret_key']
+            time_stamp = int(time.time())
+            json_data = json.dumps(payload)
+            signature = calculate_md5(secret_key + json_data + str(time_stamp))
+            
+            self.headers = {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + api_key,
+                "X-BC-Request-Id": "your requestId",
+                "X-BC-Timestamp": str(time_stamp),
+                "X-BC-Signature": signature,
+                "X-BC-Sign-Algo": "MD5",
+            }
+            
+        else:
+            payload = self.content_handler.transform_input(prompt, _model_kwargs)
 
         try:
             response = requests.post(
@@ -93,7 +141,10 @@ class AmazonAPIGateway(LLM):
                 headers=self.headers,
                 json=payload,
             )
-            text = self.content_handler.transform_output(response)
+            if modelId.find('Baichuan') >= 0:
+                text = self.content_handler.transform_output_baichuan(response)
+            else:
+                text = self.content_handler.transform_output(response)
 
         except Exception as error:
             raise ValueError(f"Error raised by the service: {error}")

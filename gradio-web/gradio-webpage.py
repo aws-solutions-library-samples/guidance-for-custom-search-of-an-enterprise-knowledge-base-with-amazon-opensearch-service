@@ -122,7 +122,7 @@ def get_answer(task_type,question,sessionId,language,modelType,prompt,searchEngi
     if language == "english":
         url += '&language=english'
         url += ('&embeddingEndpoint='+en_embedding_endpoint)
-        if modelType == "llama2(english)":
+        if modelType == "llama2(jumpstart)":
             url += ('&sagemakerEndpoint='+llama2_llm_endpoint)
         else:
             url += ('&sagemakerEndpoint='+en_llm_endpoint)
@@ -146,7 +146,10 @@ def get_answer(task_type,question,sessionId,language,modelType,prompt,searchEngi
     elif modelType == "claude2":
         url += ('&modelType=bedrock')
         url += ('&modelName=anthropic.claude-v2')
-    elif modelType == "llama2(english)":
+    elif modelType == "llama2(bedrock)":
+        url += ('&modelType=bedrock')
+        url += ('&modelName=meta.llama2-13b-chat-v1')        
+    elif modelType == "llama2(jumpstart)":
         url += ('&modelType=llama2')
 
     if len(prompt) > 0:
@@ -329,7 +332,7 @@ with demo:
                     qa_button = gr.Button("Summit")
 
                     qa_language_radio = gr.Radio(["chinese","chinese-tc", "english"],value="chinese",label="Language")
-                    qa_modelType_radio = gr.Radio(["claude2","claude2_api", "llama2(english)","other"],value="other",label="Model type")
+                    qa_modelType_radio = gr.Radio(["claude2","claude2_api","llama2(bedrock)","llama2(jumpstart)","other"],value="other",label="Model type")
                     qa_prompt_textbox = gr.Textbox(label="Prompt( must include {context} and {question} )",placeholder=chinese_prompt,lines=2)
                     qa_searchEngine_radio = gr.Radio(["OpenSearch","Kendra","Zilliz"],value="OpenSearch",label="Search engine")
                     qa_index_textbox = gr.Textbox(label="OpenSearch index OR Kendra index id")

@@ -60,8 +60,17 @@ def lambda_handler(event, context):
         })
     elif modelId == 'amazon.titan-e1t-medium':
         body = json.dumps({"inputText": prompt})
+    elif modelId == 'meta.llama2-13b-chat-v1':
+        body = json.dumps({
+                        "prompt": prompt,
+                        "max_gen_len": max_tokens,
+		                "temperature": temperature,
+		                 "top_p": 0.9
+                         })
         
     accept = "application/json"
+    if modelId == 'meta.llama2-13b-chat-v1':
+        accept = "*/*"
     contentType = "application/json"
     result = boto3_bedrock.invoke_model(
         body=body, modelId=modelId, accept=accept, contentType=contentType
@@ -73,6 +82,8 @@ def lambda_handler(event, context):
     embedding = []
     if modelId.find('claude') >=0:
         answer = result_body.get("completion")
+    elif modelId.find('llama') >=0:
+        answer = result_body.get("generation")
     elif modelId == 'amazon.titan-tg1-large':
         answer = result_body.get("results")[0].get("outputText")
     elif modelId == 'amazon.titan-e1t-medium' or modelId.find('amazon.titan-embed')>=0:
@@ -88,7 +99,7 @@ def lambda_handler(event, context):
         "isBase64Encoded": False
     }
     
-    if modelId.find('claude') >=0 or modelId == 'amazon.titan-tg1-large': 
+    if modelId.find('claude') >=0 or modelId.find('llama') >=0 or modelId == 'amazon.titan-tg1-large': 
         response['body'] = json.dumps(
                     {
                         'answer':answer,

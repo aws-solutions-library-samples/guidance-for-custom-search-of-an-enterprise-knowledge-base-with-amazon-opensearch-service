@@ -8,6 +8,7 @@ from langchain.chains.summarize import load_summarize_chain
 from langchain.memory import ConversationBufferMemory
 from langchain import LLMChain
 from langchain.llms import AmazonAPIGatewayBedrock
+from langchain.llms import AmazonAPIGateway
 import json
 import numpy as np
 from model import *
@@ -32,9 +33,11 @@ class SmartSearchQA:
                  language: str = "chinese",
                  search_engine: str = "opensearch",
                  model_type:str = "normal",
-                 bedrock_api_url:str = "",
-                 bedrock_model_id:str="anthropic.claude-v2",
-                 bedrock_max_tokens:int=500
+                 api_url:str = "",
+                 model_name:str="anthropic.claude-v2",
+                 api_key:str = "",
+                 secret_key:str = "",
+                 max_tokens:int=512,
                 ):
         self.language = language
         self.search_engine = search_engine
@@ -49,21 +52,30 @@ class SmartSearchQA:
         if model_type == "llama2":
             self.llm = init_model_llama2(llm_endpoint_name,region,temperature)
         elif model_type == "bedrock_api":
-            self.llm = AmazonAPIGatewayBedrock(api_url=bedrock_api_url)
+            self.llm = AmazonAPIGatewayBedrock(api_url=api_url)
             parameters={
-                "modelId":bedrock_model_id,
-                "max_tokens":bedrock_max_tokens,
+                "modelId":model_name,
+                "max_tokens":max_tokens,
                 "temperature":temperature
             }
             self.llm.model_kwargs = parameters
         elif model_type == "bedrock":
-            self.llm = init_model_bedrock(bedrock_model_id)
+            self.llm = init_model_bedrock(model_name)
             parameters={
-                "max_tokens":bedrock_max_tokens,
+                "modelId":model_name,
+                "max_tokens":max_tokens,
                 "temperature":temperature
             }
             self.llm.model_kwargs = parameters
-            
+        elif model_type == 'llm_api':
+            if model_name.find('Baichuan2') >= 0:
+                self.llm = AmazonAPIGateway(api_url=api_url)
+                parameters={
+                    "modelId":model_name,
+                    "api_key":api_key,
+                    "secret_key":secret_key,
+                }
+                self.llm.model_kwargs = parameters
         else:
             self.llm = init_model(llm_endpoint_name,region,temperature)
 

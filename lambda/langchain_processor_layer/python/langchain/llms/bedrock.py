@@ -87,7 +87,7 @@ class LLMInputOutputAdapter:
             input_body["inputText"] = prompt
             input_body["textGenerationConfig"] = {**model_kwargs}
         else:
-            input_body["inputText"] = prompt
+            input_body["prompt"] = prompt
 
         if provider == "anthropic" and "max_tokens_to_sample" not in input_body:
             input_body["max_tokens_to_sample"] = 256
