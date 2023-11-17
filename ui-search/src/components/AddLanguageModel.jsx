@@ -11,8 +11,9 @@ import {
   SpaceBetween,
   Table,
   Tiles,
+  RadioGroup,
 } from '@cloudscape-design/components';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import useInput from 'src/hooks/useInput';
 import useLsLanguageModelList from 'src/hooks/useLsLanguageModelList';
 import { genRandomNum } from 'src/utils/genUID';
@@ -24,16 +25,34 @@ const SAGEMAKER_MODEL_TYPE = [
   { label: 'llama2', value: 'llama2' },
   { label: 'none llama2', value: 'none_llama2' },
 ];
-const THIRD_PARTY_APIS = [
-  // { label: 'ChatGPT', value: 'ChatGPT' },
-  // { label: 'Claude', value: 'Claude' },
-  // { label: 'ChatGLM', value: 'ChatGLM' },
-  // { label: 'WestLake', value: 'WestLake' },
-  { label: 'Bedrock', value: 'bedrock_api' },
+const THIRD_PARTY_API_MODEL_TYPES = [
+  { label: 'Bedrock', value: 'bedrock' },
+  { label: 'Bedrock API', value: 'bedrock_api' },
+  { label: 'LLM API', value: 'llm_api' },
 ];
-const THIRD_PARTY_API_MODEL_NAME = [
-  { label: 'Claude2', value: 'Claude2' },
-  { label: 'Titan', value: 'Titan' },
+const THIRD_PARTY_API_MODEL_NAMES = [
+  { label: 'Baichuan2-53B', value: 'Baichuan2-53B', modelType: ['llm_api'] },
+  { label: 'Baichuan2-192k', value: 'Baichuan2-192k', modelType: ['llm_api'] },
+  {
+    label: 'anthropic.claude-v2',
+    value: 'anthropic.claude-v2',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
+    label: 'anthropic.claude-v1',
+    value: 'anthropic.claude-v1',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
+    label: 'anthropic.claude-instant-v1',
+    value: 'anthropic.claude-instant-v1',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
+    label: 'meta.llama2-13b-chat-v1',
+    value: 'meta.llama2-13b-chat-v1',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
 ];
 
 const AddLanguageModel = () => {
@@ -42,24 +61,54 @@ const AddLanguageModel = () => {
     useInput('');
   const [embeddingEndpoint, bindEmbeddingEndpoint, resetEmbeddingEndpoint] =
     useInput('');
-  const [thirdPartyModelType, setThirdPartyApiOption] = useState(
-    THIRD_PARTY_APIS[0].value
+  const [
+    thirdPartyEmbeddingEndpoint,
+    bindThirdPartyEmbeddingEndpoint,
+    resetThirdPartyEmbeddingEmbeddingEndpoint,
+  ] = useInput('');
+  const [thirdPartyModelType, setThirdPartyModelType] = useState(
+    THIRD_PARTY_API_MODEL_TYPES[0].value
   );
   const [sagemakerModelType, setSagemakerModelType] = useState(
     SAGEMAKER_MODEL_TYPE[0].value
   );
-  const [endpointOrApiKey, bindEndpointOrApiKey, resetEndpointOrApiKey] =
-    useInput('');
-  const [thirdPartyModelName, setThirdPartyModelName] = useState(
-    THIRD_PARTY_API_MODEL_NAME[0].value
+  const [thirdPartyModelNameOpts, setThirdPartyModelNameOpts] = useState(
+    THIRD_PARTY_API_MODEL_NAMES
   );
-  const [modelName, bindModelName, resetModelName] = useInput('');
+  const [thirdPartyModelName, setThirdPartyModelName] = useState(
+    THIRD_PARTY_API_MODEL_NAMES[0].value
+  );
+
+  const [thirdPartyApiUrl, bindThirdPartyApiUrl, resetThirdPartyApiUrl] =
+    useInput('');
+  const [thirdPartyApiKey, bindThirdPartyApiKey, resetThirdPartyApiKey] =
+    useInput('');
+  const [
+    thirdPartySecretKey,
+    bindThirdPartySecretKey,
+    resetThirdPartySecretKey,
+  ] = useInput('');
+
+  useEffect(() => {
+    const filteredModalNameOpts = THIRD_PARTY_API_MODEL_NAMES.filter((item) =>
+      item.modelType.includes(thirdPartyModelType)
+    );
+    setThirdPartyModelName(filteredModalNameOpts[0].value);
+    setThirdPartyModelNameOpts(filteredModalNameOpts);
+    resetThirdPartyApiUrl();
+    resetThirdPartyApiKey();
+    resetThirdPartySecretKey();
+  }, [thirdPartyModelType]);
 
   const resetForm = useCallback(() => {
     resetSagemakerEndpoint();
     resetEmbeddingEndpoint();
-    resetEndpointOrApiKey();
-    resetModelName();
+    resetThirdPartyEmbeddingEmbeddingEndpoint();
+    setThirdPartyModelType(THIRD_PARTY_API_MODEL_TYPES[0].value);
+    setSagemakerModelType(SAGEMAKER_MODEL_TYPE[0].value);
+    resetThirdPartyApiUrl();
+    resetThirdPartyApiKey();
+    resetThirdPartySecretKey();
   }, []);
 
   const {
@@ -124,13 +173,28 @@ const AddLanguageModel = () => {
                   id: 'embeddingEndpoint',
                   header: 'EmbeddingEndpoint',
                   width: 200,
-                  cell: (item) => item.embeddingEndpoint || 'n/a',
+                  cell: (item) =>
+                    item.embeddingEndpoint ||
+                    item.thirdPartyEmbeddingEndpoint ||
+                    'n/a',
                 },
                 {
-                  id: 'endpointOrApiKey',
-                  header: 'Endpoint / API Key',
+                  id: 'apiUrl',
+                  header: 'API URL',
                   width: 200,
-                  cell: (item) => item.endpointOrApiKey || 'n/a',
+                  cell: (item) => item.apiUrl || 'n/a',
+                },
+                {
+                  id: 'apiKey',
+                  header: 'API Key',
+                  width: 200,
+                  cell: (item) => item.apiKey || 'n/a',
+                },
+                {
+                  id: 'secretKey',
+                  header: 'Secret Key',
+                  width: 200,
+                  cell: (item) => item.secretKey || 'n/a',
                 },
                 {
                   id: 'operations',
@@ -140,7 +204,12 @@ const AddLanguageModel = () => {
                     <SpaceBetween size="xxs">
                       <Button
                         iconName="remove"
-                        onClick={() => lsDelLanguageModelItem(item.recordId)}
+                        onClick={() => {
+                          const bool = confirm(
+                            'Confirm to delete this language model?'
+                          );
+                          if (bool) lsDelLanguageModelItem(item.recordId);
+                        }}
                       />
                     </SpaceBetween>
                   ),
@@ -148,7 +217,12 @@ const AddLanguageModel = () => {
               ]}
             />
             <Box float="right">
-              <Button onClick={lsClearLanguageModelList}>
+              <Button
+                onClick={() => {
+                  const bool = confirm('Confirm to clear this list?');
+                  if (bool) lsClearLanguageModelList();
+                }}
+              >
                 Delete all language models
               </Button>
             </Box>
@@ -171,27 +245,27 @@ const AddLanguageModel = () => {
                         // Sagemaker endpoint
                         values = {
                           type,
-                          // *** different items
-                          sagemakerEndpoint,
                           embeddingEndpoint,
                           modelType: sagemakerModelType,
-                          // *** backend doesn't care about these
-                          modelName: modelName || sagemakerEndpoint,
-                          recordId: `${endpointOrApiKey}-${genRandomNum()}`,
+                          modelName: sagemakerEndpoint,
+                          recordId: `${sagemakerEndpoint}-${genRandomNum()}`,
+                          // *** different items
+                          sagemakerEndpoint,
                         };
                       } else {
                         // Third Party APIs
                         values = {
                           type,
-                          // *** different items
-                          endpointOrApiKey,
+                          embeddingEndpoint: thirdPartyEmbeddingEndpoint,
                           modelType: thirdPartyModelType,
                           modelName: thirdPartyModelName,
-                          // *** backend doesn't care about these
                           recordId: `${thirdPartyModelName}-${genRandomNum()}`,
+                          // *** different items
+                          apiUrl: thirdPartyApiUrl,
+                          apiKey: thirdPartyApiKey,
+                          secretKey: thirdPartySecretKey,
                         };
                       }
-                      console.log(values);
                       lsAddLanguageModelItem(values);
                       resetForm();
                     } catch (error) {
@@ -218,8 +292,7 @@ const AddLanguageModel = () => {
                     {
                       value: TYPE.thirdParty,
                       label: 'Third Party APIs',
-                      description:
-                        'Options are ChatGPT, Claude, ChatGLM, WestLake',
+                      description: 'Options are Bedrock, Claude, ChatGLM etc.',
                     },
                   ]}
                 />
@@ -228,13 +301,21 @@ const AddLanguageModel = () => {
               {type === TYPE.sagemaker ? (
                 <>
                   <FormField label="Model Type">
-                    <Select
+                    <Tiles
+                      columns={4}
+                      onChange={({ detail }) =>
+                        setSagemakerModelType(detail.value)
+                      }
+                      value={sagemakerModelType}
+                      items={SAGEMAKER_MODEL_TYPE}
+                    />
+                    {/* <Select
                       selectedOption={{ value: sagemakerModelType }}
                       onChange={({ detail }) =>
                         setSagemakerModelType(detail.selectedOption.value)
                       }
                       options={SAGEMAKER_MODEL_TYPE}
-                    />
+                    /> */}
                   </FormField>
                   <FormField label="Sagemaker Endpoint">
                     <Input {...bindSagemakerEndpoint} />
@@ -245,28 +326,63 @@ const AddLanguageModel = () => {
                 </>
               ) : (
                 <>
-                  <FormField label="Model Type">
-                    <Select
+                  <FormField label="Model Type" stretch>
+                    <Tiles
+                      columns={4}
+                      onChange={({ detail }) =>
+                        setThirdPartyModelType(detail.value)
+                      }
+                      value={thirdPartyModelType}
+                      items={THIRD_PARTY_API_MODEL_TYPES}
+                    />
+                    {/* <Select
                       selectedOption={{ value: thirdPartyModelType }}
                       onChange={({ detail }) =>
-                        setThirdPartyApiOption(detail.selectedOption.value)
+                        setThirdPartyModelType(detail.selectedOption.value)
                       }
-                      options={THIRD_PARTY_APIS}
-                    />
+                      options={THIRD_PARTY_API_MODEL_TYPES}
+                    /> */}
                   </FormField>
-                  <FormField label="Model Name">
-                    {/* <Input {...bindModelName} /> */}
-                    <Select
+                  <FormField label="Model Name" stretch>
+                    <Tiles
+                      columns={4}
+                      onChange={({ detail }) =>
+                        setThirdPartyModelName(detail.value)
+                      }
+                      value={thirdPartyModelName}
+                      items={thirdPartyModelNameOpts}
+                    />
+                    {/* <Select
                       selectedOption={{ value: thirdPartyModelName }}
                       onChange={({ detail }) =>
                         setThirdPartyModelName(detail.selectedOption.value)
                       }
-                      options={THIRD_PARTY_API_MODEL_NAME}
-                    />
+                      options={thirdPartyModelNameOpts}
+                    /> */}
                   </FormField>
-                  <FormField label="Endpoint / API Key">
-                    <Input {...bindEndpointOrApiKey} />
+                  <FormField label="Embedding Endpoint">
+                    <Input {...bindThirdPartyEmbeddingEndpoint} />
                   </FormField>
+                  {thirdPartyModelType ===
+                  'bedrock' ? null : thirdPartyModelType === 'bedrock_api' ? (
+                    <>
+                      <FormField label="API URL">
+                        <Input {...bindThirdPartyApiUrl} />
+                      </FormField>
+                    </>
+                  ) : thirdPartyModelType === 'llm_api' ? (
+                    <>
+                      <FormField label="API URL">
+                        <Input {...bindThirdPartyApiUrl} />
+                      </FormField>
+                      <FormField label="API Key">
+                        <Input {...bindThirdPartyApiKey} />
+                      </FormField>
+                      <FormField label="Secret Key">
+                        <Input {...bindThirdPartySecretKey} />
+                      </FormField>
+                    </>
+                  ) : null}
                 </>
               )}
             </SpaceBetween>

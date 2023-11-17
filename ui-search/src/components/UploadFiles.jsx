@@ -113,7 +113,7 @@ const UploadFiles = () => {
             </FormField>
             <FormField
               label="Select a local file"
-              description="File format: txt, csv"
+              description="File format: pdf, ppt, doc, docx, txt, csv"
             >
               <FileUpload
                 onChange={({ detail }) => setSelectedFiles(detail.value)}

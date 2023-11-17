@@ -1,4 +1,37 @@
-## Use amplify to publish ui-search frontend website
+# Use amplify to publish ui-search frontend website
+
+## Prerequisite
+
+### 1. Make sure you have installed `node.js`
+
+```bash
+node -v
+v16.20.1
+npm -v
+9.8.0
+```
+
+> If your system does not recognize the commands, please refer to the official doc for installation:
+>
+> - nodejs: https://nodejs.org/en/download
+> - npm: https://docs.npmjs.com/downloading-and-installing-node-js-and-npm
+
+### 2. Make sure you have installed `amplify-cli`
+
+```bash
+amplify -v
+12.8.2
+```
+
+If your system does not recognize the command, please run the following code:
+
+```bash
+npm install -g @aws-amplify/cli
+```
+
+Note: You can always refer to the [user guide of Amplify](https://docs.aws.amazon.com/amplify/latest/userguide/welcome.html) and [doc for Amplify cli](https://docs.amplify.aws/cli/) for more information.
+
+## Deployment Overview
 
 It is simple to publish this app with amplify, only 4 commands are needed.
 
@@ -11,7 +44,7 @@ amplify console
 
 Following the breakdowns for the first-timers.
 
-### Init amplify
+## Init amplify
 
 ```bash
 amplify init
@@ -29,7 +62,7 @@ AWS access keys
 Yes
 ```
 
-### Add amplify hosting
+## Add amplify hosting
 
 ```bash
 amplify hosting add
@@ -40,7 +73,7 @@ amplify hosting add
 Manual deployment
 ```
 
-### Publish the app
+## Publish the app
 
 ```bash
 amplify publish -y
@@ -68,13 +101,13 @@ amplify console
 
 ---
 
-## Local development
+# Local development
 
 ```bash
 npm run start
 ```
 
-## local build test
+# local build test
 
 ```bash
 npm i -g serve

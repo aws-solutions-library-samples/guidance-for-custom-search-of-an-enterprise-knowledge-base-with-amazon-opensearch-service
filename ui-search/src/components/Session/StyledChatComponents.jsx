@@ -16,7 +16,7 @@ export const StyledQ = styled.div`
     flex: 1;
   }
   .extra {
-    width: 160px;
+    width: 180px;
     display: flex;
     flex-direction: column;
     align-items: flex-end;

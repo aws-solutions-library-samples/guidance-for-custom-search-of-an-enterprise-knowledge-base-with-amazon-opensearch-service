@@ -22,6 +22,7 @@ import useToggle from 'src/hooks/useToggle';
 import { useSessionStore } from 'src/stores/session';
 import Divider from './Divider';
 import useLsSessionList from 'src/hooks/useLsSessionList';
+import useLsAppConfigs from 'src/hooks/useLsAppConfigs';
 
 const SIZE = 's';
 const OPTIONS_LANGUAGE = [
@@ -41,24 +42,35 @@ export const OPTIONS_SEARCH_ENGINE = [
     description: 'A brief description of Kendra',
   },
 ];
-const OPTIONS_TOP_K = [1, 2, 3, 4].map((value) => ({
-  label: `Top ${value}`,
-  value,
-}));
+const KENDRA = OPTIONS_SEARCH_ENGINE[1].value;
+
+const SEARCH_METHOD = [
+  { label: 'vector', value: 'vector' },
+  { label: 'text', value: 'text' },
+  { label: 'mix', value: 'mix' },
+];
 
 export default function ModalCreateSession({ dismissModal, modalVisible }) {
   const { addSession } = useSessionStore();
   const { lsLanguageModelList } = useLsLanguageModelList();
   const { lsSessionList, lsGetSessionItem } = useLsSessionList();
+  const { appConfigs } = useLsAppConfigs();
   const [name, bindName, resetName, setName] = useInput('');
   const [sessionTemplateOpt, setSessionTemplateOpt] = useState();
 
+  const [displayKendraOptions, setDisplayKendraOptions] = useState(false);
   const [searchEngine, bindSearchEngine, resetSearchEngine, setSearchEngine] =
     useInput(OPTIONS_SEARCH_ENGINE[0].value);
+
+  useEffect(() => {
+    setDisplayKendraOptions(searchEngine === KENDRA);
+  }, [searchEngine]);
+
   const [llmData, setLLMData] = useState(lsLanguageModelList[0]);
   const [role, bindRole, resetRole, setRole] = useInput();
 
   const [language, setLanguage] = useState(OPTIONS_LANGUAGE[0].value);
+  useLsAppConfigs();
 
   const [
     taskDefinition,
@@ -87,18 +99,23 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     bindKnowledgeBase,
     resetKnowledgeBase,
     setIsCheckedKnowledgeBase,
-  ] = useToggle(false);
+  ] = useToggle(true);
 
-  const [
-    isCheckedMapReduce,
-    bindMapReduce,
-    resetMapReduce,
-    setIsCheckedMapReduce,
-  ] = useToggle(false);
+  // const [
+  // isCheckedMapReduce,
+  //   bindMapReduce,
+  //   resetMapReduce,
+  //   setIsCheckedMapReduce,
+  // ] = useToggle(false);
 
   const [indexName, setIndexName] = useState('');
+  const [kendraIndexName, setKendraIndexName] = useState('');
   const { indexNameList, loading: loadingIndexNameList } = useIndexNameList();
-  const [topK, setTopK] = useState(OPTIONS_TOP_K[2].value);
+  const [searchMethod, setSearchMethod] = useState(SEARCH_METHOD[0].value);
+  const [txtDocsNum, setTxtDocsNum] = useState(0);
+  const [vecDocsScoreThresholds, setVecDocsScoreThresholds] = useState(0);
+  const [txtDocsScoreThresholds, setTxtDocsScoreThresholds] = useState(0);
+  const [topK, setTopK] = useState(3);
 
   const [isCheckedScoreQA, bindScoreQA, resetScoreQA, setIsCheckedScoreQA] =
     useToggle(true);
@@ -139,13 +156,20 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     isCheckedGenerateReport,
     isCheckedContext,
     isCheckedKnowledgeBase,
-    isCheckedMapReduce,
+    // isCheckedMapReduce,
     indexName,
+    kendraIndexName,
     topK,
+    searchMethod,
+    txtDocsNum,
+    vecDocsScoreThresholds,
+    txtDocsScoreThresholds,
     isCheckedScoreQA,
     isCheckedScoreQD,
     isCheckedScoreAD,
     prompt,
+    tokenContentCheck: appConfigs.tokenContentCheck,
+    responseIfNoDocsFound: appConfigs.responseIfNoDocsFound,
   };
   // console.log(sessionData);
 
@@ -159,8 +183,14 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     resetGenerateReport();
     resetContext();
     resetKnowledgeBase();
-    resetMapReduce();
+    // resetMapReduce();
     setIndexName('');
+    setKendraIndexName('');
+    setSearchMethod(SEARCH_METHOD[0].value);
+    setTopK(3);
+    setTxtDocsNum(0);
+    setVecDocsScoreThresholds(0);
+    setTxtDocsScoreThresholds(0);
     // resetIndexName();
     resetScoreQA();
     resetScoreQD();
@@ -183,9 +213,14 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
           isCheckedGenerateReport,
           isCheckedContext,
           isCheckedKnowledgeBase,
-          isCheckedMapReduce,
+          // isCheckedMapReduce,
           indexName,
+          kendraIndexName,
           topK,
+          searchMethod,
+          txtDocsNum,
+          vecDocsScoreThresholds,
+          txtDocsScoreThresholds,
           isCheckedScoreQA,
           isCheckedScoreQD,
           isCheckedScoreAD,
@@ -204,10 +239,15 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
       setIsCheckedGenerateReport(isCheckedGenerateReport);
       setIsCheckedContext(isCheckedContext);
       setIsCheckedKnowledgeBase(isCheckedKnowledgeBase);
-      setIsCheckedMapReduce(isCheckedMapReduce);
+      // setIsCheckedMapReduce(isCheckedMapReduce);
 
       setIndexName(indexName);
+      setKendraIndexName(kendraIndexName);
       setTopK(topK);
+      setSearchMethod(searchMethod);
+      setTxtDocsNum(txtDocsNum);
+      setVecDocsScoreThresholds(vecDocsScoreThresholds);
+      setTxtDocsScoreThresholds(txtDocsScoreThresholds);
 
       setIsCheckedScoreQA(isCheckedScoreQA);
       setIsCheckedScoreQD(isCheckedScoreQD);
@@ -266,8 +306,8 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
 
               {lsSessionList.length === 0 ? null : (
                 <FormField
-                  label="Session Template"
-                  description="Select an existing session template"
+                  label="Refer to an Existing Session"
+                  description="Select an existing session as template"
                 >
                   <Select
                     selectedOption={sessionTemplateOpt}
@@ -356,20 +396,14 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                     Context
                   </Toggle>
                 </FormField>
-                <FormField
-                  constraintText="Can be enabled when generating report"
-                  disa
-                >
+                {/* <FormField constraintText="Can be enabled when generating report">
                   <Toggle
                     disabled={!isCheckedGenerateReport}
                     {...bindMapReduce}
                   >
                     Map Reduce
                   </Toggle>
-                </FormField>
-              </SpaceBetween>
-
-              <SpaceBetween direction="horizontal" size="xxl">
+                </FormField> */}
                 <FormField constraintText="ON when generating report">
                   <Toggle
                     {...bindKnowledgeBase}
@@ -378,42 +412,165 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                     Knowledge Base
                   </Toggle>
                 </FormField>
-                {isCheckedKnowledgeBase ? (
-                  <>
-                    <FormField label="Top_K">
-                      <Select
-                        selectedOption={{ value: topK }}
-                        onChange={({ detail }) =>
-                          setTopK(detail.selectedOption.value)
-                        }
-                        options={OPTIONS_TOP_K}
-                      />
-                    </FormField>
-                    <FormField label="Index Name">
-                      <Select
-                        empty="Upload a file if no options present"
-                        onChange={({ detail }) =>
-                          setIndexName(detail.selectedOption.value)
-                        }
-                        loadingText="loading index names"
-                        statusType={
-                          loadingIndexNameList ? 'loading' : 'finished'
-                        }
-                        selectedOption={{ value: indexName }}
-                        options={indexNameList.map((name) => ({ value: name }))}
-                      />
-                    </FormField>
-                  </>
-                ) : null}
               </SpaceBetween>
 
-              <FormField stretch label="Display Scores">
-                <SpaceBetween direction="horizontal" size="xxl">
-                  <Checkbox {...bindScoreQA}>Query-Answer score</Checkbox>
-                  <Checkbox {...bindScoreQD}>Query-Doc scores</Checkbox>
-                  <Checkbox {...bindScoreAD}>Answer-Doc scores</Checkbox>
-                </SpaceBetween>
-              </FormField>
+              {isCheckedKnowledgeBase ? (
+                displayKendraOptions ? (
+                  <SpaceBetween direction="vertical" size="s">
+                    <FormField label="Kendra Index Name" stretch>
+                      <Input
+                        placeholder="Please provide Kendra index name"
+                        value={kendraIndexName}
+                        onChange={({ detail }) => {
+                          setKendraIndexName(detail.value);
+                        }}
+                      />
+                    </FormField>
+                  </SpaceBetween>
+                ) : (
+                  <SpaceBetween direction="vertical" size="s">
+                    <ColumnLayout columns={3}>
+                      <FormField label="Index Name" stretch>
+                        <Select
+                          empty="Upload a file if no options present"
+                          onChange={({ detail }) =>
+                            setIndexName(detail.selectedOption.value)
+                          }
+                          loadingText="loading index names"
+                          statusType={
+                            loadingIndexNameList ? 'loading' : 'finished'
+                          }
+                          selectedOption={{ value: indexName }}
+                          options={indexNameList.map((name) => ({
+                            value: name,
+                          }))}
+                        />
+                      </FormField>
+                      <FormField stretch label="Search method">
+                        <Select
+                          selectedOption={{ value: searchMethod }}
+                          onChange={({ detail }) =>
+                            setSearchMethod(detail.selectedOption.value)
+                          }
+                          options={SEARCH_METHOD}
+                        />
+                      </FormField>
+                      <FormField
+                        stretch
+                        label="Threshold for vector search"
+                        constraintText="Float number between 0 and 1"
+                        errorText={
+                          vecDocsScoreThresholds >= 0 &&
+                          vecDocsScoreThresholds <= 1
+                            ? ''
+                            : 'A number between 0 and 1'
+                        }
+                      >
+                        <Input
+                          onBlur={() =>
+                            vecDocsScoreThresholds !== 0 &&
+                            !vecDocsScoreThresholds
+                              ? setVecDocsScoreThresholds(0)
+                              : null
+                          }
+                          step={0.01}
+                          type="number"
+                          value={vecDocsScoreThresholds}
+                          onChange={({ detail }) => {
+                            setVecDocsScoreThresholds(detail.value);
+                          }}
+                        />
+                      </FormField>
+                    </ColumnLayout>
+                    <ColumnLayout columns={3}>
+                      <FormField
+                        stretch
+                        label="Number of doc for vector search"
+                        constraintText="Integer between 1 and 10"
+                        errorText={
+                          topK >= 0 && topK <= 10
+                            ? ''
+                            : 'A number between 0 and 10'
+                        }
+                      >
+                        <Input
+                          onBlur={() =>
+                            topK !== 0 && !topK ? setTopK(0) : null
+                          }
+                          step={1}
+                          type="number"
+                          inputMode="decimal"
+                          value={topK}
+                          onChange={({ detail }) => {
+                            setTopK(detail.value);
+                          }}
+                        />
+                      </FormField>
+                      <FormField
+                        stretch
+                        label="Number of doc for text search"
+                        constraintText="Integer between 1 and 10"
+                        errorText={
+                          txtDocsNum >= 0 && txtDocsNum <= 10
+                            ? ''
+                            : 'A number between 0 and 10'
+                        }
+                      >
+                        <Input
+                          onBlur={() =>
+                            txtDocsNum !== 0 && !txtDocsNum
+                              ? setTxtDocsNum(0)
+                              : null
+                          }
+                          step={1}
+                          type="number"
+                          inputMode="decimal"
+                          value={txtDocsNum}
+                          onChange={({ detail }) => {
+                            setTxtDocsNum(detail.value);
+                          }}
+                        />
+                      </FormField>
+                      <FormField
+                        stretch
+                        label="Threshold for text search"
+                        constraintText="Float number between 0 and 1"
+                        errorText={
+                          txtDocsScoreThresholds >= 0 &&
+                          txtDocsScoreThresholds <= 1
+                            ? ''
+                            : 'A number between 0 and 1'
+                        }
+                      >
+                        <Input
+                          onBlur={() =>
+                            txtDocsScoreThresholds !== 0 &&
+                            !txtDocsScoreThresholds
+                              ? setTxtDocsScoreThresholds(0)
+                              : null
+                          }
+                          step={0.01}
+                          type="number"
+                          value={txtDocsScoreThresholds}
+                          onChange={({ detail }) => {
+                            setTxtDocsScoreThresholds(detail.value);
+                          }}
+                        />
+                      </FormField>
+                    </ColumnLayout>
+                  </SpaceBetween>
+                )
+              ) : null}
+
+              {displayKendraOptions ? null : (
+                <FormField stretch label="Display Scores">
+                  <SpaceBetween direction="horizontal" size="xxl">
+                    <Checkbox {...bindScoreQA}>Query-Answer score</Checkbox>
+                    <Checkbox {...bindScoreQD}>Query-Doc scores</Checkbox>
+                    <Checkbox {...bindScoreAD}>Answer-Doc scores</Checkbox>
+                  </SpaceBetween>
+                </FormField>
+              )}
 
               <ExpandableSection
                 headerText="Prompt Summary"

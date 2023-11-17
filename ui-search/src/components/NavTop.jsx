@@ -74,7 +74,7 @@ export default function TopNav() {
         {
           type: 'button',
           iconName: themeBool ? 'star-filled' : 'star',
-          // text: themeBool ? 'bright' : 'dark',
+          text: themeBool ? 'Dark Mode' : 'Light Mode',
           ariaLabel: 'ThemeSwitch',
           // disableUtilityCollapse: true,
           onClick: () => {
@@ -87,7 +87,7 @@ export default function TopNav() {
         {
           type: 'button',
           iconName: spacingBool ? 'view-full' : 'zoom-to-fit',
-          // text: themeBool ? 'bright' : 'dark',
+          text: spacingBool ? 'Compact' : 'Comfortable',
           ariaLabel: 'SpacingSwitch',
           // disableUtilityCollapse: true,
           onClick: () => {
@@ -107,6 +107,7 @@ export default function TopNav() {
         {
           type: 'button',
           iconName: 'settings',
+          text: 'App Configurations',
           title: 'Settings',
           ariaLabel: 'Settings',
           onClick: () => {

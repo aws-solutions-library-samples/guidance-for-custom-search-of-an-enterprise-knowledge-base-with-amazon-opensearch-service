@@ -57,10 +57,10 @@ const TableSources = ({ sourceData }) => {
           cell: ({ scoreQueryDoc, scoreAnswerDoc }) => (
             <SpaceBetween direction="horizontal" size="xs">
               <Badge color="blue">
-                QD: {scoreQueryDoc ? Number(scoreQueryDoc).toFixed(4) : 'n/a'}
+                QD: {scoreQueryDoc ? Number(scoreQueryDoc).toFixed(3) : 'n/a'}
               </Badge>
               <Badge color="blue">
-                AD: {scoreAnswerDoc ? Number(scoreAnswerDoc).toFixed(4) : 'n/a'}
+                AD: {scoreAnswerDoc ? Number(scoreAnswerDoc).toFixed(3) : 'n/a'}
               </Badge>
             </SpaceBetween>
           ),

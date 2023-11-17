@@ -129,7 +129,7 @@ const SessionInput = ({ data }) => {
       if (!success)
         throw new Error('Socket connection can not be established...');
     }
-    let configs = lsGetCurSessionConfig(sessionId, lsSessionList);
+    const configs = lsGetCurSessionConfig(sessionId, lsSessionList);
     if (!configs) throw new Error('No session config found');
     lsAddContentToSessionItem(sessionId, lsSessionList, {
       type: 'customer',
@@ -139,24 +139,8 @@ const SessionInput = ({ data }) => {
     //   type: 'robot',
     //   content,
     // });
-    const {
-      searchMethod,
-      txtDocsNum,
-      vecDocsScoreThresholds,
-      txtDocsScoreThresholds,
-      responseIfNoDocsFound,
-    } = appConfigs;
-    configs = {
-      ...configs,
-      searchMethod,
-      txtDocsNum: Number(txtDocsNum),
-      vecDocsScoreThresholds: Number(vecDocsScoreThresholds),
-      txtDocsScoreThresholds: Number(txtDocsScoreThresholds),
-      responseIfNoDocsFound,
-    };
     socket.current?.send(JSON.stringify({ action: 'search', configs, query }));
   }, [
-    appConfigs,
     lsGetCurSessionConfig,
     sessionId,
     query,
@@ -203,9 +187,9 @@ const SessionInput = ({ data }) => {
               disabled={!isConnected}
               autoFocus
               {...bindQuery}
-              onKeyUp={(e) =>
-                e.detail.key === 'Enter' ? handleOnEnterSearch() : null
-              }
+              // onKeyUp={(e) =>
+              //   e.detail.key === 'Enter' ? handleOnEnterSearch() : null
+              // }
               data-corner-style="rounded"
               placeholder="Search Input"
             />
@@ -223,7 +207,7 @@ const SessionInput = ({ data }) => {
         </StyledBoxVerticalCenter>
         <StyledBoxVerticalCenter>
           <StatusIndicator type={isConnected ? 'success' : 'stopped'}>
-            {isConnected ? 'WSS' : 'WSS'}
+            WSS
           </StatusIndicator>
         </StyledBoxVerticalCenter>
       </Grid>

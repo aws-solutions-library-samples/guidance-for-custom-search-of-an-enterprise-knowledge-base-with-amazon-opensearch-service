@@ -59,7 +59,9 @@ const SessionChatsAI = ({
                 content="Query-Answer Score"
                 triggerType="custom"
               >
-                <Badge color="blue">{scoreQueryAnswer}</Badge>
+                <Badge color="blue">
+                  {Number(scoreQueryAnswer).toFixed(3)}
+                </Badge>
               </Popover>
             </div>
           </Box>

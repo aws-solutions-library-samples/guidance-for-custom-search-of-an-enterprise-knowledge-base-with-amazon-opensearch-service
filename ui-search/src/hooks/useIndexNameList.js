@@ -9,20 +9,20 @@ const useIndexNameList = () => {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`${urlApiGateway}/knowledge_base_handler`)
-      .then((res) => {
-        if (res.ok) {
-          return res.json();
-        }
-        throw new Error('Network response was not ok.');
-      })
-      .then((data) => {
-        setIndexNameList(data.map((item) => item.name));
-      })
-      .catch((error) => {
-        toast.error('Error fetching knowledge base index names');
-      })
-      .finally(() => setLoading(false));
+    if (!urlApiGateway) return;
+    let timer = setTimeout(() => {
+      fetch(`${urlApiGateway}/knowledge_base_handler`)
+        .then((res) => {
+          if (res.ok) return res.json();
+          throw new Error('Network response was not ok.');
+        })
+        .then((data) => setIndexNameList(data.map((item) => item.name)))
+        .catch((error) => {
+          toast.error('Error fetching knowledge base index names');
+        })
+        .finally(() => setLoading(false));
+    }, 1000);
+    return () => clearTimeout(timer);
   }, [urlApiGateway]);
 
   return { indexNameList, loading };

@@ -70,16 +70,16 @@ export default function NavSide() {
           href: '/upload-files',
         },
         { type: 'divider' },
-        {
-          type: 'link',
-          text: 'Notifications',
-          href: '#/notifications',
-          info: <Badge color="red">23</Badge>,
-        },
+        // {
+        //   type: 'link',
+        //   text: 'Notifications',
+        //   href: '#/notifications',
+        //   info: <Badge color="red">23</Badge>,
+        // },
         {
           type: 'link',
           text: 'Documentation',
-          href: 'https://gitlab.aws.dev/aws-gcr-industrysolution/smart_search/-/blob/main/README.md',
+          href: 'https://studio.us-east-1.prod.workshops.aws/preview/3973557a-0853-41f6-9678-00ae171ba1f6/builds/d140c44a-97e5-4a33-b85e-b13d4702f3df',
           external: true,
         },
       ]}

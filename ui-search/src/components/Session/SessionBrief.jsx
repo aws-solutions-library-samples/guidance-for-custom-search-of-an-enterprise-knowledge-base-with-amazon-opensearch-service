@@ -36,11 +36,16 @@ const SessionBrief = ({ configs, expanded }) => {
     isCheckedMapReduce,
     indexName,
     topK,
+    searchMethod,
+    txtDocsNum,
+    vecDocsScoreThresholds,
+    txtDocsScoreThresholds,
     isCheckedScoreQA,
     isCheckedScoreQD,
     isCheckedScoreAD,
     sessionId,
     prompt,
+    tokenContentCheck,
   } = configs;
 
   return (
@@ -103,13 +108,11 @@ const SessionBrief = ({ configs, expanded }) => {
             <ValueWithLabel label="Language Model">
               {llmData?.modelName}
             </ValueWithLabel>
-            <ValueWithLabel label="Index Name">{indexName}</ValueWithLabel>
-          </SpaceBetween>
-
-          <SpaceBetween size={SIZE}>
-            {/* <ValueWithLabel label="Role">{role}</ValueWithLabel> */}
             <ValueWithLabel label="Language">{language}</ValueWithLabel>
-            <ValueWithLabel label="Top K">Top {topK}</ValueWithLabel>
+            <ValueWithLabel label="Index Name">{indexName}</ValueWithLabel>
+            <ValueWithLabel label="Search Method">
+              {searchMethod}
+            </ValueWithLabel>
           </SpaceBetween>
 
           <SpaceBetween size={SIZE}>
@@ -124,6 +127,22 @@ const SessionBrief = ({ configs, expanded }) => {
             </ValueWithLabel>
           </SpaceBetween>
 
+          <SpaceBetween size={SIZE}>
+            {/* <ValueWithLabel label="Role">{role}</ValueWithLabel> */}
+            <ValueWithLabel label="Number of doc for vector search">
+              {topK}
+            </ValueWithLabel>
+            <ValueWithLabel label="Number of doc for text search">
+              {txtDocsNum}
+            </ValueWithLabel>
+            <ValueWithLabel label="Threshold for vector search">
+              {vecDocsScoreThresholds}
+            </ValueWithLabel>
+            <ValueWithLabel label="Threshold for text search">
+              {txtDocsScoreThresholds}
+            </ValueWithLabel>
+          </SpaceBetween>
+
           <SpaceBetween size="xs">
             <BoolState bool={isCheckedGenerateReport} text="Generate Report" />
             <BoolState bool={isCheckedContext} text="Context" />
@@ -132,6 +151,7 @@ const SessionBrief = ({ configs, expanded }) => {
             <BoolState bool={isCheckedScoreQA} text="Score Question-Answer" />
             <BoolState bool={isCheckedScoreQD} text="Score Question-Doc" />
             <BoolState bool={isCheckedScoreAD} text="Score Answer-Doc" />
+            <BoolState bool={!!tokenContentCheck} text="Content Check" />
           </SpaceBetween>
         </ColumnLayout>
       )}
