@@ -26,7 +26,7 @@ from datetime import datetime
 import boto3
 import numpy as np
 
-def load_file(filepath,language,chunk_size: int=500, chunk_overlap: int=50):
+def load_file(filepath,language,chunk_size: int=100, chunk_overlap: int=10):
     
     print('begin to load ' + filepath + ' file')
     if filepath.lower().endswith(".pdf"):
@@ -175,7 +175,7 @@ class SmartSearchDataload:
             if self.vector_store is not None:
                 new_texts = []
                 new_metadatas = []
-                texts = [d.page_content for d in docs]
+                texts = [d.page_content.strip().replace('\n','') for d in docs]
                 metadatas = [d.metadata for d in docs]
                 sep = '。'
                 if self.language == "english":
@@ -188,7 +188,7 @@ class SmartSearchDataload:
                     pre_metadata = ""
                     pre_title = ""
                     for i in range(len(metadatas)):
-                        text = texts[i]
+                        text = texts[i].strip().replace('\n','')
                         metadata = dict(metadatas[i])
                         row = int(metadata['row'])
                         title=''
