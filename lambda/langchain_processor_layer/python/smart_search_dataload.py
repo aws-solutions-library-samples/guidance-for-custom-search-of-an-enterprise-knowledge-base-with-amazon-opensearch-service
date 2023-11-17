@@ -2,8 +2,7 @@ import os
 import shutil
 from langchain.document_loaders import TextLoader
 from langchain.document_loaders import UnstructuredMarkdownLoader
-#from langchain.document_loaders import PyPDFLoader
-from langchain.document_loaders import PyMuPDFLoader
+from langchain.document_loaders import PyPDFLoader
 from langchain.document_loaders import Docx2txtLoader
 from langchain.document_loaders import UnstructuredPowerPointLoader
 from langchain.document_loaders import UnstructuredHTMLLoader
@@ -31,8 +30,7 @@ def load_file(filepath,language,chunk_size: int=100, chunk_overlap: int=10):
     
     print('begin to load ' + filepath + ' file')
     if filepath.lower().endswith(".pdf"):
-        #loader = PyPDFLoader(filepath) 
-        loader = PyMuPDFLoader(filepath)
+        loader = PyPDFLoader(filepath)
     elif filepath.lower().endswith(".docx"):
         loader = Docx2txtLoader(filepath)
     elif filepath.lower().endswith(".pptx"):
