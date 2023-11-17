@@ -142,8 +142,6 @@ class LambdaStack(Stack):
                             binary_media_types=binary_media_types
                             )
 
-        ###########
-
         websocket_table = dynamodb.Table(self, "websocket",
                                          partition_key=dynamodb.Attribute(name="id",
                                                                           type=dynamodb.AttributeType.STRING),
@@ -157,7 +155,7 @@ class LambdaStack(Stack):
                 'dynamodb:*',
                 'logs:*',
             ],
-            resources=['*']  # 现在比较大
+            resources=['*']  
         )
         websocket_role = _iam.Role(
             self, 'websocket_role',
@@ -215,7 +213,6 @@ class LambdaStack(Stack):
         )
         websocketsearch.add_environment("TABLE_NAME", table_name)
         websocketsearch.add_environment("DIR_NAME", "search")
-        ###########
 
         web_socket_api = apigwv2.WebSocketApi(self, "websocketapi")
         apigwv2.WebSocketStage(self, "prod",
@@ -236,8 +233,11 @@ class LambdaStack(Stack):
                                  integration=WebSocketLambdaIntegration("SearchIntegration", websocketdefault)
                                  )
 
+        # langchain_qa_func加wss gw 环境变量
         langchain_qa_func.add_environment("api_gw", web_socket_api.api_id)
-        #################################
+        # cfn output
+        web_socket_url = f"wss://{web_socket_api.api_id}.execute-api.{os.getenv('AWS_REGION')}.amazonaws.com/prod"
+        cdk.CfnOutput(self, 'web_socket_api', value=web_socket_url, export_name='WebSocketApi')
 
         if 'knn_faq' in func_selection:
             self.opensearch_search_knn_faq_lambda = self.define_lambda_function('opensearch-search-knn-faq',
