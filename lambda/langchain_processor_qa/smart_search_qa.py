@@ -304,14 +304,9 @@ class SmartSearchQA:
             new_question = string_processor(new_question_response)
             print('new_question:',new_question)
         
-        
-        if self.search_engine == "opensearch":
-            docs_with_scores = self.vector_store.similarity_search_with_score(new_question,k=top_k)
-        elif self.search_engine == "kendra":
-            docs_with_scores = retrieval_from_kendra(self.kendra_host,new_question,top_k)
-        elif self.search_engine == "zilliz":
-            docs_with_scores = self.vector_store.similarity_search_with_score(new_question, k=top_k)
-        
+        retriever = self.get_retriever(top_k)
+        docs_with_scores = retriever.get_relevant_documents(new_question)
+
         print('docs_with_scores:',docs_with_scores)
         docs = [doc[0] for doc in docs_with_scores]
         relate_docs=''

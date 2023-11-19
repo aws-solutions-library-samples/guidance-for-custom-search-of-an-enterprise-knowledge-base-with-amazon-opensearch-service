@@ -405,7 +405,7 @@ def lambda_handler(event, context):
                 if "isCheckedScoreAD" in evt_body.keys():
                     isCheckedScoreAD = bool(evt_body['isCheckedScoreAD'])
                 print('isCheckedScoreAD:',isCheckedScoreAD)
-                if isCheckedScoreAD:
+                if isCheckedScoreAD and (searchEngine == "opensearch" or searchEngine == "zilliz"):
                     cal_answer = answer
                     if language.find("chinese") >= 0 and len(answer) > 150:
                         cal_answer = answer[:150]
