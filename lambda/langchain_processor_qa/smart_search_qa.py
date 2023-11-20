@@ -308,7 +308,10 @@ class SmartSearchQA:
         docs_with_scores = retriever.get_relevant_documents(new_question)
 
         print('docs_with_scores:',docs_with_scores)
-        docs = [doc[0] for doc in docs_with_scores]
+        if self.search_engine == "kendra":
+            docs = docs_with_scores
+        else:
+            docs = [doc[0] for doc in docs_with_scores]
         relate_docs=''
         for i in range(len(docs)):
             page_content = string_processor(docs[i].page_content)
