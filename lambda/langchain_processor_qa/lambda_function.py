@@ -523,7 +523,10 @@ def lambda_handler(event, context):
         if requestType == 'websocket':
             print('response body',response['body'])
             connectionId = str(event.get('requestContext', {}).get('connectionId'))
-            endpoint_url = F"https://{domain_name}.execute-api.{region}.amazonaws.com/{stage}"
+            if region.find('cn') >=0 :
+                endpoint_url = F"https://{domain_name}.execute-api.{region}.amazonaws.com.cn/{stage}"
+            else:
+                endpoint_url = F"https://{domain_name}.execute-api.{region}.amazonaws.com/{stage}"
             apigw_management = boto3.client('apigatewaymanagementapi',
                                             endpoint_url=endpoint_url)
             api_res = apigw_management.post_to_connection(ConnectionId=connectionId,
