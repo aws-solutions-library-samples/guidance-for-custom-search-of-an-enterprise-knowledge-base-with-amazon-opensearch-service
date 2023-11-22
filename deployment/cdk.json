@@ -44,7 +44,7 @@
     ],
     "notebook_deployment": true,
     "search_engine_opensearch":true,
-    "search_engine_kendra":false,
+    "search_engine_kendra":true,
     "search_engine_zilliz":false,
     "zilliz_endpoint": "",
     "zilliz_token": "",
