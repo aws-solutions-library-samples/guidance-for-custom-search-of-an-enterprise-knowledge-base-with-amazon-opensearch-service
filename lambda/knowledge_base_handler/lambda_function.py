@@ -40,7 +40,8 @@ def lambda_handler(event, context):
 
         result = list(client.indices.get_alias().keys())
         for indice in result:
-            response.append({"name": indice, "s3_prefix": "", "aos_indice": indice})
+            if not indice.startswith("."):
+                response.append({"name": indice, "s3_prefix": "", "aos_indice": indice})
 
         print(result)
         return {
