@@ -2,7 +2,7 @@
 
 ## Prerequisite
 
-### 1. Make sure you have installed `node.js`
+### 1. Make sure you have installed the correct version of `node.js`
 
 ```bash
 node -v

@@ -23,6 +23,7 @@ import { useSessionStore } from 'src/stores/session';
 import Divider from './Divider';
 import useLsSessionList from 'src/hooks/useLsSessionList';
 import useLsAppConfigs from 'src/hooks/useLsAppConfigs';
+import toast from 'react-hot-toast';
 
 const SIZE = 's';
 const OPTIONS_LANGUAGE = [
@@ -34,12 +35,14 @@ export const OPTIONS_SEARCH_ENGINE = [
   {
     value: 'opensearch',
     label: 'Open Search',
-    description: 'A brief description of Open Search',
+    description:
+      'OpenSearch is an open source, distributed search and analytics suite derived from Elasticsearch.',
   },
   {
     value: 'kendra',
     label: 'Kendra',
-    description: 'A brief description of Kendra',
+    description:
+      'Amazon Kendra is an intelligent search service powered by machine learning (ML)',
   },
 ];
 const KENDRA = OPTIONS_SEARCH_ENGINE[1].value;
@@ -55,16 +58,11 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
   const { lsLanguageModelList } = useLsLanguageModelList();
   const { lsSessionList, lsGetSessionItem } = useLsSessionList();
   const { appConfigs } = useLsAppConfigs();
-  const [name, bindName, resetName, setName] = useInput('');
+  const [name, bindName, resetName] = useInput('');
   const [sessionTemplateOpt, setSessionTemplateOpt] = useState();
 
-  const [displayKendraOptions, setDisplayKendraOptions] = useState(false);
   const [searchEngine, bindSearchEngine, resetSearchEngine, setSearchEngine] =
     useInput(OPTIONS_SEARCH_ENGINE[0].value);
-
-  useEffect(() => {
-    setDisplayKendraOptions(searchEngine === KENDRA);
-  }, [searchEngine]);
 
   const [llmData, setLLMData] = useState(lsLanguageModelList[0]);
   const [role, bindRole, resetRole, setRole] = useInput();
@@ -109,7 +107,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
   // ] = useToggle(false);
 
   const [indexName, setIndexName] = useState('');
-  const [kendraIndexName, setKendraIndexName] = useState('');
+  const [kendraIndexId, setKendraIndexId] = useState('');
   const { indexNameList, loading: loadingIndexNameList } = useIndexNameList();
   const [searchMethod, setSearchMethod] = useState(SEARCH_METHOD[0].value);
   const [txtDocsNum, setTxtDocsNum] = useState(0);
@@ -145,34 +143,6 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     }
   }, [role, taskDefinition, outputFormat, language]);
 
-  const sessionData = {
-    name,
-    searchEngine,
-    llmData,
-    role,
-    language,
-    taskDefinition,
-    outputFormat,
-    isCheckedGenerateReport,
-    isCheckedContext,
-    isCheckedKnowledgeBase,
-    // isCheckedMapReduce,
-    indexName,
-    kendraIndexName,
-    topK,
-    searchMethod,
-    txtDocsNum,
-    vecDocsScoreThresholds,
-    txtDocsScoreThresholds,
-    isCheckedScoreQA,
-    isCheckedScoreQD,
-    isCheckedScoreAD,
-    prompt,
-    tokenContentCheck: appConfigs.tokenContentCheck,
-    responseIfNoDocsFound: appConfigs.responseIfNoDocsFound,
-  };
-  // console.log(sessionData);
-
   const resetAllFields = useCallback(() => {
     resetName();
     resetSearchEngine();
@@ -185,7 +155,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     resetKnowledgeBase();
     // resetMapReduce();
     setIndexName('');
-    setKendraIndexName('');
+    setKendraIndexId('');
     setSearchMethod(SEARCH_METHOD[0].value);
     setTopK(3);
     setTxtDocsNum(0);
@@ -196,6 +166,8 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     resetScoreQD();
     resetScoreAD();
     setSessionTemplateOpt(undefined);
+    setLoading(false);
+    setValidating(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -215,7 +187,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
           isCheckedKnowledgeBase,
           // isCheckedMapReduce,
           indexName,
-          kendraIndexName,
+          kendraIndexId,
           topK,
           searchMethod,
           txtDocsNum,
@@ -229,35 +201,42 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
       } = lsGetSessionItem(sessionTemplateOpt.value, lsSessionList);
 
       // setName(name);
-      setSearchEngine(searchEngine);
-      setLLMData(llmData);
-      setRole(role);
-      setLanguage(language);
-      setTaskDefinition(taskDefinition);
-      setOutputFormat(outputFormat);
+      if (searchEngine !== undefined) setSearchEngine(searchEngine);
+      if (llmData !== undefined) setLLMData(llmData);
+      if (role !== undefined) setRole(role);
+      if (language !== undefined) setLanguage(language);
+      if (taskDefinition !== undefined) setTaskDefinition(taskDefinition);
+      if (outputFormat !== undefined) setOutputFormat(outputFormat);
 
-      setIsCheckedGenerateReport(isCheckedGenerateReport);
-      setIsCheckedContext(isCheckedContext);
-      setIsCheckedKnowledgeBase(isCheckedKnowledgeBase);
+      if (isCheckedGenerateReport !== undefined)
+        setIsCheckedGenerateReport(isCheckedGenerateReport);
+      if (isCheckedContext !== undefined) setIsCheckedContext(isCheckedContext);
+      if (isCheckedKnowledgeBase !== undefined)
+        setIsCheckedKnowledgeBase(isCheckedKnowledgeBase);
       // setIsCheckedMapReduce(isCheckedMapReduce);
 
-      setIndexName(indexName);
-      setKendraIndexName(kendraIndexName);
-      setTopK(topK);
-      setSearchMethod(searchMethod);
-      setTxtDocsNum(txtDocsNum);
-      setVecDocsScoreThresholds(vecDocsScoreThresholds);
-      setTxtDocsScoreThresholds(txtDocsScoreThresholds);
+      if (indexName !== undefined) setIndexName(indexName);
+      if (kendraIndexId !== undefined) setKendraIndexId(kendraIndexId);
+      if (topK !== undefined) setTopK(topK);
+      if (searchMethod !== undefined) setSearchMethod(searchMethod);
+      if (txtDocsNum !== undefined) setTxtDocsNum(txtDocsNum);
+      if (vecDocsScoreThresholds !== undefined)
+        setVecDocsScoreThresholds(vecDocsScoreThresholds);
+      if (txtDocsScoreThresholds !== undefined)
+        setTxtDocsScoreThresholds(txtDocsScoreThresholds);
 
-      setIsCheckedScoreQA(isCheckedScoreQA);
-      setIsCheckedScoreQD(isCheckedScoreQD);
-      setIsCheckedScoreAd(isCheckedScoreAD);
+      if (isCheckedScoreQA !== undefined) setIsCheckedScoreQA(isCheckedScoreQA);
+      if (isCheckedScoreQD !== undefined) setIsCheckedScoreQD(isCheckedScoreQD);
+      if (isCheckedScoreAD !== undefined) setIsCheckedScoreAd(isCheckedScoreAD);
     } else {
       setSessionTemplateOpt(undefined);
     }
   }, [sessionTemplateOpt, lsSessionList]);
 
   const [loading, setLoading] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const isKendra = searchEngine === KENDRA;
+
   return (
     <Modal
       header="Session Configurations"
@@ -277,6 +256,53 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
               onClick={async () => {
                 try {
                   setLoading(true);
+                  setValidating(true);
+
+                  const sessionData = {
+                    name,
+                    searchEngine,
+                    llmData,
+                    role,
+                    language,
+                    taskDefinition,
+                    outputFormat,
+                    isCheckedGenerateReport,
+                    isCheckedContext,
+                    isCheckedKnowledgeBase,
+                    // isCheckedMapReduce,
+                    indexName,
+                    kendraIndexId,
+                    topK,
+                    searchMethod,
+                    txtDocsNum,
+                    vecDocsScoreThresholds,
+                    txtDocsScoreThresholds,
+                    isCheckedScoreQA,
+                    isCheckedScoreQD,
+                    isCheckedScoreAD,
+                    prompt,
+                    tokenContentCheck: appConfigs.tokenContentCheck,
+                    responseIfNoDocsFound: appConfigs.responseIfNoDocsFound,
+                  };
+                  if (isKendra) {
+                    delete sessionData.indexName;
+                    delete sessionData.topK;
+                    delete sessionData.searchMethod;
+                    delete sessionData.txtDocsNum;
+                    delete sessionData.vecDocsScoreThresholds;
+                    delete sessionData.txtDocsScoreThresholds;
+                    sessionData.isCheckedScoreQA = false;
+                    sessionData.isCheckedScoreQD = false;
+                    sessionData.isCheckedScoreAD = false;
+                    if (!kendraIndexId)
+                      return toast.error('Please provide Kendra Index ID');
+                  } else {
+                    delete sessionData.kendraIndexId;
+                    if (isCheckedKnowledgeBase && !indexName) {
+                      return toast.error('Please provide Index Name');
+                    }
+                  }
+                  // console.log(sessionData);
                   await addSession(sessionData);
                   dismissModal();
                   resetAllFields();
@@ -327,7 +353,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
 
             <FormField
               stretch
-              label="Engine"
+              label="Search Engine"
               description="Please select a search engine"
             >
               <Tiles {...bindSearchEngine} items={OPTIONS_SEARCH_ENGINE} />
@@ -388,7 +414,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
               </FormField>
 
               <SpaceBetween direction="horizontal" size="xxl">
-                <FormField constraintText="This is a constraint text">
+                <FormField constraintText="Has to use a knowledge base">
                   <Toggle {...bindGenerateReport}>Generate Report</Toggle>
                 </FormField>
                 <FormField constraintText="OFF when generating report">
@@ -415,14 +441,22 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
               </SpaceBetween>
 
               {isCheckedKnowledgeBase ? (
-                displayKendraOptions ? (
+                isKendra ? (
                   <SpaceBetween direction="vertical" size="s">
-                    <FormField label="Kendra Index Name" stretch>
+                    <FormField
+                      label="Kendra Index ID"
+                      stretch
+                      errorText={
+                        validating && kendraIndexId === ''
+                          ? 'Please provide Kendra Index'
+                          : ''
+                      }
+                    >
                       <Input
-                        placeholder="Please provide Kendra index name"
-                        value={kendraIndexName}
+                        placeholder="Please provide Kendra index ID"
+                        value={kendraIndexId}
                         onChange={({ detail }) => {
-                          setKendraIndexName(detail.value);
+                          setKendraIndexId(detail.value);
                         }}
                       />
                     </FormField>
@@ -430,7 +464,15 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                 ) : (
                   <SpaceBetween direction="vertical" size="s">
                     <ColumnLayout columns={3}>
-                      <FormField label="Index Name" stretch>
+                      <FormField
+                        label="Index Name"
+                        stretch
+                        errorText={
+                          validating &&
+                          !indexName &&
+                          'Please provide Index Name'
+                        }
+                      >
                         <Select
                           empty="Upload a file if no options present"
                           onChange={({ detail }) =>
@@ -562,7 +604,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                 )
               ) : null}
 
-              {displayKendraOptions ? null : (
+              {isKendra ? null : (
                 <FormField stretch label="Display Scores">
                   <SpaceBetween direction="horizontal" size="xxl">
                     <Checkbox {...bindScoreQA}>Query-Answer score</Checkbox>

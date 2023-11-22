@@ -183,7 +183,9 @@ const AppConfigs = () => {
               <Button
                 iconName="remove"
                 onClick={() => {
-                  const bool = confirm('Confirm to clear all sessions?');
+                  const bool = window?.confirm(
+                    'Confirm to clear all sessions?'
+                  );
                   if (bool) {
                     if (process.env.NODE_ENV === 'development') {
                       // TESTING
@@ -211,7 +213,7 @@ const AppConfigs = () => {
               <Button
                 iconName="remove"
                 onClick={() => {
-                  const bool = confirm(
+                  const bool = window?.confirm(
                     'Confirm to reset all configs for the app?'
                   );
                   if (bool) setAppConfigs(INIT_APP_CONFIGS);

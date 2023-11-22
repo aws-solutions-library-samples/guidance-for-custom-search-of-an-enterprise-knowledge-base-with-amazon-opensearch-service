@@ -43,13 +43,16 @@ const UploadFiles = () => {
                 onClick={(e) => {
                   e.preventDefault();
                   setUploading(true);
-                  console.log({ selectedFiles });
+                  try {
+                    if (/^\./.test(indexName))
+                      return toast.error('Index Name can not start with dots');
 
-                  selectedFiles.forEach((file) => {
-                    const formData = new FormData();
-                    formData.append('file', file);
+                    // console.log({ selectedFiles });
 
-                    try {
+                    selectedFiles.forEach((file) => {
+                      const formData = new FormData();
+                      formData.append('file', file);
+
                       // url example: https://ttfo6y08h2.execute-api.us-west-2.amazonaws.com/prod/file_upload/intelligent-search-data-bucket-5643200499-us-west-2/source_data/index3/blogg
                       const url = `${urlApiGateway}/file_upload/${s3FileUpload}/source_data/${indexName}/${file.name}`;
                       console.log({ url });
@@ -57,28 +60,24 @@ const UploadFiles = () => {
                         method: 'PUT',
                         headers: { 'Content-Type': 'multipart/form-data' },
                         body: file,
-                      })
-                        .then((res) => {
-                          console.info('upload response:', res);
-                          if (res.ok) {
-                            toast.success(
-                              `File: ${file.name} uploaded successfully`
-                            );
-                          } else {
-                            toast.error(
-                              `Failed to upload file: ${file.name}...`
-                            );
-                            console.error(res);
-                          }
-                        })
-                        // NOTE: for single file upload, modify this if to upload multiple files
-                        .finally(() => {
-                          setUploading(false);
-                        });
-                    } catch (error) {
-                      console.error(error);
-                    }
-                  });
+                      }).then((res) => {
+                        console.info('upload response:', res);
+                        if (res.ok) {
+                          toast.success(
+                            `File: ${file.name} uploaded successfully`
+                          );
+                        } else {
+                          toast.error(`Failed to upload file: ${file.name}...`);
+                          console.error(res);
+                        }
+                      });
+                      // NOTE: for single file upload, modify this if to upload multiple files
+                    });
+                  } catch (error) {
+                    console.error(error);
+                  } finally {
+                    setUploading(false);
+                  }
                 }}
               >
                 Confirm
@@ -99,7 +98,13 @@ const UploadFiles = () => {
                 )}
               />
             </FormField>
-            <FormField label="Index Name" description="Database Index">
+            <FormField
+              label="Index Name"
+              description="Knowledge base index name (can NOT start with dots )"
+              errorText={
+                /^\./.test(indexName) && 'Index Name can not start with dots'
+              }
+            >
               <Autosuggest
                 enteredTextLabel={(v) => `Use: "${v}"`}
                 onChange={({ detail }) => setIndexName(detail.value)}
@@ -113,11 +118,13 @@ const UploadFiles = () => {
             </FormField>
             <FormField
               label="Select a local file"
-              description="File format: pdf, ppt, doc, docx, txt, csv"
+              description="File format: pdf, doc, docx"
+              // description="File format: pdf, ppt, doc, docx, txt, csv"
             >
               <FileUpload
                 onChange={({ detail }) => setSelectedFiles(detail.value)}
                 value={selectedFiles}
+                accept=".docx,.doc,.pdf"
                 // accept=".txt,.csv,.docx,.doc,.pdf"
                 i18nStrings={{
                   uploadButtonText: (e) => (e ? 'Choose files' : 'Choose file'),

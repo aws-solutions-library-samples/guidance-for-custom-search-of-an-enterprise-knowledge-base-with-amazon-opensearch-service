@@ -35,6 +35,7 @@ const SessionBrief = ({ configs, expanded }) => {
     isCheckedKnowledgeBase,
     isCheckedMapReduce,
     indexName,
+    kendraIndexId,
     topK,
     searchMethod,
     txtDocsNum,
@@ -47,6 +48,8 @@ const SessionBrief = ({ configs, expanded }) => {
     prompt,
     tokenContentCheck,
   } = configs;
+
+  const isKendra = searchEngine === 'kendra';
 
   return (
     <Container
@@ -62,7 +65,7 @@ const SessionBrief = ({ configs, expanded }) => {
                 iconName="remove"
                 variant="primary"
                 onClick={() => {
-                  const bool = confirm(
+                  const bool = window?.confirm(
                     '‼️ Confirm to delete this session. This operation is irreversible!'
                   );
                   if (bool) {
@@ -102,17 +105,25 @@ const SessionBrief = ({ configs, expanded }) => {
       }
     >
       {!displayDetails ? null : (
-        <ColumnLayout columns={4} variant="text-grid">
+        <ColumnLayout columns={isKendra ? 3 : 4} variant="text-grid">
           <SpaceBetween size={SIZE}>
             <ValueWithLabel label="Engine">{searchEngine}</ValueWithLabel>
             <ValueWithLabel label="Language Model">
               {llmData?.modelName}
             </ValueWithLabel>
             <ValueWithLabel label="Language">{language}</ValueWithLabel>
-            <ValueWithLabel label="Index Name">{indexName}</ValueWithLabel>
-            <ValueWithLabel label="Search Method">
-              {searchMethod}
-            </ValueWithLabel>
+            {isKendra ? (
+              <ValueWithLabel label="Kendra Index ID">
+                {kendraIndexId}
+              </ValueWithLabel>
+            ) : (
+              <ValueWithLabel label="Index Name">{indexName}</ValueWithLabel>
+            )}
+            {isKendra ? null : (
+              <ValueWithLabel label="Search Method">
+                {searchMethod}
+              </ValueWithLabel>
+            )}
           </SpaceBetween>
 
           <SpaceBetween size={SIZE}>
@@ -127,30 +138,39 @@ const SessionBrief = ({ configs, expanded }) => {
             </ValueWithLabel>
           </SpaceBetween>
 
-          <SpaceBetween size={SIZE}>
-            {/* <ValueWithLabel label="Role">{role}</ValueWithLabel> */}
-            <ValueWithLabel label="Number of doc for vector search">
-              {topK}
-            </ValueWithLabel>
-            <ValueWithLabel label="Number of doc for text search">
-              {txtDocsNum}
-            </ValueWithLabel>
-            <ValueWithLabel label="Threshold for vector search">
-              {vecDocsScoreThresholds}
-            </ValueWithLabel>
-            <ValueWithLabel label="Threshold for text search">
-              {txtDocsScoreThresholds}
-            </ValueWithLabel>
-          </SpaceBetween>
+          {!isKendra && (
+            <SpaceBetween size={SIZE}>
+              {/* <ValueWithLabel label="Role">{role}</ValueWithLabel> */}
+              <ValueWithLabel label="Number of doc for vector search">
+                {topK}
+              </ValueWithLabel>
+              <ValueWithLabel label="Number of doc for text search">
+                {txtDocsNum}
+              </ValueWithLabel>
+              <ValueWithLabel label="Threshold for vector search">
+                {vecDocsScoreThresholds}
+              </ValueWithLabel>
+              <ValueWithLabel label="Threshold for text search">
+                {txtDocsScoreThresholds}
+              </ValueWithLabel>
+            </SpaceBetween>
+          )}
 
           <SpaceBetween size="xs">
             <BoolState bool={isCheckedGenerateReport} text="Generate Report" />
             <BoolState bool={isCheckedContext} text="Context" />
             <BoolState bool={isCheckedKnowledgeBase} text="Knowledge Base" />
             <BoolState bool={isCheckedMapReduce} text="Map Reduce" />
-            <BoolState bool={isCheckedScoreQA} text="Score Question-Answer" />
-            <BoolState bool={isCheckedScoreQD} text="Score Question-Doc" />
-            <BoolState bool={isCheckedScoreAD} text="Score Answer-Doc" />
+            {!isKendra && (
+              <>
+                <BoolState
+                  bool={isCheckedScoreQA}
+                  text="Score Question-Answer"
+                />
+                <BoolState bool={isCheckedScoreQD} text="Score Question-Doc" />
+                <BoolState bool={isCheckedScoreAD} text="Score Answer-Doc" />
+              </>
+            )}
             <BoolState bool={!!tokenContentCheck} text="Content Check" />
           </SpaceBetween>
         </ColumnLayout>

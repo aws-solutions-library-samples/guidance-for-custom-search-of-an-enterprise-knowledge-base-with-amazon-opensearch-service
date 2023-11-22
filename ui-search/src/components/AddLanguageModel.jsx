@@ -205,7 +205,7 @@ const AddLanguageModel = () => {
                       <Button
                         iconName="remove"
                         onClick={() => {
-                          const bool = confirm(
+                          const bool = window?.confirm(
                             'Confirm to delete this language model?'
                           );
                           if (bool) lsDelLanguageModelItem(item.recordId);
@@ -219,7 +219,7 @@ const AddLanguageModel = () => {
             <Box float="right">
               <Button
                 onClick={() => {
-                  const bool = confirm('Confirm to clear this list?');
+                  const bool = window?.confirm('Confirm to clear this list?');
                   if (bool) lsClearLanguageModelList();
                 }}
               >
@@ -287,7 +287,8 @@ const AddLanguageModel = () => {
                     {
                       value: TYPE.sagemaker,
                       label: 'Sagemaker Endpoint',
-                      description: 'A brief description of Sagemaker Endpoint',
+                      description:
+                        'Deployed service for real-time ML model inference',
                     },
                     {
                       value: TYPE.thirdParty,
