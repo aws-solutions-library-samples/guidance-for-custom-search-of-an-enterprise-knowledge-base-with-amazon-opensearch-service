@@ -201,8 +201,8 @@ def lambda_handler(event, context):
         username = data.get('username')
         password = data.get('password')
     elif searchEngine == "kendra":
-        if "KendraIndexId" in evt_body.keys():
-            host = evt_body['KendraIndexId']
+        if "kendraIndexId" in evt_body.keys():
+            host = evt_body['kendraIndexId']
     print("host:", host)
 
     response = {
