@@ -23,7 +23,7 @@ const SIZE = 'l';
 const TYPE = { sagemaker: 'sagemaker_endpoint', thirdParty: 'third_party_api' };
 const SAGEMAKER_MODEL_TYPE = [
   { label: 'llama2', value: 'llama2' },
-  { label: 'none llama2', value: 'none_llama2' },
+  { label: 'non-llama2', value: 'non_llama2' },
 ];
 const THIRD_PARTY_API_MODEL_TYPES = [
   { label: 'Bedrock', value: 'bedrock' },

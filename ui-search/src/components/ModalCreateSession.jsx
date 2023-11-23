@@ -108,7 +108,8 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
 
   const [indexName, setIndexName] = useState('');
   const [kendraIndexId, setKendraIndexId] = useState('');
-  const { indexNameList, loading: loadingIndexNameList } = useIndexNameList();
+  const { indexNameList, loading: loadingIndexNameList } =
+    useIndexNameList(modalVisible);
   const [searchMethod, setSearchMethod] = useState(SEARCH_METHOD[0].value);
   const [txtDocsNum, setTxtDocsNum] = useState(0);
   const [vecDocsScoreThresholds, setVecDocsScoreThresholds] = useState(0);
