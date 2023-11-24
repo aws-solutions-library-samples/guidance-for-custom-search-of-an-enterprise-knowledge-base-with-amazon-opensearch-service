@@ -131,7 +131,7 @@ class LambdaStack(Stack):
         # Create Lambda Function for Content Moderation
         content_moderation_func = self.create_content_moderation_func()
 
-            
+
         # api gateway resource
         api = apigw.RestApi(self, 'smartsearch-api',
                             # default_cors_preflight_options=apigw.CorsOptions(
@@ -155,7 +155,7 @@ class LambdaStack(Stack):
                 'dynamodb:*',
                 'logs:*',
             ],
-            resources=['*']  
+            resources=['*']
         )
         websocket_role = _iam.Role(
             self, 'websocket_role',
@@ -497,7 +497,7 @@ class LambdaStack(Stack):
             timeout=Duration.minutes(10),
             reserved_concurrent_executions=50
         )
-        langchain_processor_qa_function.add_environment("host", search_engine_key) 
+        langchain_processor_qa_function.add_environment("host", search_engine_key)
         langchain_processor_qa_function.add_environment("index", index)
         langchain_processor_qa_function.add_environment("language", language)
         langchain_processor_qa_function.add_environment("embedding_endpoint_name", embedding_endpoint_name)
@@ -507,7 +507,7 @@ class LambdaStack(Stack):
         langchain_processor_qa_function.add_environment("search_engine_zilliz", str(search_engine_zilliz))
         langchain_processor_qa_function.add_environment("zilliz_endpoint", str(zilliz_endpoint))
         langchain_processor_qa_function.add_environment("zilliz_token", str(zilliz_token))
-        
+
 
         return langchain_processor_qa_function
 
@@ -754,7 +754,8 @@ class LambdaStack(Stack):
             path_part="{filename}",
             default_cors_preflight_options=apigw.CorsOptions(
                 allow_methods=['PUT', 'POST', 'OPTIONS'],
-                allow_origins=apigw.Cors.ALL_ORIGINS
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_headers=['*']
             )
         )
 
@@ -763,7 +764,8 @@ class LambdaStack(Stack):
             "method.request.path.bucket": True,  # True if param is mandatory
             "method.request.path.filename": True,  # True if param is mandatory
             "method.request.path.prefix": True,  # True if param is mandatory
-            "method.request.path.sub_prefix": True  # True if param is mandatory
+            "method.request.path.sub_prefix": True,  # True if param is mandatory,
+            "method.request.header.x-amz-meta-doc_segment": True
         }
 
         request_parameters_in_integration_options = {
@@ -771,6 +773,7 @@ class LambdaStack(Stack):
             "integration.request.path.key": "method.request.path.filename",
             "integration.request.path.prefix": "method.request.path.prefix",
             "integration.request.path.sub_prefix": "method.request.path.sub_prefix",
+            "integration.request.header.x-amz-meta-doc_segment": "method.request.header.x-amz-meta-doc_segment"
         }
 
         """
@@ -836,7 +839,7 @@ class LambdaStack(Stack):
                 apigw.IntegrationResponse(
                     status_code="200",
                     response_parameters={
-                        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+                        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-amz-meta-doc_segment'",
                         "method.response.header.Access-Control-Allow-Origin": "'*'",
                         "method.response.header.Access-Control-Allow-Methods": "'PUT,POST,OPTIONS'",
                     },
@@ -848,6 +851,7 @@ class LambdaStack(Stack):
             ]
         )
 
+        # PUT
         s3_apigw_integration = apigw.AwsIntegration(
             service="s3",
             path="{bucket}/{prefix}/{sub_prefix}/{key}",

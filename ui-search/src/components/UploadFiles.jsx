@@ -58,7 +58,10 @@ const UploadFiles = () => {
                       console.log({ url });
                       fetch(url, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'multipart/form-data' },
+                        headers: {
+                            'Content-Type': 'multipart/form-data',
+                            'x-amz-meta-doc_segment': "faq"
+                        },
                         body: file,
                       }).then((res) => {
                         console.info('upload response:', res);
