@@ -38,7 +38,7 @@ else:
     if REGION.find('cn') == -1: 
         bedrockstack = BedrockStack( app, "BedrockStack", env=env)
 notebookstack = NotebookStack(app, "NotebookStack", search_engine_key=search_engine_key, env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
-notebookstack.add_dependency(searchstack)
+# notebookstack.add_dependency(searchstack)
 
 
 if('bot' in app.node.try_get_context("extension")):
