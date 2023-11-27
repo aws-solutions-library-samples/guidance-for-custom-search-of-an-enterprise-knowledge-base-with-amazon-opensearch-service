@@ -44,6 +44,10 @@ const router = createBrowserRouter([
         path: 'upload-files',
         element: <UploadFiles />,
       },
+      {
+        path: 'about',
+        element: <Landing withConfigs={false} />,
+      },
       { path: '*', element: <PageNotFound /> },
     ],
   },

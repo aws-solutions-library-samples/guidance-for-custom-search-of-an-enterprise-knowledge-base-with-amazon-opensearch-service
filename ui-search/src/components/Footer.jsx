@@ -1,15 +1,13 @@
 import { Icon } from '@cloudscape-design/components';
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
   return (
     <footer className="custom-main-footer" id="f">
       <ul>
         <li>
-          <a href="/about/about-cloudscape/">About</a>
-        </li>
-        <li>
-          <a href="/about/connect/">Connect</a>
+          <Link to="/about">About</Link>
         </li>
         <li>
           <a

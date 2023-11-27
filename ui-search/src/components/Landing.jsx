@@ -29,7 +29,7 @@ const desc = (
   </Box>
 );
 
-const Landing = () => {
+const Landing = ({ withConfigs = true }) => {
   return (
     <ContentLayout
       header={
@@ -101,7 +101,7 @@ const Landing = () => {
         >
           <StyledImg src={architecture} alt="" />
         </Container>
-        <AppConfigs />
+        {withConfigs && <AppConfigs />}
       </SpaceBetween>
     </ContentLayout>
   );
