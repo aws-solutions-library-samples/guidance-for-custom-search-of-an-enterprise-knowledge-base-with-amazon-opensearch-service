@@ -345,6 +345,11 @@ def lambda_handler(event, context):
                 if "txtDocsScoreThresholds" in evt_body.keys() and evt_body['txtDocsScoreThresholds'] is not None:
                     txtDocsScoreThresholds = float(evt_body['txtDocsScoreThresholds'])
                 print('txtDocsScoreThresholds:', txtDocsScoreThresholds)
+                
+                historyRounds = 3
+                if "historyRounds" in evt_body.keys():
+                    historyRounds = int(evt_body['historyRounds'])
+                print('historyRounds:', historyRounds)
 
                 if modelType == 'llama2':
                     result = search_qa.get_answer_from_conversational_llama2(query,
@@ -369,6 +374,7 @@ def lambda_handler(event, context):
                                                                       response_if_no_docs_found=responseIfNoDocsFound,
                                                                       vec_docs_score_thresholds=vecDocsScoreThresholds,
                                                                       txt_docs_score_thresholds=txtDocsScoreThresholds,
+                                                                      historyRounds=historyRounds,
                                                                       )
 
                 print('result:', result)

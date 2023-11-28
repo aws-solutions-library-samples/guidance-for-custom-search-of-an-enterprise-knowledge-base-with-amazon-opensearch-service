@@ -5,3 +5,4 @@ deployment/lib/__pycache__
 search-web-knn/node_modules
 *.pyc
 .idea/
+.~*.py

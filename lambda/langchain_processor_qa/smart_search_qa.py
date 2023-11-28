@@ -207,6 +207,7 @@ class SmartSearchQA:
                                         response_if_no_docs_found: str="",
                                         vec_docs_score_thresholds: float =0,
                                         txt_docs_score_thresholds: float =0,
+                                        historyRounds: int = 3,
                                         ):
         
         prompt = PromptTemplate(template=prompt_template,
@@ -215,10 +216,10 @@ class SmartSearchQA:
         
         history = []
         session_info = ""
-        if len(session_id) > 0 and len(table_name) > 0:
+        if len(session_id) > 0 and len(table_name) > 0 and historyRounds > 0:
             session_info = get_session_info(table_name,session_id)
             if len(session_info) > 0:
-                session_info = session_info[-3:]
+                session_info = session_info[-historyRounds:]
                 for item in session_info:
                     print("session info:",item[0]," ; ",item[1]," ; ",item[2])
                     if item[2] == "qa":
