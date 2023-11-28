@@ -254,11 +254,11 @@ class BaseConversationalRetrievalChain(Chain):
                 vec_docs = self._get_docs(new_question, inputs, run_manager=_run_manager)
             else:
                 vec_docs = self._get_docs(new_question, inputs)  # type: ignore[call-arg]
-            print('vec_docs:',vec_docs)
+            # print('vec_docs:',vec_docs)
         #add get aos docs
         if search_engine == "opensearch" and search_method != "vector" and txt_docs_num > 0:
             aos_docs = _get_aos_docs(new_question,index_name,aos_username,aos_passwd,aos_host,aos_port,txt_docs_num)
-            print('aos_docs:',aos_docs)
+            # print('aos_docs:',aos_docs)
         
         output: Dict[str, Any] = {}
         if self.response_if_no_docs_found is not None and len(vec_docs+aos_docs) == 0:
@@ -286,7 +286,7 @@ class BaseConversationalRetrievalChain(Chain):
                 docs = new_vec_docs + new_aos_docs
             else:
                 docs = new_vec_docs
-            print('last docs:',docs)
+            # print('last docs:',docs)
             
             if len(docs) == 0:
                 output[self.output_key] = self.response_if_no_docs_found
@@ -320,7 +320,7 @@ class BaseConversationalRetrievalChain(Chain):
                             new_docs_with_scores.append((ori_only_docs[i],scores[i],sentences[i]))
                     deduplication_docs = [doc[0] for doc in new_docs_with_scores]
                     docs = new_docs_with_scores
-                    print('deduplication docs:',docs)
+                    # print('deduplication docs:',docs)
 
                 answer = self.combine_docs_chain.run(
                     input_documents=deduplication_docs, callbacks=_run_manager.get_child(), **new_inputs
