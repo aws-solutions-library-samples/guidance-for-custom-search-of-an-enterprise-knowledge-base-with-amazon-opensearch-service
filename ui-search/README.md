@@ -124,6 +124,8 @@ HOST=【EC2hostname】npm run start
 # example: HOST=ec2-107-23-142-5.compute-1.amazonaws.com npm run start
 ```
 
+Web 应用程序将默认在 3030 端口启动，进入 AWS Console 的 EC2 管理界面，增加该实例安全组的 inbound rules，TCP 允许 3030 端口。
+
 # local build test
 
 ```bash
