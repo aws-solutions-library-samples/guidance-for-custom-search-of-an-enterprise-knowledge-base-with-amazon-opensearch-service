@@ -33,7 +33,18 @@ Note: You can always refer to the [user guide of Amplify](https://docs.aws.amazo
 
 ## Deployment Overview
 
-It is simple to publish this app with amplify, only 4 commands are needed.
+Firstly, navigate to the folder where the frontend code lives and install the packages.
+
+```bash
+# go to <ui-search> folder
+cd ui-search
+# install the packages
+npm install
+```
+
+It is recommended to use node 16. You might run into errors if you use versions above node 16.
+
+### It is simple to publish this app with amplify, only 4 commands are needed.
 
 ```bash
 amplify init
@@ -82,16 +93,21 @@ https://dev.xxxx.amplifyapp.com
 # visit your app ⬆️
 ```
 
+#### Note: In some cases, you need to run the command with `sudo` permission
+
 \*\* While you are publishing the app, you can finish the last step below
 
-### ‼️ VERY IMPORTANT: Don't forget to manage the amplify app
+### ‼️ IMPORTANT: Don't forget to manage the amplify app
 
 ```bash
 # launch your amplify console
 amplify console
+# if error occurs, please copy and paste the console URL to your browser
 ```
 
-- Go to `Rewrites and redirects` under 'App Settings'
+On amplify console page:
+
+- On the side navigation panel, click `Rewrites and redirects` under `App Settings`
 - Add a rule
 - Write in 'Source address': `</^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json|webp)$)([^.]+$)/>`
 - Write in 'Target address': `/index.html`
