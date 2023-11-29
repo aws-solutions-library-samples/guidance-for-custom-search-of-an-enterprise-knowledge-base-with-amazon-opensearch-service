@@ -120,7 +120,8 @@ On amplify console page:
 # Local development
 
 ```bash
-npm run start
+HOST=【EC2hostname】npm run start
+# example: HOST=ec2-107-23-142-5.compute-1.amazonaws.com npm run start
 ```
 
 # local build test
