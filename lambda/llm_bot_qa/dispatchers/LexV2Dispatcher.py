@@ -64,6 +64,7 @@ class LexV2Dispatcher():
             {
              'query':self.input_transcript,
              'task':'qa',
+             'requestType':'lambda',
              'session_id':qa_session_id
             }
         }
@@ -78,7 +79,8 @@ class LexV2Dispatcher():
         # print(invoke_response.get('Payload').get('body').get('suggestion_answer'))
         payload = invoke_response["Payload"].read().decode("utf-8")
         payload = json.loads(payload)
-        llm_response= json.loads(payload.get('body')).get('suggestion_answer')
+        # llm_response= json.loads(payload.get('body')).get('suggestion_answer')
+        llm_response= json.loads(payload.get('body')).get('text')
         print('llm_response-->',llm_response)
         
         self.message = {

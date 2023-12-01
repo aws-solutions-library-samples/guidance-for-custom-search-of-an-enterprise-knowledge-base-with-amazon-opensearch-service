@@ -60,6 +60,7 @@ class BotStack(Stack):
             actions=[
                 'lexv2:*' ,
                 's3:AmazonS3FullAccess',
+                'logs:*',                
                 'polly:SynthesizeSpeech'
                 ],
             resources=['*'] # Customize it according to your use case
