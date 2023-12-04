@@ -415,14 +415,14 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
               </FormField>
 
               <SpaceBetween direction="horizontal" size="xxl">
-                <FormField constraintText="Has to use a knowledge base">
+                {/* <FormField constraintText="Has to use a knowledge base">
                   <Toggle {...bindGenerateReport}>Generate Report</Toggle>
-                </FormField>
-                <FormField constraintText="OFF when generating report">
+                </FormField> */}
+                {/* <FormField constraintText="OFF when generating report">
                   <Toggle disabled={isCheckedGenerateReport} {...bindContext}>
                     Context
                   </Toggle>
-                </FormField>
+                </FormField> */}
                 {/* <FormField constraintText="Can be enabled when generating report">
                   <Toggle
                     disabled={!isCheckedGenerateReport}
