@@ -301,6 +301,43 @@ class LambdaVPCStack(Stack):
 
         self.apigw = api
 
+    
+    def create_apigw_resource_method_for_content_moderation(self, api, func):
+
+        content_moderation_resource = api.root.add_resource(
+            'content_moderation_check',
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_methods=['GET', 'OPTIONS'],
+                allow_origins=apigw.Cors.ALL_ORIGINS)
+        )
+
+        content_moderation_integraion = apigw.LambdaIntegration(
+            func,
+            proxy=True,
+            integration_responses=[
+                apigw.IntegrationResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': "'*'"
+                    }
+                )
+            ]
+        )
+
+        content_moderation_resource.add_method(
+            'GET',
+            content_moderation_integraion,
+            method_responses=[
+                apigw.MethodResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': True
+                    }
+                )
+            ]
+        )
+    
+
     def define_lambda_function(self, function_name, role, vpc=None, vpc_subnets=None, timeout=10):
         lambda_function = _lambda.Function(
             self, function_name,
