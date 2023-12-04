@@ -53,6 +53,13 @@ class LambdaVPCStack(Stack):
 
         func_selection = self.node.try_get_context("selection")
 
+        self.langchain_processor_qa_layer = _lambda.LayerVersion(
+            self, 'QALambdaLayer',
+            code=_lambda.Code.from_asset('../lambda/langchain_processor_layer'),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_9],
+            description='QA Library'
+        )
+
         print("These functions are slected( configuration is in cdk.json context 'selection'):  ", func_selection)
         # role and policy (smartsearch knn doc,opensearch-search-knn,knn_faq),all three function using same policy.
         if ('knn' in func_selection or 'knn_faq' in func_selection or 'knn_doc' in func_selection):
@@ -381,6 +388,7 @@ class LambdaVPCStack(Stack):
             function_name=function_name_qa,
             runtime=_lambda.Runtime.PYTHON_3_9,
             role=langchain_processor_role,
+            layers=[self.langchain_processor_qa_layer],
             code=_lambda.Code.from_asset('../lambda/' + function_name_qa),
             handler='lambda_function' + '.lambda_handler',
             timeout=Duration.minutes(10),
@@ -573,6 +581,7 @@ class LambdaVPCStack(Stack):
             function_name=function_name,
             runtime=_lambda.Runtime.PYTHON_3_9,
             role=data_load_role,
+            layers=[self.langchain_processor_qa_layer],
             code=_lambda.Code.from_asset('../lambda/' + function_name),
             handler='lambda_function' + '.lambda_handler',
             timeout=Duration.minutes(10),
