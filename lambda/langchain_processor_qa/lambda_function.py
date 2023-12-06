@@ -255,8 +255,10 @@ def lambda_handler(event, context):
                 QUERY_VERIFIED_RESULT = _suggestion
                 response['body'] = json.dumps(
                     {
-                        'datetime': time.time() * 1000,
                         'text': query,
+                        'timestamp': time.time() * 1000,
+                        'sourceData': [],
+                        'scoreQueryAnswer': str(round(0.0,3)),
                         'contentCheckLabel': _reason,
                         'contentCheckSuggestion': _suggestion
                     })
