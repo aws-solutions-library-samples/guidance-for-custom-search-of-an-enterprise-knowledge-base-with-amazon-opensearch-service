@@ -236,7 +236,8 @@ class LambdaStack(Stack):
         # langchain_qa_func加wss gw 环境变量
         langchain_qa_func.add_environment("api_gw", web_socket_api.api_id)
         # cfn output
-        web_socket_url = f"wss://{web_socket_api.api_id}.execute-api.{os.getenv('AWS_REGION')}.amazonaws.com/prod"
+        CN_SUFFIX = ".cn" if "cn-" in os.getenv('AWS_REGION') else ""
+        web_socket_url = f"wss://{web_socket_api.api_id}.execute-api.{os.getenv('AWS_REGION')}.amazonaws.com{CN_SUFFIX}/prod"
         cdk.CfnOutput(self, 'web_socket_api', value=web_socket_url, export_name='WebSocketApi')
 
         if 'knn_faq' in func_selection:

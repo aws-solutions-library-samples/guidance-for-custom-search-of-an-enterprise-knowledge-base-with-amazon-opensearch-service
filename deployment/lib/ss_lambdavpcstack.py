@@ -19,6 +19,8 @@ from aws_cdk import (
     ContextProvider,
     RemovalPolicy
 )
+from aws_cdk.aws_apigatewayv2_integrations_alpha import WebSocketLambdaIntegration
+from aws_cdk import aws_apigatewayv2_alpha as apigwv2
 import os
 
 binary_media_types = ["multipart/form-data"]
@@ -52,6 +54,13 @@ class LambdaVPCStack(Stack):
         # get CloudFormation parameter
 
         func_selection = self.node.try_get_context("selection")
+
+        self.langchain_processor_qa_layer = _lambda.LayerVersion(
+            self, 'QALambdaLayer',
+            code=_lambda.Code.from_asset('../lambda/langchain_processor_layer'),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_9],
+            description='QA Library'
+        )
 
         print("These functions are slected( configuration is in cdk.json context 'selection'):  ", func_selection)
         # role and policy (smartsearch knn doc,opensearch-search-knn,knn_faq),all three function using same policy.
@@ -187,6 +196,105 @@ class LambdaVPCStack(Stack):
         #             )
         #         ]
         #     )
+        websocket_table = dynamodb.Table(self, "websocket",
+                                         partition_key=dynamodb.Attribute(name="id",
+                                                                          type=dynamodb.AttributeType.STRING),
+                                         removal_policy=RemovalPolicy.DESTROY
+                                         )
+
+        _websocket_policy = _iam.PolicyStatement(
+            actions=[
+                'lambda:*',
+                'apigateway:*',
+                'dynamodb:*',
+                'logs:*',
+            ],
+            resources=['*']  
+        )
+        websocket_role = _iam.Role(
+            self, 'websocket_role',
+            assumed_by=_iam.ServicePrincipal('lambda.amazonaws.com')
+        )
+        websocket_role.add_to_policy(_websocket_policy)
+
+        websocket_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonDynamoDBFullAccess")
+        )
+
+        table_name = websocket_table.table_name
+
+        connect_function_name = 'websocket_connect'
+        websocketconnect = _lambda.Function(
+            self, connect_function_name,
+            function_name=connect_function_name,
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            role=websocket_role,
+            code=_lambda.Code.from_asset('../lambda/' + connect_function_name),
+            handler='lambda_function' + '.lambda_handler',
+        )
+        websocketconnect.add_environment("TABLE_NAME", table_name)
+
+        disconnect_function_name = 'websocket_disconnect'
+        websocketdisconnect = _lambda.Function(
+            self, disconnect_function_name,
+            function_name=disconnect_function_name,
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            role=websocket_role,
+            code=_lambda.Code.from_asset('../lambda/' + disconnect_function_name),
+            handler='lambda_function' + '.lambda_handler',
+        )
+        websocketdisconnect.add_environment("TABLE_NAME", table_name)
+
+        default_function_name = 'websocket_default'
+        websocketdefault = _lambda.Function(
+            self, default_function_name,
+            function_name=default_function_name,
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            role=websocket_role,
+            code=_lambda.Code.from_asset('../lambda/' + disconnect_function_name),
+            handler='lambda_function' + '.lambda_handler',
+        )
+        websocketdefault.add_environment("TABLE_NAME", table_name)
+
+        search_function_name = 'websocket_search'
+        websocketsearch = _lambda.Function(
+            self, search_function_name,
+            function_name=search_function_name,
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            role=websocket_role,
+            code=_lambda.Code.from_asset('../lambda/' + search_function_name),
+            handler='lambda_function' + '.lambda_handler',
+        )
+        websocketsearch.add_environment("TABLE_NAME", table_name)
+        websocketsearch.add_environment("DIR_NAME", "search")
+
+        web_socket_api = apigwv2.WebSocketApi(self, "websocketapi")
+        apigwv2.WebSocketStage(self, "prod",
+                               web_socket_api=web_socket_api,
+                               stage_name="prod",
+                               auto_deploy=True
+                               )
+        web_socket_api.add_route("search",
+                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketsearch)
+                                 )
+        web_socket_api.add_route("$connect",
+                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketconnect)
+                                 )
+        web_socket_api.add_route("$disconnect",
+                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketdisconnect)
+                                 )
+        web_socket_api.add_route("$default",
+                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketdefault)
+                                 )
+
+        # langchain_qa_func加wss gw 环境变量
+        langchain_qa_func.add_environment("api_gw", web_socket_api.api_id)
+        # cfn output
+        CN_SUFFIX = ".cn" if "cn-" in os.getenv('AWS_REGION') else ""
+        web_socket_url = f"wss://{web_socket_api.api_id}.execute-api.{os.getenv('AWS_REGION')}.amazonaws.com{CN_SUFFIX}/prod"
+        cdk.CfnOutput(self, 'web_socket_api', value=web_socket_url, export_name='WebSocketApi')
+
+
         if ('knn_faq' in func_selection):
             self.opensearch_search_knn_faq_lambda = self.define_lambda_function('opensearch-search-knn-faq',
                                                                                 knn_lambda_role)
@@ -245,6 +353,10 @@ class LambdaVPCStack(Stack):
                                                                                 vpc_subnets=vpc_subnets_selection,
                                                                                 timeout=60)
             self.opensearch_search_knn_doc_lambda.add_environment("host", host)
+            #################################################
+            self.opensearch_search_knn_doc_lambda.add_environment("domain_name", web_socket_api.api_id)
+            self.opensearch_search_knn_doc_lambda.add_environment("region", os.getenv('AWS_REGION', 'us-west-2'))
+
             # search_knn_doc_resource
             search_knn_doc_resource = api.root.add_resource(
                 'search_knn_doc',
@@ -294,6 +406,43 @@ class LambdaVPCStack(Stack):
 
         self.apigw = api
 
+    
+    def create_apigw_resource_method_for_content_moderation(self, api, func):
+
+        content_moderation_resource = api.root.add_resource(
+            'content_moderation_check',
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_methods=['GET', 'OPTIONS'],
+                allow_origins=apigw.Cors.ALL_ORIGINS)
+        )
+
+        content_moderation_integraion = apigw.LambdaIntegration(
+            func,
+            proxy=True,
+            integration_responses=[
+                apigw.IntegrationResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': "'*'"
+                    }
+                )
+            ]
+        )
+
+        content_moderation_resource.add_method(
+            'GET',
+            content_moderation_integraion,
+            method_responses=[
+                apigw.MethodResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': True
+                    }
+                )
+            ]
+        )
+    
+
     def define_lambda_function(self, function_name, role, vpc=None, vpc_subnets=None, timeout=10):
         lambda_function = _lambda.Function(
             self, function_name,
@@ -332,6 +481,7 @@ class LambdaVPCStack(Stack):
                     'ec2:DescribeNetworkInterfaces',
                     'ec2:DeleteNetworkInterface',
                     'kendra:*',
+                    'execute-api:*',  ##############
                     'bedrock:*'
                 ],
                 resources=['*']  # 可根据需求进行更改
@@ -347,6 +497,7 @@ class LambdaVPCStack(Stack):
                     'ec2:DescribeNetworkInterfaces',
                     'ec2:DeleteNetworkInterface',
                     'es:*',
+                    'execute-api:*'  ##############
                     'bedrock:*'
                 ],
                 resources=['*']  # 可同时使用opensearch和kendra
@@ -381,6 +532,7 @@ class LambdaVPCStack(Stack):
             function_name=function_name_qa,
             runtime=_lambda.Runtime.PYTHON_3_9,
             role=langchain_processor_role,
+            layers=[self.langchain_processor_qa_layer],
             code=_lambda.Code.from_asset('../lambda/' + function_name_qa),
             handler='lambda_function' + '.lambda_handler',
             timeout=Duration.minutes(10),
@@ -573,6 +725,7 @@ class LambdaVPCStack(Stack):
             function_name=function_name,
             runtime=_lambda.Runtime.PYTHON_3_9,
             role=data_load_role,
+            layers=[self.langchain_processor_qa_layer],
             code=_lambda.Code.from_asset('../lambda/' + function_name),
             handler='lambda_function' + '.lambda_handler',
             timeout=Duration.minutes(10),
@@ -699,7 +852,10 @@ class LambdaVPCStack(Stack):
                 "logs:DescribeLogStreams",
                 "logs:PutLogEvents",
                 "logs:GetLogEvents",
-                "logs:FilterLogEvents"
+                "logs:FilterLogEvents",
+                'ec2:CreateNetworkInterface',
+                'ec2:DescribeNetworkInterfaces',
+                'ec2:DeleteNetworkInterface',
             ],
             resources=['*']
         )
