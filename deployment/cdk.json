@@ -40,7 +40,7 @@
       "langchain_processor_qa"
     ],
     "extension": [
-      "nobot"   
+      "bot"   
     ],
     "notebook_deployment": true,
     "search_engine_opensearch":true,

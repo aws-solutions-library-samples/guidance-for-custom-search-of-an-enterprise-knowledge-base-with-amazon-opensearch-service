@@ -60,7 +60,7 @@ class BotStack(Stack):
             actions=[
                 'lexv2:*' ,
                 's3:AmazonS3FullAccess',
-                'logs:*',                
+                'logs:*',
                 'polly:SynthesizeSpeech'
                 ],
             resources=['*'] # Customize it according to your use case
@@ -127,8 +127,9 @@ class BotStack(Stack):
             test_bot_alias_settings=lex.CfnBot.TestBotAliasSettingsProperty(
                 bot_alias_locale_settings=[lex.CfnBot.BotAliasLocaleSettingsItemProperty(
                     bot_alias_locale_setting= bot_alias_locale_setting, 
-                    locale_id="zh_CN"                           # zh_CN = Mandarin Chinese
-                )],
+                    locale_id=loc                          # zh_CN = Mandarin Chinese
+                )
+                for loc in ["zh_CN","en_US"]],
                 conversation_log_settings = conversation_log_settings,
                 sentiment_analysis_settings=SENTIMENT_ANALYSYS_SETTINGS
             )
