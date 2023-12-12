@@ -146,6 +146,8 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
   }, [role, taskDefinition, outputFormat, language]);
 
   const resetAllFields = useCallback(() => {
+    // reset fields after the creation completes
+    // NOTE: add code when adding new inputs
     resetName();
     resetSearchEngine();
     setLLMData();
@@ -160,6 +162,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     setKendraIndexId('');
     setSearchMethod(SEARCH_METHOD[0].value);
     setTopK(3);
+    setContextRounds(3);
     setTxtDocsNum(0);
     setVecDocsScoreThresholds(0);
     setTxtDocsScoreThresholds(0);
@@ -175,6 +178,8 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
 
   useEffect(() => {
     if (sessionTemplateOpt?.value) {
+      // Setting template
+      // NOTE: add code when adding new inputs
       const {
         configs: {
           name,
@@ -191,6 +196,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
           indexName,
           kendraIndexId,
           topK,
+          contextRounds,
           searchMethod,
           txtDocsNum,
           vecDocsScoreThresholds,
@@ -220,6 +226,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
       if (indexName !== undefined) setIndexName(indexName);
       if (kendraIndexId !== undefined) setKendraIndexId(kendraIndexId);
       if (topK !== undefined) setTopK(topK);
+      if (contextRounds !== undefined) setContextRounds(contextRounds);
       if (searchMethod !== undefined) setSearchMethod(searchMethod);
       if (txtDocsNum !== undefined) setTxtDocsNum(txtDocsNum);
       if (vecDocsScoreThresholds !== undefined)
