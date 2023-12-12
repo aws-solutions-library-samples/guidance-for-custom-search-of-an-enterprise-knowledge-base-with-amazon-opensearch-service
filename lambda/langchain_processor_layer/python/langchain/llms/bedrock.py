@@ -12,6 +12,7 @@ from langchain.utilities.anthropic import (
     get_num_tokens_anthropic,
     get_token_ids_anthropic,
 )
+from bedrockAdapter import BedrockAdapter
 
 HUMAN_PROMPT = "\n\nHuman:"
 ASSISTANT_PROMPT = "\n\nAssistant:"
@@ -274,13 +275,13 @@ class BedrockBase(BaseModel, ABC):
         params = {**_model_kwargs, **kwargs}
         input_body = LLMInputOutputAdapter.prepare_input(provider, prompt, params)
 #         print('input_body:',input_body)
-        
+
         try:
             import json
             import boto3
 
             lambda_client = boto3.client('lambda')
-            
+
             body={"queryStringParameters":input_body}
             response = lambda_client.invoke(
                         FunctionName = 'bedrock_invoke',
@@ -292,7 +293,7 @@ class BedrockBase(BaseModel, ABC):
             body = json.loads(payload['body'])
             text = body['answer']
 #             print('answer:',text)
-       
+
         except Exception as e:
             raise ValueError(f"Error raised by bedrock service: {e}")
 
@@ -300,9 +301,9 @@ class BedrockBase(BaseModel, ABC):
             text = enforce_stop_tokens(text, stop)
 
         return text
-            
-            
-    
+
+
+
     def _prepare_input_and_invoke_stream(
         self,
         prompt: str,
@@ -327,7 +328,7 @@ class BedrockBase(BaseModel, ABC):
             _model_kwargs["stream"] = True
 
         params = {**_model_kwargs, **kwargs}
-        input_body = LLMInputOutputAdapter.prepare_input(provider, prompt, params)
+        input_body = BedrockAdapter.prepare_input(provider, prompt, params)
         body = json.dumps(input_body)
 
         try:
