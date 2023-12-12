@@ -2,7 +2,8 @@
   "extends": ["react-app", "prettier"],
   "plugins": ["prettier"],
   "rules": {
-    "prettier/prettier": "error",
-    "no-restricted-globals": ["warn", "event", "fdescribe"]
+    "prettier/prettier": "warn",
+    "no-restricted-globals": ["warn", "event", "fdescribe"],
+    "no-unused-vars": 0
   }
 }
