@@ -7,6 +7,7 @@ from datetime import datetime
 import time
 from smart_search_qa import SmartSearchQA
 from prompt import *
+import copy
 
 lam = boto3.client('lambda')
 
@@ -30,13 +31,15 @@ TOP_K = 2
 domain_name = os.environ.get('api_gw')
 stage = 'prod'
 
+streaming_answer_list=[]
+
 
 def lambda_handler(event, context):
-    
+
     print("event:",event)
     # print("region:",region)
     # print('table name:',table_name)
-    
+
     evt_para = {}
     if 'queryStringParameters' in event.keys():
         evt_para = event['queryStringParameters']
@@ -132,7 +135,7 @@ def lambda_handler(event, context):
     apiUrl = ''
     if "apiUrl" in evt_body.keys():
         apiUrl = evt_body['apiUrl']
-        
+
     apiKey = ''
     if "apiKey" in evt_body.keys():
         apiKey = evt_body['apiKey']
@@ -194,7 +197,7 @@ def lambda_handler(event, context):
     password = None
     host = HOST
     if searchEngine == "opensearch":
-        # retrieve secret manager value by key using boto3                                             
+        # retrieve secret manager value by key using boto3
         sm_client = boto3.client('secretsmanager')
         master_user = sm_client.get_secret_value(SecretId='opensearch-master-user')['SecretString']
         data = json.loads(master_user)
@@ -214,9 +217,8 @@ def lambda_handler(event, context):
     }
 
     try:
-        connectionId = str(event.get('requestContext', {}).get('connectionId'))
         search_qa = SmartSearchQA()
-        search_qa.init_cfg_withstreaming(index,
+        search_qa.init_cfg(index,
                            username,
                            password,
                            host,
@@ -234,8 +236,7 @@ def lambda_handler(event, context):
                            modelName,
                            apiKey,
                            secretKey,
-                           maxTokens,
-                           MyStreamingHandler(connectionId,domain_name,region)
+                           maxTokens
                            )
 
         QUERY_VERIFIED_RESULT = None
@@ -257,10 +258,8 @@ def lambda_handler(event, context):
                 QUERY_VERIFIED_RESULT = _suggestion
                 response['body'] = json.dumps(
                     {
+                        'datetime': time.time() * 1000,
                         'text': query,
-                        'timestamp': time.time() * 1000,
-                        'sourceData': [],
-                        'scoreQueryAnswer': str(round(0.0,3)),
                         'contentCheckLabel': _reason,
                         'contentCheckSuggestion': _suggestion
                     })
@@ -349,7 +348,7 @@ def lambda_handler(event, context):
                 if "txtDocsScoreThresholds" in evt_body.keys() and evt_body['txtDocsScoreThresholds'] is not None:
                     txtDocsScoreThresholds = float(evt_body['txtDocsScoreThresholds'])
                 print('txtDocsScoreThresholds:', txtDocsScoreThresholds)
-                
+
                 historyRounds = 3
                 if "historyRounds" in evt_body.keys():
                     historyRounds = int(evt_body['historyRounds'])
@@ -486,17 +485,16 @@ def lambda_handler(event, context):
                             source["scoreQueryDoc"] = round(float(query_docs_scores[i]),3)
                         else:
                             source["scoreQueryDoc"] = -1
-                            
+
                         if (searchEngine == "opensearch" or searchEngine == "zilliz") and len(answer_docs_scores) > 0:
                             source["scoreAnswerDoc"] = round(float(answer_docs_scores[i]),3)
                         else:
                             source["scoreAnswerDoc"] = -1
-                        
+
                         source_list.append(source)
-                    
+
                     response['body'] = json.dumps(
                         {
-                            'message': 'streaming_end',
                             'timestamp': time.time() * 1000,
                             'sourceData': source_list,
                             'text': answer,
@@ -505,6 +503,32 @@ def lambda_handler(event, context):
                             'contentCheckSuggestion': contentCheckSuggestion
 
                         })
+
+                    streaming_answer={
+                            'timestamp': time.time() * 1000,
+                            'sourceData': source_list,
+                            'text': answer,
+                            'scoreQueryAnswer': str(round(query_answer_score,3)),
+                            'contentCheckLabel': contentCheckLabel,
+                            'contentCheckSuggestion': contentCheckSuggestion
+
+                        }
+                    answer_str=''
+                    for i in range(1, 11):
+                        new_answer = copy.deepcopy(streaming_answer)  # 创建一个新的字典
+                        if i < 10:
+                            new_answer["message"] = "streaming"
+                            new_answer["sourceData"] = []
+                            new_answer["scoreQueryAnswer"] = ""
+                            new_answer["contentCheckLabel"] = ""
+                            new_answer["contentCheckSuggestion"] = ""
+                        else:
+                            new_answer["message"] = "streaming_end"
+                        answer_str=f"{answer_str}word{i}"
+                        new_answer["text"]=answer_str
+
+                        streaming_answer_list.append(new_answer)
+
 
             elif task == "summarize":
 
@@ -540,8 +564,13 @@ def lambda_handler(event, context):
                 endpoint_url = F"https://{domain_name}.execute-api.{region}.amazonaws.com/{stage}"
             apigw_management = boto3.client('apigatewaymanagementapi',
                                             endpoint_url=endpoint_url)
-            api_res = apigw_management.post_to_connection(ConnectionId=connectionId,
-                                                          Data=response['body'])
+            for answer in streaming_answer_list:
+
+                response_body = json.dumps(answer)
+                time.sleep(1)
+                api_res = apigw_management.post_to_connection(ConnectionId=connectionId, Data=response_body)
+            #api_res = apigw_management.post_to_connection(ConnectionId=connectionId,
+            #                                              Data=response['body'])
             print('api_res', api_res)
         else:
             return response
@@ -575,51 +604,3 @@ def moderate_content(function_name, access_token, content):
     print(f"result : {result}")
 
     return result
-import sys
-from typing import TYPE_CHECKING, Any, Dict, List
-#from langchain_core.outputs import LLMResult
-import time
-import boto3
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-class MyStreamingHandler(StreamingStdOutCallbackHandler ):
-    def __init__(self, connectionId: str, domainName: str, region: str):
-
-        if region.find('cn') >=0 :
-            endpoint_url = F"https://{domainName}.execute-api.{region}.amazonaws.com.cn/{stage}"
-        else:
-            endpoint_url = F"https://{domainName}.execute-api.{region}.amazonaws.com/{stage}"
-        self.apigw_management = boto3.client('apigatewaymanagementapi',
-                                             endpoint_url=endpoint_url)
-        self.answer=''
-        self.connectionId=connectionId
-
-
-    def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
-        self.answer=f"{self.answer}{token}"
-        streaming_answer={
-            'message': "streaming",
-            'timestamp': time.time() * 1000,
-            'sourceData': [],
-            'text': self.answer,
-            'scoreQueryAnswer': '',
-            'contentCheckLabel': '',
-            'contentCheckSuggestion': ''
-
-        }
-        response_body = json.dumps(streaming_answer)
-        self.api_res = self.apigw_management.post_to_connection(ConnectionId=self.connectionId, Data=response_body)
-"""  def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
-        self.answer=f"{self.answer}<end>"
-        streaming_answer={
-            'message': "streaming_end",
-            'timestamp': time.time() * 1000,
-            'sourceData': [],
-            'text': self.answer,
-            'scoreQueryAnswer': '',
-            'contentCheckLabel': '',
-            'contentCheckSuggestion': ''
-
-        }
-        response_body = json.dumps(streaming_answer)
-        self.api_res = self.apigw_management.post_to_connection(ConnectionId=self.connectionId, Data=response_body)
-"""

@@ -188,6 +188,13 @@ def init_model_bedrock(model_id):
         return llm
     except Exception as e:
         return None
-
+def init_model_bedrock_withstreaming(model_id,callbackHandler):
+    try:
+        llm = Bedrock(model_id=model_id,
+                      streaming=True,
+                     callbacks=[callbackHandler],)
+        return llm
+    except Exception as e:
+        return None
 def string_processor(string):
     return string.replace('\n','').replace('"','').replace('“','').replace('”','').strip()
