@@ -370,7 +370,10 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
 
             <SpaceBetween direction="vertical" size="xl">
               <ColumnLayout columns={3}>
-                <FormField label="LLM" description="Please select an LLM">
+                <FormField
+                  label="Language Model Strategy"
+                  description="Please select a strategy"
+                >
                   <Select
                     empty="Add llm if no options present"
                     selectedOption={{ label: llmData?.modelName }}
@@ -378,12 +381,16 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                       setLLMData(detail.selectedOption.value);
                     }}
                     options={lsLanguageModelList.map((item) => ({
-                      label: item.modelName,
+                      label:
+                        item.strategyName || item.modelName || item.recordId,
                       value: item,
                     }))}
                   />
                 </FormField>
-                <FormField label="Language" description="Select a language">
+                <FormField
+                  label="Language"
+                  description="Select a language for conversation"
+                >
                   <Select
                     selectedOption={{ value: language }}
                     onChange={({ detail }) =>

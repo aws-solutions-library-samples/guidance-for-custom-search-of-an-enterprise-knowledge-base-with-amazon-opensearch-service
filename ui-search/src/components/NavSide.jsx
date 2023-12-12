@@ -61,8 +61,8 @@ export default function NavSide() {
         { type: 'divider' },
         {
           type: 'link',
-          text: 'Add language models',
-          href: '/add-language-models',
+          text: 'Add language model strategies',
+          href: '/add-language-model-strategies',
         },
         {
           type: 'link',

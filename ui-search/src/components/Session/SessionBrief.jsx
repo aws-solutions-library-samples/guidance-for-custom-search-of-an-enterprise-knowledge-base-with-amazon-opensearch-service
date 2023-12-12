@@ -108,7 +108,7 @@ const SessionBrief = ({ configs, expanded }) => {
         <ColumnLayout columns={isKendra ? 3 : 4} variant="text-grid">
           <SpaceBetween size={SIZE}>
             <ValueWithLabel label="Engine">{searchEngine}</ValueWithLabel>
-            <ValueWithLabel label="Language Model">
+            <ValueWithLabel label="Language Model Strategy">
               {llmData?.modelName}
             </ValueWithLabel>
             <ValueWithLabel label="Language">{language}</ValueWithLabel>

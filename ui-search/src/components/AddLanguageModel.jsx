@@ -56,6 +56,7 @@ const THIRD_PARTY_API_MODEL_NAMES = [
 ];
 
 const AddLanguageModel = () => {
+  const [strategyName, bindStrategyName, resetStrategyName] = useInput('');
   const [type, setType] = useState(TYPE.sagemaker);
   const [sagemakerEndpoint, bindSagemakerEndpoint, resetSagemakerEndpoint] =
     useInput('');
@@ -121,7 +122,9 @@ const AddLanguageModel = () => {
   return (
     <SpaceBetween size={SIZE}>
       <SpaceBetween size="s">
-        <Container header={<Header variant="h2">Language Models</Header>}>
+        <Container
+          header={<Header variant="h2">Language Model Strategies</Header>}
+        >
           <SpaceBetween size={SIZE}>
             <Table
               items={lsLanguageModelList}
@@ -138,18 +141,18 @@ const AddLanguageModel = () => {
                 </Box>
               }
               columnDefinitions={[
-                // {
-                //   recordId: 'recordId',
-                //   header: 'ID',
-                //   width: 90,
-                //   cell: (item) => item.recordId,
-                // },
+                {
+                  id: 'strategyName',
+                  header: 'Strategy Name',
+                  width: 90,
+                  cell: (item) => item.strategyName,
+                },
                 {
                   id: 'modelName',
                   header: 'Model Name',
                   isRowHeader: true,
                   width: 150,
-                  cell: (item) => item.modelName,
+                  cell: (item) => item.modelName || 'n/a',
                 },
                 {
                   id: 'type',
@@ -206,7 +209,7 @@ const AddLanguageModel = () => {
                         iconName="remove"
                         onClick={() => {
                           const bool = window?.confirm(
-                            'Confirm to delete this language model?'
+                            'Confirm to delete this language model strategy?'
                           );
                           if (bool) lsDelLanguageModelItem(item.recordId);
                         }}
@@ -223,13 +226,16 @@ const AddLanguageModel = () => {
                   if (bool) lsClearLanguageModelList();
                 }}
               >
-                Delete all language models
+                Delete all language model strategies
               </Button>
             </Box>
           </SpaceBetween>
         </Container>
       </SpaceBetween>
-      <Container header={<Header variant="h2">Add a language model</Header>}>
+
+      <Container
+        header={<Header variant="h2">Add a language model strategy</Header>}
+      >
         <form onSubmit={(e) => e.preventDefault()}>
           <Form
             variant="embedded"
@@ -244,10 +250,10 @@ const AddLanguageModel = () => {
                       if (type === TYPE.sagemaker) {
                         // Sagemaker endpoint
                         values = {
+                          strategyName,
                           type,
                           embeddingEndpoint,
                           modelType: sagemakerModelType,
-                          modelName: sagemakerEndpoint,
                           recordId: `${sagemakerEndpoint}-${genRandomNum()}`,
                           // *** different items
                           sagemakerEndpoint,
@@ -255,6 +261,7 @@ const AddLanguageModel = () => {
                       } else {
                         // Third Party APIs
                         values = {
+                          strategyName,
                           type,
                           embeddingEndpoint: thirdPartyEmbeddingEndpoint,
                           modelType: thirdPartyModelType,
@@ -279,6 +286,12 @@ const AddLanguageModel = () => {
             }
           >
             <SpaceBetween size={SIZE}>
+              <FormField label="Strategy Name">
+                <Input
+                  {...bindStrategyName}
+                  placeholder="Please provide a name for this language model strategy"
+                />
+              </FormField>
               <FormField stretch label="Please select the endpoint type">
                 <Tiles
                   value={type}
