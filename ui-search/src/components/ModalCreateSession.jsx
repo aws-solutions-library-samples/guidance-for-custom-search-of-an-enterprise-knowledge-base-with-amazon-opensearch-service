@@ -115,6 +115,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
   const [vecDocsScoreThresholds, setVecDocsScoreThresholds] = useState(0);
   const [txtDocsScoreThresholds, setTxtDocsScoreThresholds] = useState(0);
   const [topK, setTopK] = useState(3);
+  const [contextRounds, setContextRounds] = useState(3);
 
   const [isCheckedScoreQA, bindScoreQA, resetScoreQA, setIsCheckedScoreQA] =
     useToggle(true);
@@ -375,12 +376,6 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                     }))}
                   />
                 </FormField>
-                <FormField
-                  label="Role Name"
-                  description="Please determine the role"
-                >
-                  <Input {...bindRole} placeholder="a footwear vendor" />
-                </FormField>
                 <FormField label="Language" description="Select a language">
                   <Select
                     selectedOption={{ value: language }}
@@ -390,7 +385,28 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                     options={OPTIONS_LANGUAGE}
                   />
                 </FormField>
+                <FormField
+                  label="Context Rounds"
+                  description="Search with how many rounds of context"
+                >
+                  <Input
+                    step={1}
+                    type="number"
+                    value={contextRounds}
+                    onChange={({ detail }) => {
+                      setContextRounds(detail.value);
+                    }}
+                  />
+                </FormField>
               </ColumnLayout>
+
+              <FormField
+                stretch
+                label="Role Name"
+                description="Please determine the role"
+              >
+                <Input {...bindRole} placeholder="a footwear vendor" />
+              </FormField>
               <FormField
                 stretch
                 label="Task Definition"
@@ -398,7 +414,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
               >
                 <Textarea
                   {...bindTaskDefinition}
-                  rows={5}
+                  rows={2}
                   placeholder="recommend appropriate footwear to the customer"
                 />
               </FormField>
@@ -413,17 +429,15 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                   placeholder="answer in English"
                 />
               </FormField>
-
-              <SpaceBetween direction="horizontal" size="xxl">
-                {/* <FormField constraintText="Has to use a knowledge base">
+              {/* <FormField constraintText="Has to use a knowledge base">
                   <Toggle {...bindGenerateReport}>Generate Report</Toggle>
                 </FormField> */}
-                {/* <FormField constraintText="OFF when generating report">
+              {/* <FormField constraintText="OFF when generating report">
                   <Toggle disabled={isCheckedGenerateReport} {...bindContext}>
                     Context
                   </Toggle>
                 </FormField> */}
-                {/* <FormField constraintText="Can be enabled when generating report">
+              {/* <FormField constraintText="Can be enabled when generating report">
                   <Toggle
                     disabled={!isCheckedGenerateReport}
                     {...bindMapReduce}
@@ -431,6 +445,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                     Map Reduce
                   </Toggle>
                 </FormField> */}
+              <ColumnLayout columns={3}>
                 <FormField constraintText="ON when generating report">
                   <Toggle
                     {...bindKnowledgeBase}
@@ -439,8 +454,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                     Knowledge Base
                   </Toggle>
                 </FormField>
-              </SpaceBetween>
-
+              </ColumnLayout>
               {isCheckedKnowledgeBase ? (
                 isKendra ? (
                   <SpaceBetween direction="vertical" size="s">
@@ -604,7 +618,6 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                   </SpaceBetween>
                 )
               ) : null}
-
               {isKendra ? null : (
                 <FormField stretch label="Display Scores">
                   <SpaceBetween direction="horizontal" size="xxl">
@@ -614,7 +627,6 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                   </SpaceBetween>
                 </FormField>
               )}
-
               <ExpandableSection
                 headerText="Prompt Summary"
                 defaultExpanded
