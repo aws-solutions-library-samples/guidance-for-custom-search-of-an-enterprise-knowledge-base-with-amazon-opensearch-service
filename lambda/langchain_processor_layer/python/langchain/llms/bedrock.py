@@ -12,7 +12,7 @@ from langchain.utilities.anthropic import (
     get_num_tokens_anthropic,
     get_token_ids_anthropic,
 )
-from bedrockAdapter import BedrockAdapter
+from langchain.llms.bedrockAdapter import BedrockAdapter
 
 HUMAN_PROMPT = "\n\nHuman:"
 ASSISTANT_PROMPT = "\n\nAssistant:"
