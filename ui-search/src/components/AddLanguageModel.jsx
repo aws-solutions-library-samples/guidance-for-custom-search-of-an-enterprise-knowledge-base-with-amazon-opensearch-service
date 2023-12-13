@@ -7,15 +7,15 @@ import {
   FormField,
   Header,
   Input,
-  Select,
   SpaceBetween,
   Table,
   Tiles,
-  RadioGroup,
+  Toggle,
 } from '@cloudscape-design/components';
 import { useCallback, useEffect, useState } from 'react';
 import useInput from 'src/hooks/useInput';
 import useLsLanguageModelList from 'src/hooks/useLsLanguageModelList';
+import useToggle from 'src/hooks/useToggle';
 import { genRandomNum } from 'src/utils/genUID';
 
 const SIZE = 'l';
@@ -101,7 +101,15 @@ const AddLanguageModel = () => {
     resetThirdPartySecretKey();
   }, [thirdPartyModelType]);
 
+  const [
+    isCheckedTitanEmbedding,
+    bindIsCheckedTitanEmbedding,
+    resetTitanEmbedding,
+  ] = useToggle(false);
+
   const resetForm = useCallback(() => {
+    resetStrategyName();
+    resetTitanEmbedding();
     resetSagemakerEndpoint();
     resetEmbeddingEndpoint();
     resetThirdPartyEmbeddingEmbeddingEndpoint();
@@ -168,7 +176,7 @@ const AddLanguageModel = () => {
                 },
                 {
                   id: 'sagemakerEndpoint',
-                  header: 'Sagemaker Endpoint',
+                  header: 'SageMaker Endpoint',
                   width: 200,
                   cell: (item) => item.sagemakerEndpoint || 'n/a',
                 },
@@ -234,7 +242,7 @@ const AddLanguageModel = () => {
       </SpaceBetween>
 
       <Container
-        header={<Header variant="h2">Add a language model strategy</Header>}
+        header={<Header variant="h2">Create a language model strategy</Header>}
       >
         <form onSubmit={(e) => e.preventDefault()}>
           <Form
@@ -248,7 +256,7 @@ const AddLanguageModel = () => {
                     try {
                       let values;
                       if (type === TYPE.sagemaker) {
-                        // Sagemaker endpoint
+                        // SageMaker endpoint
                         values = {
                           strategyName,
                           type,
@@ -257,6 +265,7 @@ const AddLanguageModel = () => {
                           recordId: `${sagemakerEndpoint}-${genRandomNum()}`,
                           // *** different items
                           sagemakerEndpoint,
+                          isCheckedTitanEmbedding,
                         };
                       } else {
                         // Third Party APIs
@@ -286,7 +295,7 @@ const AddLanguageModel = () => {
             }
           >
             <SpaceBetween size={SIZE}>
-              <FormField label="Strategy Name">
+              <FormField stretch label="Strategy Name">
                 <Input
                   {...bindStrategyName}
                   placeholder="Please provide a name for this language model strategy"
@@ -299,7 +308,7 @@ const AddLanguageModel = () => {
                   items={[
                     {
                       value: TYPE.sagemaker,
-                      label: 'Sagemaker Endpoint',
+                      label: 'SageMaker Endpoint',
                       description:
                         'Deployed service for real-time ML model inference',
                     },
@@ -331,12 +340,25 @@ const AddLanguageModel = () => {
                       options={SAGEMAKER_MODEL_TYPE}
                     /> */}
                   </FormField>
-                  <FormField label="Sagemaker Endpoint">
-                    <Input {...bindSagemakerEndpoint} />
+                  <FormField label="SageMaker Endpoint">
+                    <Input
+                      {...bindSagemakerEndpoint}
+                      placeholder="Please provide SageMaker Endpoint"
+                    />
                   </FormField>
-                  <FormField label="Embedding Endpoint">
-                    <Input {...bindEmbeddingEndpoint} />
+                  <FormField>
+                    <Toggle {...bindIsCheckedTitanEmbedding}>
+                      Use Titan Embedding
+                    </Toggle>
                   </FormField>
+                  {isCheckedTitanEmbedding ? null : (
+                    <FormField label="Embedding Endpoint">
+                      <Input
+                        {...bindEmbeddingEndpoint}
+                        placeholder="Please provide embedding endpoint"
+                      />
+                    </FormField>
+                  )}
                 </>
               ) : (
                 <>
@@ -375,25 +397,40 @@ const AddLanguageModel = () => {
                     /> */}
                   </FormField>
                   <FormField label="Embedding Endpoint">
-                    <Input {...bindThirdPartyEmbeddingEndpoint} />
+                    <Input
+                      {...bindThirdPartyEmbeddingEndpoint}
+                      placeholder="Please provide embedding endpoint"
+                    />
                   </FormField>
                   {thirdPartyModelType ===
                   'bedrock' ? null : thirdPartyModelType === 'bedrock_api' ? (
                     <>
                       <FormField label="API URL">
-                        <Input {...bindThirdPartyApiUrl} />
+                        <Input
+                          {...bindThirdPartyApiUrl}
+                          placeholder="Please provide API URL"
+                        />
                       </FormField>
                     </>
                   ) : thirdPartyModelType === 'llm_api' ? (
                     <>
                       <FormField label="API URL">
-                        <Input {...bindThirdPartyApiUrl} />
+                        <Input
+                          {...bindThirdPartyApiUrl}
+                          placeholder="Please provide API URL"
+                        />
                       </FormField>
                       <FormField label="API Key">
-                        <Input {...bindThirdPartyApiKey} />
+                        <Input
+                          {...bindThirdPartyApiKey}
+                          placeholder="Please provide API Key"
+                        />
                       </FormField>
                       <FormField label="Secret Key">
-                        <Input {...bindThirdPartySecretKey} />
+                        <Input
+                          {...bindThirdPartySecretKey}
+                          placeholder="Please provide Secret Key"
+                        />
                       </FormField>
                     </>
                   ) : null}

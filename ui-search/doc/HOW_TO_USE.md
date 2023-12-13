@@ -24,7 +24,7 @@ You can pick an `Index Name` from the list or you can enter a new one of your ch
 
 ## 3. Add language model strategies
 
-Click the nav link **Add language model strategies** on the side navigation panel. Here you can add Sagemaker Endpoint or Third Party APIs. Manage added language models in the `Language Model Strategies` Table.
+Click the nav link **Add language model strategies** on the side navigation panel. Here you can add SageMaker Endpoint or Third Party APIs. Manage added language models in the `Language Model Strategies` Table.
 
 ## 4. Create a new session
 
