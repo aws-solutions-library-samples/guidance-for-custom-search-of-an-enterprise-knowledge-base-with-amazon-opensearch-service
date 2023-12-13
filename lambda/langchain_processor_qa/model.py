@@ -9,6 +9,7 @@ from langchain.vectorstores import OpenSearchVectorSearch
 from langchain.vectorstores import Zilliz
 from typing import Dict, List, Optional,Any
 import json
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
 def init_embeddings(endpoint_name,region_name,language: str = "chinese"):
     
@@ -90,6 +91,36 @@ def init_model(endpoint_name,
     except Exception as e:
         return None
 
+def init_model_withstreaming(endpoint_name,
+               region_name,
+               temperature: float = 0.01,
+                callbackHandler:StreamingStdOutCallbackHandler =StreamingStdOutCallbackHandler()):
+    try:
+        class ContentHandler(LLMContentHandler):
+            content_type = "application/json"
+            accepts = "application/json"
+
+            def transform_input(self, prompt: str, model_kwargs: Dict) -> bytes:
+                print('prompt:',prompt)
+                input_str = json.dumps({"ask": prompt, **model_kwargs})
+                return input_str.encode('utf-8')
+
+            def transform_output(self, output: bytes) -> str:
+                response_json = json.loads(output.read().decode("utf-8"))
+                return response_json['answer']
+
+        content_handler = ContentHandler()
+
+        llm=SagemakerEndpoint(
+            endpoint_name=endpoint_name,
+            region_name=region_name,
+            model_kwargs={'parameters': {'max_length': 1024, 'temperature': temperature, 'top_p': 0.9}, 'history': [], 'stream': True},
+            content_handler=content_handler,
+            callbacks=[callbackHandler]
+        )
+        return llm
+    except Exception as e:
+        return None
 
 def new_call(self, prompt: str, stop: Optional[List[str]] = None, run_manager: Optional[CallbackManagerForLLMRun] = None, **kwargs: Any) -> str:
     _model_kwargs = self.model_kwargs or {}

@@ -1,6 +1,5 @@
 """Sagemaker InvokeEndpoint API."""
 import io
-import json
 from abc import abstractmethod
 from typing import Any, Dict, Generic, Iterator, List, Mapping, Optional, TypeVar, Union
 
@@ -8,68 +7,58 @@ from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.llms.utils import enforce_stop_tokens
 from langchain.pydantic_v1 import Extra, root_validator
+from langchain.schema.output import GenerationChunk
 
 INPUT_TYPE = TypeVar("INPUT_TYPE", bound=Union[str, List[str]])
 OUTPUT_TYPE = TypeVar("OUTPUT_TYPE", bound=Union[str, List[List[float]], Iterator])
 
 
+import io
+
+
 class LineIterator:
     """
-    A helper class for parsing the byte stream input.
+    A helper class for parsing the InvokeEndpointWithResponseStream event stream.
 
     The output of the model will be in the following format:
-
+    ```
     b'{"outputs": [" a"]}\n'
     b'{"outputs": [" challenging"]}\n'
     b'{"outputs": [" problem"]}\n'
     ...
+    ```
 
-    While usually each PayloadPart event from the event stream will
-    contain a byte array with a full json, this is not guaranteed
-    and some of the json objects may be split acrossPayloadPart events.
-
-    For example:
-
+    While usually each PayloadPart event from the event stream will contain a byte array
+    with a full json, this is not guaranteed and some of the json objects may be split across
+    PayloadPart events. For example:
+    ```
     {'PayloadPart': {'Bytes': b'{"outputs": '}}
     {'PayloadPart': {'Bytes': b'[" problem"]}\n'}}
-
+    ```
 
     This class accounts for this by concatenating bytes written via the 'write' function
-    and then exposing a method which will return lines (ending with a '\n' character)
-    within the buffer via the 'scan_lines' function.
-    It maintains the position of the last read position to ensure
-    that previous bytes are not exposed again.
-
-    For more details see:
-    https://aws.amazon.com/blogs/machine-learning/elevating-the-generative-ai-experience-introducing-streaming-support-in-amazon-sagemaker-hosting/
+    and then exposing a method which will return lines (ending with a '\n' character) within
+    the buffer via the 'readlines' function. It maintains the position of the last read
+    position to ensure that previous bytes are not exposed again.
     """
 
-    def __init__(self, stream: Any) -> None:
-        self.byte_iterator = iter(stream)
-        self.buffer = io.BytesIO()
+    def __init__(self):
+        self.buff = io.BytesIO()
         self.read_pos = 0
 
-    def __iter__(self) -> "LineIterator":
-        return self
+    def write(self, content):
+        self.buff.seek(0, io.SEEK_END)
+        self.buff.write(content)
 
-    def __next__(self) -> Any:
-        while True:
-            self.buffer.seek(self.read_pos)
-            line = self.buffer.readline()
-            if line and line[-1] == ord("\n"):
+    def readlines(self):
+        self.buff.seek(self.read_pos)
+        for line in self.buff.readlines():
+            if line[-1] != b'\n':
                 self.read_pos += len(line)
-                return line[:-1]
-            try:
-                chunk = next(self.byte_iterator)
-            except StopIteration:
-                if self.read_pos < self.buffer.getbuffer().nbytes:
-                    continue
-                raise
-            if "PayloadPart" not in chunk:
-                # Unknown Event Type
-                continue
-            self.buffer.seek(0, io.SEEK_END)
-            self.buffer.write(chunk["PayloadPart"]["Bytes"])
+                yield line[:-1]
+
+    def reset(self):
+        self.read_pos = 0
 
 
 class ContentHandlerBase(Generic[INPUT_TYPE, OUTPUT_TYPE]):
@@ -210,13 +199,8 @@ class SagemakerEndpoint(LLM):
     """The content handler class that provides an input and
     output transform functions to handle formats between LLM
     and the endpoint.
-    """
 
-    streaming: bool = False
-    """Whether to stream the results."""
-
-    """
-     Example:
+    Example:
         .. code-block:: python
 
         from langchain.llms.sagemaker_endpoint import LLMContentHandler
@@ -233,6 +217,9 @@ class SagemakerEndpoint(LLM):
                     response_json = json.loads(output.read().decode("utf-8"))
                     return response_json[0]["generated_text"]
     """
+
+    streaming: bool = False
+    """Whether to stream the results."""
 
     model_kwargs: Optional[Dict] = None
     """Keyword arguments to pass to the model."""
@@ -299,12 +286,53 @@ class SagemakerEndpoint(LLM):
         """Return type of llm."""
         return "sagemaker_endpoint"
 
+    def _stream(
+            self,
+            prompt: str,
+            stop: Optional[List[str]] = None,
+            run_manager: Optional[CallbackManagerForLLMRun] = None,
+            **kwargs: Any,
+    ) -> Iterator[GenerationChunk]:
+        _model_kwargs = self.model_kwargs or {}
+        _model_kwargs = {**_model_kwargs, **kwargs}
+        _endpoint_kwargs = self.endpoint_kwargs or {}
+
+        try:
+            resp = self.client.invoke_endpoint_with_response_stream(
+                EndpointName=self.endpoint_name,
+                Body=self.content_handler.transform_input(prompt, _model_kwargs),
+                ContentType=self.content_handler.content_type,
+                **_endpoint_kwargs,
+            )
+            #iterator = LineIterator(resp["Body"])
+            event_stream = resp['Body']
+
+            scanner = LineIterator()
+            for event in event_stream:
+                scanner.write(event['PayloadPart']['Bytes'])
+                for line in scanner.readlines():
+                    try:
+                        resp = json.loads(line)
+                        text=resp.get("outputs")['outputs']
+
+                        print(resp.get("outputs")['outputs'], end='')
+                        if text:
+                            chunk = GenerationChunk(text=text)
+                            yield chunk
+                            if run_manager:
+                                run_manager.on_llm_new_token(chunk.text)
+                    except Exception as e:
+                        # print(line)
+                        continue
+        except Exception as e:
+            raise ValueError(f"Error raised by streaming inference endpoint: {e}")
+
     def _call(
-        self,
-        prompt: str,
-        stop: Optional[List[str]] = None,
-        run_manager: Optional[CallbackManagerForLLMRun] = None,
-        **kwargs: Any,
+            self,
+            prompt: str,
+            stop: Optional[List[str]] = None,
+            run_manager: Optional[CallbackManagerForLLMRun] = None,
+            **kwargs: Any,
     ) -> str:
         """Call out to Sagemaker inference endpoint.
 
@@ -324,36 +352,19 @@ class SagemakerEndpoint(LLM):
         _model_kwargs = {**_model_kwargs, **kwargs}
         _endpoint_kwargs = self.endpoint_kwargs or {}
 
-        body = self.content_handler.transform_input(prompt, _model_kwargs)
         content_type = self.content_handler.content_type
         accepts = self.content_handler.accepts
 
-        if self.streaming and run_manager:
-            try:
-                resp = self.client.invoke_endpoint_with_response_stream(
-                    EndpointName=self.endpoint_name,
-                    Body=body,
-                    ContentType=self.content_handler.content_type,
-                    **_endpoint_kwargs,
-                )
-                iterator = LineIterator(resp["Body"])
-                current_completion: str = ""
-                for line in iterator:
-                    resp = json.loads(line)
-                    resp_output = resp.get("outputs")[0]
-                    if stop is not None:
-                        # Uses same approach as below
-                        resp_output = enforce_stop_tokens(resp_output, stop)
-                    current_completion += resp_output
-                    run_manager.on_llm_new_token(resp_output)
-                return current_completion
-            except Exception as e:
-                raise ValueError(f"Error raised by streaming inference endpoint: {e}")
+        if self.streaming:
+            completion: str = ""
+            for chunk in self._stream(prompt, stop, run_manager, **kwargs):
+                completion += chunk.text
+            return completion
         else:
             try:
                 response = self.client.invoke_endpoint(
                     EndpointName=self.endpoint_name,
-                    Body=body,
+                    Body=self.content_handler.transform_input(prompt, _model_kwargs),
                     ContentType=content_type,
                     Accept=accepts,
                     **_endpoint_kwargs,

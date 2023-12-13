@@ -157,7 +157,7 @@ class SmartSearchQA:
                 }
                 self.llm.model_kwargs = parameters
         else:
-            self.llm = init_model(llm_endpoint_name,region,temperature)
+            self.llm = init_model_withstreaming(llm_endpoint_name,region,temperature,callbackHandler)
 
         if self.search_engine == "opensearch":
             self.embeddings = init_embeddings(embedding_endpoint_name, region, self.language)
@@ -346,82 +346,6 @@ class SmartSearchQA:
             new_query=result['generated_question']
             update_session_info(table_name, session_id, new_query, answer, "qa")
         
-        return result
-    def get_answer_from_conversational_withstreaming(self,query,
-                                       session_id: str='',
-                                       table_name: str='',
-                                       language: str='chinese',
-                                       prompt_template: str = "请根据{context}，回答{question}",
-                                       condense_question_prompt: str="",
-                                       top_k: int = 3,
-                                       chain_type: str="stuff",
-                                       search_method: str="vector",
-                                       txt_docs_num: int=0,
-                                       response_if_no_docs_found: str="",
-                                       vec_docs_score_thresholds: float =0,
-                                       txt_docs_score_thresholds: float =0,
-                                       historyRounds: int = 3,
-                                       callbackHandler: StreamingStdOutCallbackHandler = StreamingStdOutCallbackHandler()
-
-                                       ):
-
-        prompt = PromptTemplate(template=prompt_template,
-                                input_variables=["context", "question"])
-        combine_docs_chain_kwargs={"prompt":prompt}
-
-        history = []
-        session_info = ""
-        if len(session_id) > 0 and len(table_name) > 0 and historyRounds > 0:
-            session_info = get_session_info(table_name,session_id)
-            if len(session_info) > 0:
-                session_info = session_info[-historyRounds:]
-                for item in session_info:
-                    print("session info:",item[0]," ; ",item[1]," ; ",item[2])
-                    if item[2] == "qa":
-                        history.append((item[0],item[1]))
-
-        print('history:',history)
-        retriever = self.get_retriever(top_k)
-
-        chain = ConversationalRetrievalChain.from_llm(
-            llm = self.llm,
-            chain_type=chain_type,
-            retriever=retriever,
-            condense_question_prompt = condense_question_prompt,
-            combine_docs_chain_kwargs = combine_docs_chain_kwargs,
-            return_source_documents = True,
-            return_generated_question = True
-        )
-
-        #         result = chain({"question": query, "chat_history": history})
-        result = chain({
-            "question": query,
-            "chat_history": history,
-            "index_name": self.aos_index,
-            "aos_username": self.aos_username,
-            "aos_passwd": self.aos_passwd,
-            "aos_host": self.aos_host,
-            "aos_port": self.aos_port,
-            "search_engine": self.search_engine,
-            "search_method": search_method,
-            "txt_docs_num": txt_docs_num,
-            'response_if_no_docs_found':response_if_no_docs_found,
-            'vec_docs_score_thresholds':vec_docs_score_thresholds,
-            'txt_docs_score_thresholds':txt_docs_score_thresholds
-        })
-
-
-        answer=result['answer']
-
-        # answer=answer.split('\n\nhuman')[0].split('\n\n用户')[0].split('\n\nquestion')[0].split('\n\n\ufeffquestion')[0].split('\n\nQuestion')[0].strip()
-
-        # if language == "english":
-        #     answer = answer.split('Answer:')[-1]
-
-        if len(session_id) > 0:
-            new_query=result['generated_question']
-            update_session_info(table_name, session_id, new_query, answer, "qa")
-
         return result
 
     def get_answer_from_conversational_llama2(self,query,
