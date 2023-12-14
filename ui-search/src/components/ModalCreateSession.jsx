@@ -2,7 +2,6 @@ import {
   Box,
   Checkbox,
   ColumnLayout,
-  ExpandableSection,
   Form,
   FormField,
   Input,
@@ -15,15 +14,15 @@ import Button from '@cloudscape-design/components/button';
 import Modal from '@cloudscape-design/components/modal';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import { useCallback, useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import useIndexNameList from 'src/hooks/useIndexNameList';
 import useInput from 'src/hooks/useInput';
+import useLsAppConfigs from 'src/hooks/useLsAppConfigs';
 import useLsLanguageModelList from 'src/hooks/useLsLanguageModelList';
+import useLsSessionList from 'src/hooks/useLsSessionList';
 import useToggle from 'src/hooks/useToggle';
 import { useSessionStore } from 'src/stores/session';
 import Divider from './Divider';
-import useLsSessionList from 'src/hooks/useLsSessionList';
-import useLsAppConfigs from 'src/hooks/useLsAppConfigs';
-import toast from 'react-hot-toast';
 
 const SIZE = 's';
 const OPTIONS_LANGUAGE = [
@@ -123,6 +122,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     useToggle(true);
   const [isCheckedScoreAD, bindScoreAD, resetScoreAD, setIsCheckedScoreAd] =
     useToggle(true);
+  const [isCheckedEditPrompt, setIsCheckedEditPrompt] = useState(false);
 
   const [prompt, setPrompt] = useState('');
 
@@ -173,6 +173,8 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     setSessionTemplateOpt(undefined);
     setLoading(false);
     setValidating(false);
+    setPrompt('');
+    setIsCheckedEditPrompt(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -204,6 +206,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
           isCheckedScoreQA,
           isCheckedScoreQD,
           isCheckedScoreAD,
+          isCheckedEditPrompt,
           prompt,
         },
       } = lsGetSessionItem(sessionTemplateOpt.value, lsSessionList);
@@ -237,6 +240,9 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
       if (isCheckedScoreQA !== undefined) setIsCheckedScoreQA(isCheckedScoreQA);
       if (isCheckedScoreQD !== undefined) setIsCheckedScoreQD(isCheckedScoreQD);
       if (isCheckedScoreAD !== undefined) setIsCheckedScoreAd(isCheckedScoreAD);
+      if (isCheckedEditPrompt !== undefined)
+        setIsCheckedEditPrompt(isCheckedEditPrompt);
+      if (prompt !== undefined) setPrompt(prompt);
     } else {
       setSessionTemplateOpt(undefined);
     }
@@ -255,7 +261,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
       footer={
         <Box>
           <Box float="left">
-            <Button onClick={resetAllFields}>Clear Fields</Button>
+            <Button onClick={resetAllFields}>Reset all fields</Button>
           </Box>
           <Box float="right">
             <Button
@@ -289,6 +295,8 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                     isCheckedScoreQA,
                     isCheckedScoreQD,
                     isCheckedScoreAD,
+                    contextRounds,
+                    isCheckedEditPrompt,
                     prompt,
                     tokenContentCheck: appConfigs.tokenContentCheck,
                     responseIfNoDocsFound: appConfigs.responseIfNoDocsFound,
@@ -414,35 +422,6 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                 </FormField>
               </ColumnLayout>
 
-              <FormField
-                stretch
-                label="Role Name"
-                description="Please determine the role"
-              >
-                <Input {...bindRole} placeholder="a footwear vendor" />
-              </FormField>
-              <FormField
-                stretch
-                label="Task Definition"
-                description="Please provide your task definition"
-              >
-                <Textarea
-                  {...bindTaskDefinition}
-                  rows={2}
-                  placeholder="recommend appropriate footwear to the customer"
-                />
-              </FormField>
-              <FormField
-                stretch
-                label="Output Format"
-                description="Please provide your output format"
-              >
-                <Textarea
-                  {...bindOutputFormat}
-                  rows={1}
-                  placeholder="answer in English"
-                />
-              </FormField>
               {/* <FormField constraintText="Has to use a knowledge base">
                   <Toggle {...bindGenerateReport}>Generate Report</Toggle>
                 </FormField> */}
@@ -459,16 +438,17 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                     Map Reduce
                   </Toggle>
                 </FormField> */}
-              <ColumnLayout columns={3}>
-                <FormField constraintText="ON when generating report">
-                  <Toggle
-                    {...bindKnowledgeBase}
-                    disabled={isCheckedGenerateReport}
-                  >
-                    Knowledge Base
-                  </Toggle>
-                </FormField>
-              </ColumnLayout>
+
+              <Divider />
+
+              <FormField constraintText="Chat Mode is activated when knowledge base is NOT specified">
+                <Toggle
+                  {...bindKnowledgeBase}
+                  disabled={isCheckedGenerateReport}
+                >
+                  Knowledge Base
+                </Toggle>
+              </FormField>
               {isCheckedKnowledgeBase ? (
                 isKendra ? (
                   <SpaceBetween direction="vertical" size="s">
@@ -641,13 +621,92 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                   </SpaceBetween>
                 </FormField>
               )}
-              <ExpandableSection
-                headerText="Prompt Summary"
-                defaultExpanded
-                headerDescription="Generated automatically by the values of Role Name, Task Definition and Output Format"
-              >
-                <Textarea value={prompt} disabled rows={6} />
-              </ExpandableSection>
+
+              <Divider />
+
+              <SpaceBetween size={SIZE}>
+                {/* <FormField>
+                    <Toggle {...bindAutoGeneratePrompt}>
+                      Auto-generate prompt
+                    </Toggle>
+                  </FormField> */}
+                {!isCheckedEditPrompt ? (
+                  <>
+                    <FormField
+                      stretch
+                      label="Role Name"
+                      description="Please determine the role"
+                    >
+                      <Input {...bindRole} placeholder="a footwear vendor" />
+                    </FormField>
+                    <FormField
+                      stretch
+                      label="Task Definition"
+                      description="Please provide your task definition"
+                    >
+                      <Textarea
+                        {...bindTaskDefinition}
+                        rows={2}
+                        placeholder="recommend appropriate footwear to the customer"
+                      />
+                    </FormField>
+                    <FormField
+                      stretch
+                      label="Output Format"
+                      description="Please provide your output format"
+                    >
+                      <Textarea
+                        {...bindOutputFormat}
+                        rows={1}
+                        placeholder="answer in English"
+                      />
+                    </FormField>
+                  </>
+                ) : null}
+
+                {!isCheckedEditPrompt ? (
+                  <FormField
+                    stretch
+                    label="Prompt Summary"
+                    description="Generated automatically by the values of Role Name, Task Definition and Output Format"
+                    secondaryControl={
+                      <SpaceBetween size="xxs">
+                        <Button
+                          variant="primary"
+                          iconName="edit"
+                          onClick={() => {
+                            setRole('');
+                            setTaskDefinition('');
+                            setOutputFormat('');
+                            setIsCheckedEditPrompt(true);
+                          }}
+                        >
+                          Edit Prompt
+                        </Button>
+                        <small style={{ color: 'grey' }}>
+                          ⚠️ You can edit your prompt freely, however, role
+                          name, task definition and output format will not be
+                          displayed
+                        </small>
+                      </SpaceBetween>
+                    }
+                  >
+                    <Textarea value={prompt} disabled rows={6} />
+                  </FormField>
+                ) : (
+                  <FormField
+                    stretch
+                    label="Edit Prompt"
+                    description="Customise your prompt as you please"
+                  >
+                    <Textarea
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.detail.value)}
+                      rows={10}
+                    />
+                  </FormField>
+                )}
+              </SpaceBetween>
             </SpaceBetween>
           </SpaceBetween>
         </Form>

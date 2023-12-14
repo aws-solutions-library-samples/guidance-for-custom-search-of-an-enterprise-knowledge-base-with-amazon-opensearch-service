@@ -30,6 +30,7 @@ const SessionBrief = ({ configs, expanded }) => {
     language,
     taskDefinition,
     outputFormat,
+    contextRounds,
     isCheckedGenerateReport,
     isCheckedContext,
     isCheckedKnowledgeBase,
@@ -124,6 +125,9 @@ const SessionBrief = ({ configs, expanded }) => {
                 {searchMethod}
               </ValueWithLabel>
             )}
+            <ValueWithLabel label="Context Rounds">
+              {contextRounds || 3}
+            </ValueWithLabel>
           </SpaceBetween>
 
           <SpaceBetween size={SIZE}>
