@@ -30,6 +30,7 @@ const SessionBrief = ({ configs, expanded }) => {
     language,
     taskDefinition,
     outputFormat,
+    contextRounds,
     isCheckedGenerateReport,
     isCheckedContext,
     isCheckedKnowledgeBase,
@@ -108,7 +109,7 @@ const SessionBrief = ({ configs, expanded }) => {
         <ColumnLayout columns={isKendra ? 3 : 4} variant="text-grid">
           <SpaceBetween size={SIZE}>
             <ValueWithLabel label="Engine">{searchEngine}</ValueWithLabel>
-            <ValueWithLabel label="Language Model">
+            <ValueWithLabel label="Language Model Strategy">
               {llmData?.modelName}
             </ValueWithLabel>
             <ValueWithLabel label="Language">{language}</ValueWithLabel>
@@ -124,6 +125,9 @@ const SessionBrief = ({ configs, expanded }) => {
                 {searchMethod}
               </ValueWithLabel>
             )}
+            <ValueWithLabel label="Context Rounds">
+              {contextRounds || 3}
+            </ValueWithLabel>
           </SpaceBetween>
 
           <SpaceBetween size={SIZE}>

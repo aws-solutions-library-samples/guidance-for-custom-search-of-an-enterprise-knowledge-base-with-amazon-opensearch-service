@@ -26,9 +26,33 @@ const useLsSessionList = () => {
       if (curSession) {
         curSession.conversations = curSession.conversations.concat(newConvo);
         lsUpdateSessionItem(sessionId, curSession);
-        // const { conversations = [] } = curSession;
-        // conversations.push(newConvo);
-        // lsUpdateSessionItem(sessionId, { ...curSession, conversations });
+      } else {
+        throw new Error(`No session found with ID: ${sessionId}`);
+      }
+    },
+    []
+  );
+
+  const lsUpdateContentOfLastConvoInOneSessionItem = useCallback(
+    (sessionId, sessionList, data, firstStream = false) => {
+      const curSession = lsGetSessionItem(sessionId, sessionList);
+      if (curSession) {
+        if (firstStream) {
+          curSession.conversations = curSession.conversations.concat({
+            type: 'robot',
+            content: data,
+          });
+          lsUpdateSessionItem(sessionId, curSession);
+        } else {
+          curSession.conversations[curSession.conversations.length - 1] = {
+            type: 'robot',
+            content: data,
+          };
+        }
+        // TESTING: see if this works
+        // curSession.conversations[curSession.conversations.length - 1].content =
+        //   data;
+        lsUpdateSessionItem(sessionId, curSession);
       } else {
         throw new Error(`No session found with ID: ${sessionId}`);
       }
@@ -47,6 +71,7 @@ const useLsSessionList = () => {
     lsGetSessionItem,
     lsDelSessionItem,
     lsUpdateSessionItem,
+    lsUpdateContentOfLastConvoInOneSessionItem,
   };
 };
 

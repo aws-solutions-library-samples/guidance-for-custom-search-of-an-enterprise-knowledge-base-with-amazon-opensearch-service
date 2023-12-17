@@ -37,7 +37,7 @@ const router = createBrowserRouter([
         element: <Session />,
       },
       {
-        path: 'add-language-models',
+        path: 'add-language-model-strategies',
         element: <AddLanguageModel />,
       },
       {

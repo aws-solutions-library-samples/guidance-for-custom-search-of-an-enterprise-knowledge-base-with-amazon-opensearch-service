@@ -68,7 +68,7 @@ const SessionChatsAI = ({
         </div>
       </StyledQ>
       <div className="expandable">
-        {!sourceData.length ? null : (
+        {!sourceData?.length ? null : (
           <ExpandableSection
             headerText="Display Sources"
             className="display-source"

@@ -22,9 +22,9 @@ After configured the app, especially the **S3 Bucket Name**, you can now proceed
 
 You can pick an `Index Name` from the list or you can enter a new one of your choosing. Select a file. Press the `Confirm` button. When you see the notification that suggests successfully uploaded your file, you can proceed to **Add language models** page.
 
-## 3. Add language models
+## 3. Add language model strategies
 
-Click the nav link **Add language models** on the side navigation panel. Here you can add Sagemaker Endpoint or Third Party APIs. Manage added language models in the `Language Models` Table.
+Click the nav link **Add language model strategies** on the side navigation panel. Here you can add SageMaker Endpoint or Third Party APIs. Manage added language models in the `Language Model Strategies` Table.
 
 ## 4. Create a new session
 

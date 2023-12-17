@@ -16,12 +16,14 @@ import AutoScrollToDiv from '../AutoScrollToDiv';
 import { StyledBoxVerticalCenter } from '../StyledComponents';
 import ChatIcon from './ChatIcon';
 
+const GENERAL_WSS_ERROR_MSG = 'Error on receiving message from Websocket';
+let firstStream = true;
+
 const SessionInput = ({ data }) => {
   const [query, bindQuery, resetQuery] = useInput();
   const [loading, setLoading] = useState(false);
   const [percentage, setPercentage] = useState(0);
   const { sessionId } = useParams();
-  const { appConfigs } = useLsAppConfigs();
 
   // NOTE: to automatically scroll down to the user input
   useEffect(() => {
@@ -52,8 +54,12 @@ const SessionInput = ({ data }) => {
   const { urlWss } = useLsAppConfigs();
   const socket = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
-  const { lsSessionList, lsGetCurSessionConfig, lsAddContentToSessionItem } =
-    useLsSessionList();
+  const {
+    lsSessionList,
+    lsGetCurSessionConfig,
+    lsAddContentToSessionItem,
+    lsUpdateContentOfLastConvoInOneSessionItem,
+  } = useLsSessionList();
 
   // NOTE: what to do when websocket connection is established
   const onSocketOpen = useCallback(() => {
@@ -71,27 +77,71 @@ const SessionInput = ({ data }) => {
   // NOTE: what to do when web receives a message from websocket connection
   const onSocketMessage = useCallback(
     (dataStr) => {
-      const data = JSON.parse(dataStr);
-      // console.log({ data });
-      // TESTING
-      lsAddContentToSessionItem(sessionId, lsSessionList, {
-        type: 'robot',
-        content: data,
-      });
-      // TODO?: to add a parsing mechanism?
-      // if (data.message === 'success') {
-      //   lsAddContentToSessionItem(sessionId, lsSessionList, data);
-      // }
-      setLoading(false);
-      resetQuery();
+      try {
+        const data = JSON.parse(dataStr);
+        // console.log({ data });
+        // TODO?: to add a parsing mechanism?
+        switch (data.message) {
+          case 'streaming':
+            // do this when streaming text/answer
+            onStreaming(data, firstStream);
+            firstStream = false;
+            return;
+          case 'streaming_end':
+            // do this when streaming ends
+            onStreaming(data);
+            setLoading(false);
+            firstStream = true;
+            resetQuery();
+            return;
+          case 'success':
+            onSuccess(data);
+            return;
+          case 'error':
+            // do something when errors occur
+            toast.error(data.errorMessage || GENERAL_WSS_ERROR_MSG);
+            setLoading(false);
+            return;
+          case 'others':
+            // future expansion
+            setLoading(false);
+            return;
+          default:
+            // same as 'success' with warning toast
+            onSuccess(data);
+            toast('WARNING: WSS message is not following the standard', {
+              icon: '⚠️',
+            });
+            return;
+        }
+      } catch (error) {
+        toast.error(error?.message || GENERAL_WSS_ERROR_MSG);
+      }
+      function onSuccess(data) {
+        lsAddContentToSessionItem(sessionId, lsSessionList, {
+          type: 'robot',
+          content: data,
+        });
+        setLoading(false);
+        resetQuery();
+      }
+      function onStreaming(data, firstStream) {
+        lsUpdateContentOfLastConvoInOneSessionItem(
+          sessionId,
+          lsSessionList,
+          data,
+          firstStream
+        );
+      }
     },
     // NOTE temp solution for unnecessary re-rendering on lsSessionList change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [lsAddContentToSessionItem, sessionId, lsSessionList.length]
   );
 
   const initSocket = useCallback(() => {
     try {
-      console.log('init');
+      console.log('init WSS');
       if (!urlWss) throw new Error('urlWss is not defined');
 
       if (socket.current?.readyState !== WebSocket.OPEN) {
@@ -116,7 +166,7 @@ const SessionInput = ({ data }) => {
       initSocket();
     }
     return () => {
-      console.log('closed');
+      console.log('WSS closed');
       socket.current?.close();
       setIsConnected(false);
     };
@@ -135,10 +185,6 @@ const SessionInput = ({ data }) => {
       type: 'customer',
       content: { text: query, timestamp: Date.now() },
     });
-    // lsAddContentToSessionItem(sessionId, lsSessionList, {
-    //   type: 'robot',
-    //   content,
-    // });
     socket.current?.send(JSON.stringify({ action: 'search', configs, query }));
   }, [
     lsGetCurSessionConfig,
@@ -157,10 +203,10 @@ const SessionInput = ({ data }) => {
     if (!query) {
       return toast('Please enter a query to search', { icon: '⚠️' });
     }
-    console.log({ query });
+    // console.log({ query });
     setLoading(true);
     socketSendSearch();
-  }, [query, resetQuery, socketSendSearch]);
+  }, [query, socketSendSearch]);
 
   return (
     <Container>

@@ -2,7 +2,6 @@ import {
   Box,
   Checkbox,
   ColumnLayout,
-  ExpandableSection,
   Form,
   FormField,
   Input,
@@ -15,15 +14,15 @@ import Button from '@cloudscape-design/components/button';
 import Modal from '@cloudscape-design/components/modal';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import { useCallback, useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import useIndexNameList from 'src/hooks/useIndexNameList';
 import useInput from 'src/hooks/useInput';
+import useLsAppConfigs from 'src/hooks/useLsAppConfigs';
 import useLsLanguageModelList from 'src/hooks/useLsLanguageModelList';
+import useLsSessionList from 'src/hooks/useLsSessionList';
 import useToggle from 'src/hooks/useToggle';
 import { useSessionStore } from 'src/stores/session';
 import Divider from './Divider';
-import useLsSessionList from 'src/hooks/useLsSessionList';
-import useLsAppConfigs from 'src/hooks/useLsAppConfigs';
-import toast from 'react-hot-toast';
 
 const SIZE = 's';
 const OPTIONS_LANGUAGE = [
@@ -115,6 +114,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
   const [vecDocsScoreThresholds, setVecDocsScoreThresholds] = useState(0);
   const [txtDocsScoreThresholds, setTxtDocsScoreThresholds] = useState(0);
   const [topK, setTopK] = useState(3);
+  const [contextRounds, setContextRounds] = useState(3);
 
   const [isCheckedScoreQA, bindScoreQA, resetScoreQA, setIsCheckedScoreQA] =
     useToggle(true);
@@ -122,6 +122,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     useToggle(true);
   const [isCheckedScoreAD, bindScoreAD, resetScoreAD, setIsCheckedScoreAd] =
     useToggle(true);
+  const [isCheckedEditPrompt, setIsCheckedEditPrompt] = useState(false);
 
   const [prompt, setPrompt] = useState('');
 
@@ -145,6 +146,8 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
   }, [role, taskDefinition, outputFormat, language]);
 
   const resetAllFields = useCallback(() => {
+    // reset fields after the creation completes
+    // NOTE: add code when adding new inputs
     resetName();
     resetSearchEngine();
     setLLMData();
@@ -159,6 +162,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     setKendraIndexId('');
     setSearchMethod(SEARCH_METHOD[0].value);
     setTopK(3);
+    setContextRounds(3);
     setTxtDocsNum(0);
     setVecDocsScoreThresholds(0);
     setTxtDocsScoreThresholds(0);
@@ -169,11 +173,15 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     setSessionTemplateOpt(undefined);
     setLoading(false);
     setValidating(false);
+    setPrompt('');
+    setIsCheckedEditPrompt(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (sessionTemplateOpt?.value) {
+      // Setting template
+      // NOTE: add code when adding new inputs
       const {
         configs: {
           name,
@@ -190,6 +198,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
           indexName,
           kendraIndexId,
           topK,
+          contextRounds,
           searchMethod,
           txtDocsNum,
           vecDocsScoreThresholds,
@@ -197,6 +206,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
           isCheckedScoreQA,
           isCheckedScoreQD,
           isCheckedScoreAD,
+          isCheckedEditPrompt,
           prompt,
         },
       } = lsGetSessionItem(sessionTemplateOpt.value, lsSessionList);
@@ -219,6 +229,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
       if (indexName !== undefined) setIndexName(indexName);
       if (kendraIndexId !== undefined) setKendraIndexId(kendraIndexId);
       if (topK !== undefined) setTopK(topK);
+      if (contextRounds !== undefined) setContextRounds(contextRounds);
       if (searchMethod !== undefined) setSearchMethod(searchMethod);
       if (txtDocsNum !== undefined) setTxtDocsNum(txtDocsNum);
       if (vecDocsScoreThresholds !== undefined)
@@ -229,6 +240,9 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
       if (isCheckedScoreQA !== undefined) setIsCheckedScoreQA(isCheckedScoreQA);
       if (isCheckedScoreQD !== undefined) setIsCheckedScoreQD(isCheckedScoreQD);
       if (isCheckedScoreAD !== undefined) setIsCheckedScoreAd(isCheckedScoreAD);
+      if (isCheckedEditPrompt !== undefined)
+        setIsCheckedEditPrompt(isCheckedEditPrompt);
+      if (prompt !== undefined) setPrompt(prompt);
     } else {
       setSessionTemplateOpt(undefined);
     }
@@ -247,7 +261,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
       footer={
         <Box>
           <Box float="left">
-            <Button onClick={resetAllFields}>Clear Fields</Button>
+            <Button onClick={resetAllFields}>Reset all fields</Button>
           </Box>
           <Box float="right">
             <Button
@@ -281,6 +295,8 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                     isCheckedScoreQA,
                     isCheckedScoreQD,
                     isCheckedScoreAD,
+                    contextRounds,
+                    isCheckedEditPrompt,
                     prompt,
                     tokenContentCheck: appConfigs.tokenContentCheck,
                     responseIfNoDocsFound: appConfigs.responseIfNoDocsFound,
@@ -362,7 +378,10 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
 
             <SpaceBetween direction="vertical" size="xl">
               <ColumnLayout columns={3}>
-                <FormField label="LLM" description="Please select an LLM">
+                <FormField
+                  label="Language Model Strategy"
+                  description="Please select a strategy"
+                >
                   <Select
                     empty="Add llm if no options present"
                     selectedOption={{ label: llmData?.modelName }}
@@ -370,18 +389,16 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                       setLLMData(detail.selectedOption.value);
                     }}
                     options={lsLanguageModelList.map((item) => ({
-                      label: item.modelName,
+                      label:
+                        item.strategyName || item.modelName || item.recordId,
                       value: item,
                     }))}
                   />
                 </FormField>
                 <FormField
-                  label="Role Name"
-                  description="Please determine the role"
+                  label="Language"
+                  description="Select a language for conversation"
                 >
-                  <Input {...bindRole} placeholder="a footwear vendor" />
-                </FormField>
-                <FormField label="Language" description="Select a language">
                   <Select
                     selectedOption={{ value: language }}
                     onChange={({ detail }) =>
@@ -390,40 +407,30 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                     options={OPTIONS_LANGUAGE}
                   />
                 </FormField>
+                <FormField
+                  label="Context Rounds"
+                  description="Search with how many rounds of context"
+                >
+                  <Input
+                    step={1}
+                    type="number"
+                    value={contextRounds}
+                    onChange={({ detail }) => {
+                      setContextRounds(detail.value);
+                    }}
+                  />
+                </FormField>
               </ColumnLayout>
-              <FormField
-                stretch
-                label="Task Definition"
-                description="Please provide your task definition"
-              >
-                <Textarea
-                  {...bindTaskDefinition}
-                  rows={5}
-                  placeholder="recommend appropriate footwear to the customer"
-                />
-              </FormField>
-              <FormField
-                stretch
-                label="Output Format"
-                description="Please provide your output format"
-              >
-                <Textarea
-                  {...bindOutputFormat}
-                  rows={1}
-                  placeholder="answer in English"
-                />
-              </FormField>
 
-              <SpaceBetween direction="horizontal" size="xxl">
-                {/* <FormField constraintText="Has to use a knowledge base">
+              {/* <FormField constraintText="Has to use a knowledge base">
                   <Toggle {...bindGenerateReport}>Generate Report</Toggle>
                 </FormField> */}
-                {/* <FormField constraintText="OFF when generating report">
+              {/* <FormField constraintText="OFF when generating report">
                   <Toggle disabled={isCheckedGenerateReport} {...bindContext}>
                     Context
                   </Toggle>
                 </FormField> */}
-                {/* <FormField constraintText="Can be enabled when generating report">
+              {/* <FormField constraintText="Can be enabled when generating report">
                   <Toggle
                     disabled={!isCheckedGenerateReport}
                     {...bindMapReduce}
@@ -431,16 +438,17 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                     Map Reduce
                   </Toggle>
                 </FormField> */}
-                <FormField constraintText="ON when generating report">
-                  <Toggle
-                    {...bindKnowledgeBase}
-                    disabled={isCheckedGenerateReport}
-                  >
-                    Knowledge Base
-                  </Toggle>
-                </FormField>
-              </SpaceBetween>
 
+              <Divider />
+
+              <FormField constraintText="Chat Mode is activated when knowledge base is NOT specified">
+                <Toggle
+                  {...bindKnowledgeBase}
+                  disabled={isCheckedGenerateReport}
+                >
+                  Knowledge Base
+                </Toggle>
+              </FormField>
               {isCheckedKnowledgeBase ? (
                 isKendra ? (
                   <SpaceBetween direction="vertical" size="s">
@@ -604,7 +612,6 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                   </SpaceBetween>
                 )
               ) : null}
-
               {isKendra ? null : (
                 <FormField stretch label="Display Scores">
                   <SpaceBetween direction="horizontal" size="xxl">
@@ -615,13 +622,91 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                 </FormField>
               )}
 
-              <ExpandableSection
-                headerText="Prompt Summary"
-                defaultExpanded
-                headerDescription="Generated automatically by the values of Role Name, Task Definition and Output Format"
-              >
-                <Textarea value={prompt} disabled rows={6} />
-              </ExpandableSection>
+              <Divider />
+
+              <SpaceBetween size={SIZE}>
+                {/* <FormField>
+                    <Toggle {...bindAutoGeneratePrompt}>
+                      Auto-generate prompt
+                    </Toggle>
+                  </FormField> */}
+                {!isCheckedEditPrompt ? (
+                  <>
+                    <FormField
+                      stretch
+                      label="Role Name"
+                      description="Please determine the role"
+                    >
+                      <Input {...bindRole} placeholder="a footwear vendor" />
+                    </FormField>
+                    <FormField
+                      stretch
+                      label="Task Definition"
+                      description="Please provide your task definition"
+                    >
+                      <Textarea
+                        {...bindTaskDefinition}
+                        rows={2}
+                        placeholder="recommend appropriate footwear to the customer"
+                      />
+                    </FormField>
+                    <FormField
+                      stretch
+                      label="Output Format"
+                      description="Please provide your output format"
+                    >
+                      <Textarea
+                        {...bindOutputFormat}
+                        rows={1}
+                        placeholder="answer in English"
+                      />
+                    </FormField>
+                  </>
+                ) : null}
+
+                {!isCheckedEditPrompt ? (
+                  <FormField
+                    stretch
+                    label="Prompt Summary"
+                    description="Generated automatically by the values of Role Name, Task Definition and Output Format"
+                    secondaryControl={
+                      <SpaceBetween size="xxs">
+                        <Button
+                          variant="primary"
+                          iconName="edit"
+                          onClick={() => {
+                            setRole('');
+                            setTaskDefinition('');
+                            setOutputFormat('');
+                            setIsCheckedEditPrompt(true);
+                          }}
+                        >
+                          Edit Prompt
+                        </Button>
+                        <small style={{ color: 'grey' }}>
+                          ⚠️ You can edit your prompt freely, however, role
+                          name, task definition and output format will not be
+                          displayed
+                        </small>
+                      </SpaceBetween>
+                    }
+                  >
+                    <Textarea value={prompt} disabled rows={6} />
+                  </FormField>
+                ) : (
+                  <FormField
+                    stretch
+                    label="Edit Prompt"
+                    description="Customise your prompt as you please"
+                  >
+                    <Textarea
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.detail.value)}
+                      rows={10}
+                    />
+                  </FormField>
+                )}
+              </SpaceBetween>
             </SpaceBetween>
           </SpaceBetween>
         </Form>

@@ -52,13 +52,16 @@ export const [useSessionStore, SessionStoreProvider] = createStore(() => {
    * delete a session from the existing sessions state as well as from localStorage
    * @param {String} sessionId
    */
-  const delSession = useCallback(async (sessionId) => {
-    try {
-      lsDelSessionItem(sessionId);
-    } catch (error) {
-      console.error(error);
-    }
-  }, []);
+  const delSession = useCallback(
+    async (sessionId) => {
+      try {
+        lsDelSessionItem(sessionId);
+      } catch (error) {
+        console.error(error);
+      }
+    },
+    [lsDelSessionItem]
+  );
 
   return {
     sessionList: lsSessionList,
