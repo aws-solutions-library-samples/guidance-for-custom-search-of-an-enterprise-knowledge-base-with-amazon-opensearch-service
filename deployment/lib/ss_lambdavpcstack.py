@@ -480,7 +480,8 @@ class LambdaVPCStack(Stack):
                     'ec2:CreateNetworkInterface',
                     'ec2:DescribeNetworkInterfaces',
                     'ec2:DeleteNetworkInterface',
-                    'kendra:*',
+                    'kendra:DescribeIndex',
+                    'kendra:Query',
                     'execute-api:*',  ##############
                     'bedrock:*'
                 ],
@@ -497,8 +498,9 @@ class LambdaVPCStack(Stack):
                     'ec2:DescribeNetworkInterfaces',
                     'ec2:DeleteNetworkInterface',
                     'es:*',
+                    'bedrock:*',
                     'execute-api:*'  ##############
-                    'bedrock:*'
+
                 ],
                 resources=['*']  # 可同时使用opensearch和kendra
             )
