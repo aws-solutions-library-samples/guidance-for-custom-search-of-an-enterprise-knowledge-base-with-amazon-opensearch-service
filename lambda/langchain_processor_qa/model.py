@@ -112,6 +112,7 @@ def init_model_withstreaming(endpoint_name,
         content_handler = ContentHandler()
 
         llm=SagemakerEndpoint(
+            streaming=True,
             endpoint_name=endpoint_name,
             region_name=region_name,
             model_kwargs={'parameters': {'max_length': 1024, 'temperature': temperature, 'top_p': 0.9}, 'history': [], 'stream': True},
@@ -151,7 +152,7 @@ def new_call(self, prompt: str, stop: Optional[List[str]] = None, run_manager: O
     return text
 
 # Monkey patch the class
-SagemakerEndpoint._call = new_call
+#SagemakerEndpoint._call = new_call  已将CustomAttributes='accept_eula=true',  放到Sagemaker类中
 
 
 

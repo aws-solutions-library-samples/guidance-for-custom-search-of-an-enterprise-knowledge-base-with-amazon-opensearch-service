@@ -315,7 +315,7 @@ class SagemakerEndpoint(LLM):
                         resp = json.loads(line)
                         text=resp.get("outputs")['outputs']
 
-                        print(resp.get("outputs")['outputs'], end='')
+                        #print(resp.get("outputs")['outputs'], end='')
                         if text:
                             chunk = GenerationChunk(text=text)
                             yield chunk
@@ -367,6 +367,7 @@ class SagemakerEndpoint(LLM):
                     Body=self.content_handler.transform_input(prompt, _model_kwargs),
                     ContentType=content_type,
                     Accept=accepts,
+                    CustomAttributes='accept_eula=true',  # Added this line
                     **_endpoint_kwargs,
                 )
             except Exception as e:

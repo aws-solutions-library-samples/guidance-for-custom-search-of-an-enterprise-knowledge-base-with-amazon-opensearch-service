@@ -62,7 +62,7 @@ class SmartSearchQA:
             }
             self.llm.model_kwargs = parameters
         elif model_type == "bedrock":
-            if streaming==True:
+            if streaming:
                 self.llm = init_model_bedrock_withstreaming(model_name,callbackHandler)
             else:
                 self.llm = init_model_bedrock(model_name,callbackHandler)
@@ -82,10 +82,10 @@ class SmartSearchQA:
                 }
                 self.llm.model_kwargs = parameters
         else:
-            if streaming==True:
+            if streaming:
                 self.llm = init_model_withstreaming(llm_endpoint_name,region,temperature,callbackHandler)
             else:
-                self.llm = init_model(llm_endpoint_name,region,temperature,callbackHandler)
+                self.llm = init_model(llm_endpoint_name,region,temperature)
 
         if self.search_engine == "opensearch":
             self.embeddings = init_embeddings(embedding_endpoint_name, region, self.language)
