@@ -154,6 +154,11 @@ def lambda_handler(event, context):
     if "name" in evt_body.keys():
         name = evt_body['name']
 
+    # add para: streaming output
+    streaming = True
+    if "streaming" in evt_body.keys():
+        streaming = evt_body['streaming']
+
     if "llmData" in evt_body.keys():
         llmData = dict(evt_body['llmData'])
         if "embeddingEndpoint" in llmData.keys():
@@ -217,7 +222,7 @@ def lambda_handler(event, context):
     try:
         connectionId = str(event.get('requestContext', {}).get('connectionId'))
         search_qa = SmartSearchQA()
-        search_qa.init_cfg_withstreaming(index,
+        search_qa.init_cfg(index,
                            username,
                            password,
                            host,
@@ -236,6 +241,7 @@ def lambda_handler(event, context):
                            apiKey,
                            secretKey,
                            maxTokens,
+                           streaming,
                            MyStreamingHandler(connectionId,domain_name,region,stage)
                            )
 

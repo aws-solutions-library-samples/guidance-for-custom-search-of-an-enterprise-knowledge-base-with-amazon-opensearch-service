@@ -17,87 +17,8 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
 
 class SmartSearchQA:
-    
+
     def init_cfg(self,
-                 opensearch_index_name,
-                 opensearch_user_name,
-                 opensearch_user_password,
-                 opensearch_or_kendra_host,
-                 opensearch_port,
-                 embedding_endpoint_name,
-                 region,
-                 zilliz_endpoint,
-                 zilliz_token,
-                 llm_endpoint_name: str = 'pytorch-inference-llm-v1',
-                 temperature: float = 0.01,
-                 language: str = "chinese",
-                 search_engine: str = "opensearch",
-                 model_type:str = "normal",
-                 api_url:str = "",
-                 model_name:str="anthropic.claude-v2",
-                 api_key:str = "",
-                 secret_key:str = "",
-                 max_tokens:int=512,
-                ):
-        self.language = language
-        self.search_engine = search_engine
-        #add aos parmeter
-        self.aos_index = opensearch_index_name
-        self.aos_username = opensearch_user_name
-        self.aos_passwd = opensearch_user_password
-        self.aos_host = opensearch_or_kendra_host
-        self.aos_port = opensearch_port
-
-        
-        if model_type == "llama2":
-            self.llm = init_model_llama2(llm_endpoint_name,region,temperature)
-        elif model_type == "bedrock_api":
-            self.llm = AmazonAPIGatewayBedrock(api_url=api_url)
-            parameters={
-                "modelId":model_name,
-                "max_tokens":max_tokens,
-                "temperature":temperature
-            }
-            self.llm.model_kwargs = parameters
-        elif model_type == "bedrock":
-            self.llm = init_model_bedrock(model_name)
-            parameters={
-                "modelId":model_name,
-                "max_tokens":max_tokens,
-                "temperature":temperature
-            }
-            self.llm.model_kwargs = parameters
-        elif model_type == 'llm_api':
-            if model_name.find('Baichuan2') >= 0:
-                self.llm = AmazonAPIGateway(api_url=api_url)
-                parameters={
-                    "modelId":model_name,
-                    "api_key":api_key,
-                    "secret_key":secret_key,
-                }
-                self.llm.model_kwargs = parameters
-        else:
-            self.llm = init_model(llm_endpoint_name,region,temperature)
-
-        if self.search_engine == "opensearch":
-            self.embeddings = init_embeddings(embedding_endpoint_name, region, self.language)
-            print("init opensearch vector store")
-            self.vector_store = init_vector_store(self.embeddings,
-                                                 opensearch_index_name,
-                                                 opensearch_or_kendra_host,
-                                                 opensearch_port,
-                                                 opensearch_user_name,
-                                                 opensearch_user_password)
-        elif self.search_engine == "kendra":
-            self.vector_store = None
-            self.kendra_host = opensearch_or_kendra_host
-        elif self.search_engine == 'zilliz':
-            self.embeddings = init_embeddings(embedding_endpoint_name, region, self.language)
-            print("init zilliz vector store")
-            self.vector_store = init_zilliz_vector_store(self.embeddings,
-                                                         zilliz_endpoint,
-                                                         zilliz_token)
-    def init_cfg_withstreaming(self,
              opensearch_index_name,
              opensearch_user_name,
              opensearch_user_password,
@@ -117,6 +38,7 @@ class SmartSearchQA:
              api_key:str = "",
              secret_key:str = "",
              max_tokens:int=512,
+             streaming:bool=True,
              callbackHandler: StreamingStdOutCallbackHandler = StreamingStdOutCallbackHandler()
                 ):
         self.language = language
@@ -140,7 +62,10 @@ class SmartSearchQA:
             }
             self.llm.model_kwargs = parameters
         elif model_type == "bedrock":
-            self.llm = init_model_bedrock_withstreaming(model_name,callbackHandler)
+            if streaming==True:
+                self.llm = init_model_bedrock_withstreaming(model_name,callbackHandler)
+            else:
+                self.llm = init_model_bedrock(model_name,callbackHandler)
             parameters={
                 "modelId":model_name,
                 "max_tokens":max_tokens,
@@ -157,7 +82,10 @@ class SmartSearchQA:
                 }
                 self.llm.model_kwargs = parameters
         else:
-            self.llm = init_model_withstreaming(llm_endpoint_name,region,temperature,callbackHandler)
+            if streaming==True:
+                self.llm = init_model_withstreaming(llm_endpoint_name,region,temperature,callbackHandler)
+            else:
+                self.llm = init_model(llm_endpoint_name,region,temperature,callbackHandler)
 
         if self.search_engine == "opensearch":
             self.embeddings = init_embeddings(embedding_endpoint_name, region, self.language)

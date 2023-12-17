@@ -5,6 +5,7 @@ import time
 import boto3
 import json
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain.schema import Generation, LLMResult
 class MyStreamingHandler(StreamingStdOutCallbackHandler ):
     def __init__(self, connectionId: str, domainName: str, region: str,stage:str):
 
@@ -32,18 +33,5 @@ class MyStreamingHandler(StreamingStdOutCallbackHandler ):
         }
         response_body = json.dumps(streaming_answer)
         self.api_res = self.apigw_management.post_to_connection(ConnectionId=self.connectionId, Data=response_body)
-"""  def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
-        self.answer=f"{self.answer}<end>"
-        streaming_answer={
-            'message': "streaming_end",
-            'timestamp': time.time() * 1000,
-            'sourceData': [],
-            'text': self.answer,
-            'scoreQueryAnswer': '',
-            'contentCheckLabel': '',
-            'contentCheckSuggestion': ''
-
-        }
-        response_body = json.dumps(streaming_answer)
-        self.api_res = self.apigw_management.post_to_connection(ConnectionId=self.connectionId, Data=response_body)
-"""
+    def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
+        return
