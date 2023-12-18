@@ -412,8 +412,8 @@ def lambda_handler(event, context):
                     isCheckedScoreQA = bool(evt_body['isCheckedScoreQA'])
                 if isCheckedScoreQA and (searchEngine == "opensearch" or searchEngine == "zilliz"):
                     if language.find("chinese") >= 0 and len(answer) > 350:
-                        answer = answer[:350]
-                    query_answer_score = search_qa.get_qa_relation_score(query, answer)
+                        cal_answer = answer[:350]
+                    query_answer_score = search_qa.get_qa_relation_score(query, cal_answer)
                 print('1.query_answer_score:', query_answer_score)
 
                 # cal answer_docs_scores

@@ -49,6 +49,8 @@ class SmartSearchQA:
         self.aos_passwd = opensearch_user_password
         self.aos_host = opensearch_or_kendra_host
         self.aos_port = opensearch_port
+        #when streaming output, this llm should be different from self.llm
+        self.condense_question_llm=None
 
 
         if model_type == "llama2":
@@ -64,8 +66,9 @@ class SmartSearchQA:
         elif model_type == "bedrock":
             if streaming:
                 self.llm = init_model_bedrock_withstreaming(model_name,callbackHandler)
+                self.condense_question_llm=init_model_bedrock(model_name)
             else:
-                self.llm = init_model_bedrock(model_name,callbackHandler)
+                self.llm = init_model_bedrock(model_name)
             parameters={
                 "modelId":model_name,
                 "max_tokens":max_tokens,
@@ -83,7 +86,8 @@ class SmartSearchQA:
                 self.llm.model_kwargs = parameters
         else:
             if streaming:
-                self.llm = init_model_withstreaming(llm_endpoint_name,region,temperature,callbackHandler)
+                self.llm = init_model_withstreaming(llm_endpoint_name,region,temperature,callbackHandler=callbackHandler)
+                self.condense_question_llm=init_model(llm_endpoint_name,region,temperature)
             else:
                 self.llm = init_model(llm_endpoint_name,region,temperature)
 
@@ -237,6 +241,7 @@ class SmartSearchQA:
         
         chain = ConversationalRetrievalChain.from_llm(
                     llm = self.llm,
+                    condense_question_llm=self.condense_question_llm or self.llm,
                     chain_type=chain_type,
                     retriever=retriever,
                     condense_question_prompt = condense_question_prompt,
