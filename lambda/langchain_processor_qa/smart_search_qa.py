@@ -86,7 +86,7 @@ class SmartSearchQA:
                 self.llm.model_kwargs = parameters
         else:
             if streaming:
-                self.llm = init_model_withstreaming(llm_endpoint_name,region,temperature,callbackHandler=callbackHandler)
+                self.llm = init_model_withstreaming(llm_endpoint_name,region,temperature=temperature,callbackHandler=callbackHandler)
                 self.condense_question_llm=init_model(llm_endpoint_name,region,temperature)
             else:
                 self.llm = init_model(llm_endpoint_name,region,temperature)

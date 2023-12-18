@@ -1,6 +1,6 @@
 from langchain.embeddings import SagemakerEndpointEmbeddings
 from langchain.embeddings.sagemaker_endpoint import EmbeddingsContentHandler
-from langchain import SagemakerEndpoint
+from langchain.llms import SagemakerEndpoint
 from langchain.llms.sagemaker_endpoint import LLMContentHandler
 from langchain.llms import Bedrock
 from langchain.callbacks.manager import CallbackManagerForLLMRun

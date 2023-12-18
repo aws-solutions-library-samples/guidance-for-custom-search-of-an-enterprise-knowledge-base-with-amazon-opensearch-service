@@ -1,4 +1,5 @@
 """Sagemaker InvokeEndpoint API."""
+import json
 import io
 from abc import abstractmethod
 from typing import Any, Dict, Generic, Iterator, List, Mapping, Optional, TypeVar, Union
