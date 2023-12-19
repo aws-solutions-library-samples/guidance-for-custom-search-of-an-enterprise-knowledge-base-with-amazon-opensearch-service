@@ -384,7 +384,12 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                 >
                   <Select
                     empty="Add llm if no options present"
-                    selectedOption={{ label: llmData?.modelName }}
+                    selectedOption={{
+                      label:
+                        llmData?.strategyName ||
+                        llmData?.modelName ||
+                        llmData?.recordId,
+                    }}
                     onChange={({ detail }) => {
                       setLLMData(detail.selectedOption.value);
                     }}
