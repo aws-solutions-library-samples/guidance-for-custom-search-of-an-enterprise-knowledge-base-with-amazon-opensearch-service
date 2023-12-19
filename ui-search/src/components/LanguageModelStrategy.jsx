@@ -13,6 +13,7 @@ import {
   Toggle,
 } from '@cloudscape-design/components';
 import { useCallback, useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import useInput from 'src/hooks/useInput';
 import useLsLanguageModelList from 'src/hooks/useLsLanguageModelList';
 import useToggle from 'src/hooks/useToggle';
@@ -55,7 +56,7 @@ const THIRD_PARTY_API_MODEL_NAMES = [
   },
 ];
 
-const AddLanguageModel = () => {
+const LanguageModelStrategy = () => {
   const [strategyName, bindStrategyName, resetStrategyName] = useInput('');
   const [type, setType] = useState(TYPE.sagemaker);
   const [sagemakerEndpoint, bindSagemakerEndpoint, resetSagemakerEndpoint] =
@@ -90,6 +91,8 @@ const AddLanguageModel = () => {
     resetThirdPartySecretKey,
   ] = useInput('');
 
+  const [validating, setValidating] = useState(false);
+
   useEffect(() => {
     const filteredModalNameOpts = THIRD_PARTY_API_MODEL_NAMES.filter((item) =>
       item.modelType.includes(thirdPartyModelType)
@@ -118,6 +121,7 @@ const AddLanguageModel = () => {
     resetThirdPartyApiUrl();
     resetThirdPartyApiKey();
     resetThirdPartySecretKey();
+    setValidating(false);
   }, []);
 
   const {
@@ -253,6 +257,10 @@ const AddLanguageModel = () => {
                   variant="primary"
                   iconName="status-positive"
                   onClick={() => {
+                    setValidating(true);
+                    if (!strategyName)
+                      return toast.error('Please provide Strategy Name');
+
                     try {
                       let values;
                       if (type === TYPE.sagemaker) {
@@ -286,6 +294,8 @@ const AddLanguageModel = () => {
                       resetForm();
                     } catch (error) {
                       console.error(error);
+                    } finally {
+                      setValidating(false);
                     }
                   }}
                 >
@@ -295,7 +305,13 @@ const AddLanguageModel = () => {
             }
           >
             <SpaceBetween size={SIZE}>
-              <FormField stretch label="Strategy Name">
+              <FormField
+                stretch
+                label="Strategy Name"
+                errorText={
+                  validating && !strategyName && 'Please provide Strategy Name'
+                }
+              >
                 <Input
                   {...bindStrategyName}
                   placeholder="Please provide a name for this language model strategy"
@@ -444,4 +460,4 @@ const AddLanguageModel = () => {
   );
 };
 
-export default AddLanguageModel;
+export default LanguageModelStrategy;

@@ -8,7 +8,7 @@ import '@cloudscape-design/global-styles/index.css';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider, createBrowserRouter } from 'react-router-dom';
-import AddLanguageModel from './components/AddLanguageModel';
+import LanguageModelStrategy from './components/LanguageModelStrategy';
 import Landing from './components/Landing';
 import Layout from './components/Layout';
 import Session from './components/Session';
@@ -38,7 +38,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'add-language-model-strategies',
-        element: <AddLanguageModel />,
+        element: <LanguageModelStrategy />,
       },
       {
         path: 'upload-files',
