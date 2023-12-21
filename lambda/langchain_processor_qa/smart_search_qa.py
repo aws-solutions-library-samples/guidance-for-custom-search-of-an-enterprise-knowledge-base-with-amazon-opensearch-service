@@ -7,8 +7,8 @@ from langchain.docstore.document import Document
 from langchain.chains.summarize import load_summarize_chain
 from langchain.memory import ConversationBufferMemory
 from langchain import LLMChain
-from langchain.llms import AmazonAPIGatewayBedrock
-from langchain.llms import AmazonAPIGateway
+# from langchain.llms import AmazonAPIGateway
+from amazon_api_gateway import AmazonAPIGateway
 import json
 import numpy as np
 from model import *
@@ -24,10 +24,10 @@ class SmartSearchQA:
              opensearch_user_password,
              opensearch_or_kendra_host,
              opensearch_port,
-             embedding_endpoint_name,
              region,
              zilliz_endpoint,
              zilliz_token,
+             embedding_endpoint_name: str = 'huggingface-inference-eb',
              llm_endpoint_name: str = 'pytorch-inference-llm-v1',
              temperature: float = 0.01,
              language: str = "chinese",
@@ -43,6 +43,8 @@ class SmartSearchQA:
                 ):
         self.language = language
         self.search_engine = search_engine
+        self.embedding_type = 'bedrock' if embedding_endpoint_name == 'bedrock-titan-embed' else 'sagemaker'
+
         #add aos parmeter
         self.aos_index = opensearch_index_name
         self.aos_username = opensearch_user_name
@@ -52,16 +54,20 @@ class SmartSearchQA:
         #when streaming output, this llm should be different from self.llm
         self.condense_question_llm=None
 
-
+        #init LLM
         if model_type == "llama2":
             self.llm = init_model_llama2(llm_endpoint_name,region,temperature)
         elif model_type == "bedrock_api":
-            self.llm = AmazonAPIGatewayBedrock(api_url=api_url)
+            self.llm = AmazonAPIGateway(api_url=api_url)
             parameters={
                 "modelId":model_name,
-                "max_tokens":max_tokens,
                 "temperature":temperature
             }
+            provider = model_name.split(".")[0]
+            if provider == "anthropic":
+                parameters['max_tokens_to_sample'] = max_tokens
+            elif provider == "meta":
+                parameters['max_gen_len'] = max_tokens        
             self.llm.model_kwargs = parameters
         elif model_type == "bedrock":
             if streaming:
@@ -70,10 +76,13 @@ class SmartSearchQA:
             else:
                 self.llm = init_model_bedrock(model_name)
             parameters={
-                "modelId":model_name,
-                "max_tokens":max_tokens,
                 "temperature":temperature
             }
+            provider = model_name.split(".")[0]
+            if provider == "anthropic":
+                parameters['max_tokens_to_sample'] = max_tokens
+            elif provider == "meta":
+                parameters['max_gen_len'] = max_tokens
             self.llm.model_kwargs = parameters
         elif model_type == 'llm_api':
             if model_name.find('Baichuan2') >= 0:
@@ -84,6 +93,13 @@ class SmartSearchQA:
                     "secret_key":secret_key,
                 }
                 self.llm.model_kwargs = parameters
+            elif model_name.find('chatglm') >= 0:
+                self.llm = AmazonAPIGateway(api_url='')
+                parameters={
+                    "modelId":model_name,
+                    "api_key":api_key,
+                }
+                self.llm.model_kwargs = parameters
         else:
             if streaming:
                 self.llm = init_model_withstreaming(llm_endpoint_name,region,temperature=temperature,callbackHandler=callbackHandler)
@@ -91,8 +107,15 @@ class SmartSearchQA:
             else:
                 self.llm = init_model(llm_endpoint_name,region,temperature)
 
+        #init embedding model
+        if self.search_engine != "kendra":
+            if self.embedding_type == 'sagemaker':
+                self.embeddings = init_embeddings(embedding_endpoint_name, region, self.language)
+            elif self.embedding_type == 'bedrock':
+                self.embeddings = init_embeddings_bedrock()
+
+        #init vector store
         if self.search_engine == "opensearch":
-            self.embeddings = init_embeddings(embedding_endpoint_name, region, self.language)
             print("init opensearch vector store")
             self.vector_store = init_vector_store(self.embeddings,
                                                   opensearch_index_name,
@@ -104,14 +127,16 @@ class SmartSearchQA:
             self.vector_store = None
             self.kendra_host = opensearch_or_kendra_host
         elif self.search_engine == 'zilliz':
-            self.embeddings = init_embeddings(embedding_endpoint_name, region, self.language)
             print("init zilliz vector store")
             self.vector_store = init_zilliz_vector_store(self.embeddings,
                                                          zilliz_endpoint,
                                                          zilliz_token)
     def get_qa_relation_score(self,query,answer):
         
-        query_answer_emb = np.array(self.embeddings._embedding_func([query,answer]))
+        if self.embedding_type == 'bedrock':
+            query_answer_emb = np.array(self.embeddings.embed_documents([query,answer]))
+        else:
+            query_answer_emb = np.array(self.embeddings._embedding_func([query,answer]))
         query_emb = query_answer_emb[0]
         answer_emb = query_answer_emb[1]
         dot = query_emb * answer_emb 
@@ -193,14 +218,39 @@ class SmartSearchQA:
         
         return output
     
-    def get_retriever(self,top_k):
+    def get_retriever(self,top_k,
+                           search_method: str="vector",
+                           txt_docs_num: int=0,
+                           vec_docs_score_thresholds: float=0,
+                           txt_docs_score_thresholds: float=0,
+                           text_field: str="text",
+                           vector_field: str="vector_field",
+                     ):
         
         if self.search_engine == "opensearch":
-            retriever = self.vector_store.as_retriever(search_kwargs={"k": top_k})
+            retriever = self.vector_store.as_retriever(search_kwargs={"k": top_k,
+                                                                      "search_method":search_method,
+                                                                      "txt_docs_num":txt_docs_num,
+                                                                      "vec_docs_score_thresholds":vec_docs_score_thresholds,
+                                                                      "txt_docs_score_thresholds":txt_docs_score_thresholds,
+                                                                      "text_field":text_field,
+                                                                      "vector_field":vector_field,
+                                                                      "embedding_type":self.embedding_type
+                                                                      }
+                                                       )
         elif self.search_engine == "kendra":
             retriever = AmazonKendraRetriever(index_id=self.kendra_host,top_k=top_k)
         elif self.search_engine == "zilliz":
-            retriever = self.vector_store.as_retriever(search_kwargs={"k": top_k})
+            retriever = self.vector_store.as_retriever(search_kwargs={"k": top_k,
+                                                                      "search_method":search_method,
+                                                                      "txt_docs_num":txt_docs_num,
+                                                                      "vec_docs_score_thresholds":vec_docs_score_thresholds,
+                                                                      "txt_docs_score_thresholds":txt_docs_score_thresholds,
+                                                                      "text_field":text_field,
+                                                                      "vector_field":vector_field,
+                                                                      "embedding_type":self.embedding_type
+                                                                      }
+                                                       )
             
         return retriever
          
@@ -218,7 +268,9 @@ class SmartSearchQA:
                                         response_if_no_docs_found: str="",
                                         vec_docs_score_thresholds: float =0,
                                         txt_docs_score_thresholds: float =0,
-                                        historyRounds: int = 3,
+                                        contextRounds: int = 3,
+                                        text_field: str="text",
+                                        vector_field: str="vector_field",
                                         ):
         
         prompt = PromptTemplate(template=prompt_template,
@@ -227,17 +279,19 @@ class SmartSearchQA:
         
         history = []
         session_info = ""
-        if len(session_id) > 0 and len(table_name) > 0 and historyRounds > 0:
+        if len(session_id) > 0 and len(table_name) > 0 and contextRounds > 0:
             session_info = get_session_info(table_name,session_id)
             if len(session_info) > 0:
-                session_info = session_info[-historyRounds:]
+                session_info = session_info[-contextRounds:]
                 for item in session_info:
                     print("session info:",item[0]," ; ",item[1]," ; ",item[2])
                     if item[2] == "qa":
                         history.append((item[0],item[1]))
         
         print('history:',history)
-        retriever = self.get_retriever(top_k)
+        retriever = self.get_retriever(top_k,search_method,txt_docs_num,vec_docs_score_thresholds,txt_docs_score_thresholds,text_field,vector_field)
+        
+        ConversationalRetrievalChain._call = new_conversational_call
         
         chain = ConversationalRetrievalChain.from_llm(
                     llm = self.llm,
@@ -247,24 +301,14 @@ class SmartSearchQA:
                     condense_question_prompt = condense_question_prompt,
                     combine_docs_chain_kwargs = combine_docs_chain_kwargs,
                     return_source_documents = True,
-                    return_generated_question = True
+                    return_generated_question = True,
+                    response_if_no_docs_found = response_if_no_docs_found
                 )
         
 #         result = chain({"question": query, "chat_history": history})
         result = chain({
             "question": query, 
-            "chat_history": history, 
-            "index_name": self.aos_index, 
-            "aos_username": self.aos_username, 
-            "aos_passwd": self.aos_passwd, 
-            "aos_host": self.aos_host, 
-            "aos_port": self.aos_port, 
-            "search_engine": self.search_engine, 
-            "search_method": search_method, 
-            "txt_docs_num": txt_docs_num,
-            'response_if_no_docs_found':response_if_no_docs_found,
-            'vec_docs_score_thresholds':vec_docs_score_thresholds,
-            'txt_docs_score_thresholds':txt_docs_score_thresholds
+            "chat_history": history
         })
 
         
@@ -287,12 +331,21 @@ class SmartSearchQA:
                                         prompt_template: str = "",
                                         condense_question_prompt: str="",
                                         top_k: int = 3,
+                                        search_method: str="vector",
+                                        txt_docs_num: int=0,
+                                        response_if_no_docs_found: str="",
+                                        vec_docs_score_thresholds: float =0,
+                                        txt_docs_score_thresholds: float =0,
+                                        contextRounds: int = 3,
+                                        text_field: str="text",
+                                        vector_field: str="vector_field",
                                         ):
         history = []
         session_info = ""
-        if len(session_id) > 0 and len(table_name) > 0:
+        if len(session_id) > 0 and len(table_name) > 0 and contextRounds > 0:
             session_info = get_session_info(table_name,session_id)
             if len(session_info) > 0:
+                session_info = session_info[-contextRounds:]
                 for item in session_info:
                     print("session info:",item[0]," ; ",item[1]," ; ",item[2])
                     if item[2] == "qa":
@@ -316,25 +369,28 @@ class SmartSearchQA:
             new_question = string_processor(new_question_response)
             print('new_question:',new_question)
         
-        retriever = self.get_retriever(top_k)
+        retriever = self.get_retriever(top_k,search_method,txt_docs_num,vec_docs_score_thresholds,txt_docs_score_thresholds,text_field,vector_field)
         docs_with_scores = retriever.get_relevant_documents(new_question)
 
-        print('docs_with_scores:',docs_with_scores)
-        if self.search_engine == "kendra":
-            docs = docs_with_scores
+        if len(docs_with_scores) == 0:
+            answer = response_if_no_docs_found
         else:
-            docs = [doc[0] for doc in docs_with_scores]
-        relate_docs=''
-        for i in range(len(docs)):
-            page_content = string_processor(docs[i].page_content)
-            if len(page_content) > 0:
-                relate_docs += (page_content + ';')
-        
-        prompt_template += relate_docs
-        prompt={'system_content':string_processor(prompt_template),'history':history,'query':new_question}
-        prompt_str = json.dumps(prompt)
-        print('qa system prompt',prompt_str)
-        answer = self.llm.predict(prompt_str)
+            print('docs_with_scores:',docs_with_scores)
+            if self.search_engine == "kendra":
+                docs = docs_with_scores
+            else:
+                docs = [doc[0] for doc in docs_with_scores]
+            relate_docs=''
+            for i in range(len(docs)):
+                page_content = string_processor(docs[i].page_content)
+                if len(page_content) > 0:
+                    relate_docs += (page_content + ';')
+            
+            prompt_template += relate_docs
+            prompt={'system_content':string_processor(prompt_template),'history':history,'query':new_question}
+            prompt_str = json.dumps(prompt)
+            print('qa system prompt',prompt_str)
+            answer = self.llm.predict(prompt_str)
         
         if len(session_id) > 0:
             update_session_info(table_name, session_id, new_question, string_processor(answer), "qa")

@@ -16,6 +16,7 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain import SagemakerEndpoint
 from langchain.llms.sagemaker_endpoint import ContentHandlerBase
 from langchain.llms.sagemaker_endpoint import LLMContentHandler
+from langchain.embeddings import BedrockEmbeddings
 from langchain.vectorstores import Zilliz
 from chinese_text_splitter import ChineseTextSplitter
 import json
@@ -81,6 +82,9 @@ def init_embeddings(endpoint_name,region_name,language: str = "chinese"):
     )
     return embeddings
 
+def init_embeddings_bedrock(model_id: str = 'amazon.titan-embed-text-v1'):
+    embeddings = BedrockEmbeddings(model_id=model_id)
+    return embeddings
 
 def init_vector_store(embeddings,
              index_name,
@@ -123,7 +127,10 @@ class SmartSearchDataload:
                  language: str = "chinese",
                 ):
         self.language = language
-        self.embeddings = init_embeddings(embedding_endpoint_name,region,self.language)
+        if embedding_endpoint_name == 'bedrock-titan-embed':
+            self.embeddings = init_embeddings_bedrock()
+        else:
+            self.embeddings = init_embeddings(embedding_endpoint_name,region,self.language)
         if searchEngine == "opensearch":
             print("init opensearch vector store")
             self.vector_store = init_vector_store(self.embeddings,

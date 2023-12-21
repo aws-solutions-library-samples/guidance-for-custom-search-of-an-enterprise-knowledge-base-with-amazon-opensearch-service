@@ -60,7 +60,7 @@ def lambda_handler(event, context):
         })
     elif modelId == 'amazon.titan-e1t-medium':
         body = json.dumps({"inputText": prompt})
-    elif modelId == 'meta.llama2-13b-chat-v1':
+    elif modelId.find('meta.llama2') >= 0:
         body = json.dumps({
                         "prompt": prompt,
                         "max_gen_len": max_tokens,
@@ -69,7 +69,7 @@ def lambda_handler(event, context):
                          })
         
     accept = "application/json"
-    if modelId == 'meta.llama2-13b-chat-v1':
+    if modelId.find('meta.llama2') >= 0:
         accept = "*/*"
     contentType = "application/json"
     result = boto3_bedrock.invoke_model(

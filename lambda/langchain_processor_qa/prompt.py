@@ -45,11 +45,19 @@ CHINESE_CHAT_PROMPT_TEMPLATE = """你是一个助手，请根据以下对话历�
     人类输入: {human_input}
     回答:""" 
 
+CHINESE_TC_CHAT_PROMPT_TEMPLATE = """你是一個助手，請根據以下對話歷史記錄，回答人類輸入的問題，生成答案文本。
+    =========        
+    {history}
+    =========
+    人類輸入: {human_input}
+    回答:""" 
 
 ENGLISH_CHAT_PROMPT_TEMPLATE = """You are an assistant, Refer to the following conversation history to answer questions from users.
-       
+            
+            =========  
             {history}
-          
+            =========
+            
             user's question: {human_input}
             Answer:""" 
 

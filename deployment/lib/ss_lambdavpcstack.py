@@ -700,7 +700,8 @@ class LambdaVPCStack(Stack):
                 'ec2:CreateNetworkInterface',
                 'ec2:DescribeNetworkInterfaces',
                 'ec2:DeleteNetworkInterface',
-                'secretsmanager:SecretsManagerReadWrite'
+                'secretsmanager:SecretsManagerReadWrite',
+                'bedrock:*'
             ],
             resources=['*']  # 可根据需求进行更改
         )

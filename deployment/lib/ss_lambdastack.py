@@ -688,7 +688,8 @@ class LambdaStack(Stack):
                 'sagemaker:InvokeEndpoint',
                 's3:AmazonS3FullAccess',
                 'lambda:AWSLambdaBasicExecutionRole',
-                'secretsmanager:SecretsManagerReadWrite'
+                'secretsmanager:SecretsManagerReadWrite',
+                'bedrock:*'
             ],
             resources=['*']  # 可根据需求进行更改
         )

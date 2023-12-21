@@ -2,14 +2,21 @@ from langchain.embeddings import SagemakerEndpointEmbeddings
 from langchain.embeddings.sagemaker_endpoint import EmbeddingsContentHandler
 from langchain.llms import SagemakerEndpoint
 from langchain.llms.sagemaker_endpoint import LLMContentHandler
-from langchain.llms import Bedrock
+# from langchain.llms import Bedrock
+from bedrock import Bedrock
+from langchain.embeddings import BedrockEmbeddings
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.utils import enforce_stop_tokens
-from langchain.vectorstores import OpenSearchVectorSearch
+# from langchain.vectorstores import OpenSearchVectorSearch
+from opensearch_vector_search import OpenSearchVectorSearch
 from langchain.vectorstores import Zilliz
 from typing import Dict, List, Optional,Any
 import json
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain.schema.messages import BaseMessage
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union 
+from langchain.callbacks.manager import CallbackManagerForChainRun
+import inspect 
 
 def init_embeddings(endpoint_name,region_name,language: str = "chinese"):
     
@@ -34,6 +41,9 @@ def init_embeddings(endpoint_name,region_name,language: str = "chinese"):
     )
     return embeddings
 
+def init_embeddings_bedrock(model_id: str = 'amazon.titan-embed-text-v1'):
+    embeddings = BedrockEmbeddings(model_id=model_id)
+    return embeddings
 
 def init_vector_store(embeddings,
              index_name,
@@ -196,7 +206,7 @@ class LLamaContentHandler(LLMContentHandler):
     def transform_output(self, response_body):
         # Load the response
         output = json.load(response_body)
-        user_response = next((item['generation']['content'] for item in output if item['generation']['role'] == 'assistant'), '')
+        user_response = output['answer']
         return user_response
         
 def init_model_llama2(endpoint_name,region_name,temperature):
@@ -230,3 +240,68 @@ def init_model_bedrock_withstreaming(model_id,callbackHandler):
         return None
 def string_processor(string):
     return string.replace('\n','').replace('"','').replace('“','').replace('”','').strip()
+
+
+CHAT_TURN_TYPE = Union[Tuple[str, str], BaseMessage]
+_ROLE_MAP = {"human": "Human: ", "ai": "Assistant: "}
+def _get_chat_history(chat_history: List[CHAT_TURN_TYPE]) -> str:
+    buffer = ""
+    for dialogue_turn in chat_history:
+        if isinstance(dialogue_turn, BaseMessage):
+            role_prefix = _ROLE_MAP.get(dialogue_turn.type, f"{dialogue_turn.type}: ")
+            buffer += f"\n{role_prefix}{dialogue_turn.content}"
+        elif isinstance(dialogue_turn, tuple):
+            human = "Human: " + dialogue_turn[0]
+            ai = "Assistant: " + dialogue_turn[1]
+            buffer += "\n" + "\n".join([human, ai])
+        else:
+            raise ValueError(
+                f"Unsupported chat history format: {type(dialogue_turn)}."
+                f" Full chat history: {chat_history} "
+            )
+    return buffer
+    
+def new_conversational_call(
+        self,
+        inputs: Dict[str, Any],
+        run_manager: Optional[CallbackManagerForChainRun] = None,
+    ) -> Dict[str, Any]:
+    _run_manager = run_manager or CallbackManagerForChainRun.get_noop_manager()
+    question = inputs["question"]
+    get_chat_history = self.get_chat_history or _get_chat_history
+    chat_history_str = get_chat_history(inputs["chat_history"])
+
+    if chat_history_str:
+        callbacks = _run_manager.get_child()
+        new_question = self.question_generator.run(
+            question=question, chat_history=chat_history_str, callbacks=callbacks
+        )
+    else:
+        new_question = question
+    accepts_run_manager = (
+        "run_manager" in inspect.signature(self._get_docs).parameters
+    )
+    if accepts_run_manager:
+        docs = self._get_docs(new_question, inputs, run_manager=_run_manager)
+    else:
+        docs = self._get_docs(new_question, inputs)  # type: ignore[call-arg]
+    output: Dict[str, Any] = {}
+    if self.response_if_no_docs_found is not None and len(docs) == 0:
+        output[self.output_key] = self.response_if_no_docs_found
+    else:
+        new_inputs = inputs.copy()
+        if self.rephrase_question:
+            new_inputs["question"] = new_question
+        new_inputs["chat_history"] = chat_history_str
+        
+        docs_without_score = [doc[0] for doc in docs]
+        answer = self.combine_docs_chain.run(
+            input_documents=docs_without_score, callbacks=_run_manager.get_child(), **new_inputs
+        )
+        output[self.output_key] = answer
+
+    if self.return_source_documents:
+        output["source_documents"] = docs
+    if self.return_generated_question:
+        output["generated_question"] = new_question
+    return output

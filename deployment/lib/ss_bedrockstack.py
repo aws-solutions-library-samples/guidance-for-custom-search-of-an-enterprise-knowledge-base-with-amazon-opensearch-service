@@ -32,7 +32,7 @@ class BedrockStack(Stack):
         
         bedrock_layer = _lambda.LayerVersion(
           self, 'BedrockLayer',
-          code=_lambda.Code.from_asset('../lambda/bedrock_env_layer'),
+          code=_lambda.Code.from_asset('../lambda/langchain_processor_layer'),
           compatible_runtimes=[_lambda.Runtime.PYTHON_3_9],
           description='Bedrock Library'
         )
