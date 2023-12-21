@@ -328,7 +328,7 @@ class BedrockBase(BaseModel, ABC):
             _model_kwargs["stream"] = True
 
         params = {**_model_kwargs, **kwargs}
-        input_body = BedrockAdapter.prepare_input(provider, prompt, params)
+        input_body = LLMInputOutputAdapter.prepare_input(provider, prompt, params)
         body = json.dumps(input_body)
 
         try:

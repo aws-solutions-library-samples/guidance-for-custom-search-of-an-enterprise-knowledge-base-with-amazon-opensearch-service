@@ -1,7 +1,7 @@
 from langchain.embeddings import SagemakerEndpointEmbeddings
 from langchain.embeddings.sagemaker_endpoint import EmbeddingsContentHandler
-from langchain.llms import SagemakerEndpoint
-from langchain.llms.sagemaker_endpoint import LLMContentHandler
+from sagemaker_endpoint import SagemakerEndpoint
+from sagemaker_endpoint import LLMContentHandler
 # from langchain.llms import Bedrock
 from bedrock import Bedrock
 from langchain.embeddings import BedrockEmbeddings

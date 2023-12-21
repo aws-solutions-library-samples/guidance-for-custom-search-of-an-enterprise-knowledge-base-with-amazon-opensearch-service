@@ -13,6 +13,8 @@ from langchain.utilities.anthropic import (
     get_token_ids_anthropic,
 )
 
+from bedrockAdapter import BedrockAdapter
+
 HUMAN_PROMPT = "\n\nHuman:"
 ASSISTANT_PROMPT = "\n\nAssistant:"
 ALTERNATION_ERROR = (
@@ -288,7 +290,7 @@ class BedrockBase(BaseModel, ABC):
             _model_kwargs["stream"] = True
 
         params = {**_model_kwargs, **kwargs}
-        input_body = LLMInputOutputAdapter.prepare_input(provider, prompt, params)
+        input_body = BedrockAdapter.prepare_input(provider, prompt, params)
         body = json.dumps(input_body)
 
         try:
