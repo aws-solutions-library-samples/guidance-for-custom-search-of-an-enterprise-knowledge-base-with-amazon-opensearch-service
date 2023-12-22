@@ -121,9 +121,9 @@ class SmartSearchDataload:
                  opensearch_port,
                  embedding_endpoint_name,
                  region,
-                 searchEngine,
-                 zilliz_endpoint,
-                 zilliz_token,
+                 searchEngine: str = "opensearch",
+                 zilliz_endpoint: str = "",
+                 zilliz_token: str = "",
                  language: str = "chinese",
                 ):
         self.language = language
