@@ -208,6 +208,9 @@ class LambdaVPCStack(Stack):
                 'apigateway:*',
                 'dynamodb:*',
                 'logs:*',
+                'ec2:CreateNetworkInterface',
+                'ec2:DescribeNetworkInterfaces',
+                'ec2:DeleteNetworkInterface',
             ],
             resources=['*']  
         )
@@ -231,6 +234,8 @@ class LambdaVPCStack(Stack):
             role=websocket_role,
             code=_lambda.Code.from_asset('../lambda/' + connect_function_name),
             handler='lambda_function' + '.lambda_handler',
+            vpc=vpc,
+            vpc_subnets=vpc_subnets_selection,
         )
         websocketconnect.add_environment("TABLE_NAME", table_name)
 
@@ -242,6 +247,8 @@ class LambdaVPCStack(Stack):
             role=websocket_role,
             code=_lambda.Code.from_asset('../lambda/' + disconnect_function_name),
             handler='lambda_function' + '.lambda_handler',
+            vpc=vpc,
+            vpc_subnets=vpc_subnets_selection,
         )
         websocketdisconnect.add_environment("TABLE_NAME", table_name)
 
@@ -253,6 +260,8 @@ class LambdaVPCStack(Stack):
             role=websocket_role,
             code=_lambda.Code.from_asset('../lambda/' + disconnect_function_name),
             handler='lambda_function' + '.lambda_handler',
+            vpc=vpc,
+            vpc_subnets=vpc_subnets_selection,
         )
         websocketdefault.add_environment("TABLE_NAME", table_name)
 
@@ -264,6 +273,8 @@ class LambdaVPCStack(Stack):
             role=websocket_role,
             code=_lambda.Code.from_asset('../lambda/' + search_function_name),
             handler='lambda_function' + '.lambda_handler',
+            vpc=vpc,
+            vpc_subnets=vpc_subnets_selection,
         )
         websocketsearch.add_environment("TABLE_NAME", table_name)
         websocketsearch.add_environment("DIR_NAME", "search")
@@ -319,6 +330,27 @@ class LambdaVPCStack(Stack):
                     )
                 ]
             )
+
+            user_model = api.add_model("UserModel",
+                                       schema=apigw.JsonSchema(
+                                           type=apigw.JsonSchemaType.OBJECT,
+                                           properties={
+                                               "ind": apigw.JsonSchema(
+                                                   type=apigw.JsonSchemaType.STRING
+                                               ),
+                                               "knn": apigw.JsonSchema(
+                                                   type=apigw.JsonSchemaType.STRING
+                                               ),
+                                               "ml": apigw.JsonSchema(
+                                                   type=apigw.JsonSchemaType.STRING
+                                               ),
+                                               "q": apigw.JsonSchema(
+                                                   type=apigw.JsonSchemaType.STRING
+                                               )
+                                           },
+                                           required=["ind", "knn", "q"]
+                                       )
+                                       )
 
             search_faq_resource.add_method(
                 'GET',
@@ -615,6 +647,41 @@ class LambdaVPCStack(Stack):
         langchain_processor_qa_function.add_environment("dynamodb_table_name", chat_table.table_name)
         cdk.CfnOutput(self, 'chat_table_name', value=chat_table.table_name, export_name='ChatTableName')
 
+    def create_apigw_resource_method_for_knowledge_base_handler(self, api, knowledge_base_handler_function):
+
+        knowledge_base_handler_resource = api.root.add_resource(
+            'knowledge_base_handler',
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_methods=['GET', 'OPTIONS'],
+                allow_origins=apigw.Cors.ALL_ORIGINS)
+        )
+
+        knowledge_base_handler_integration = apigw.LambdaIntegration(
+            knowledge_base_handler_function,
+            proxy=True,
+            integration_responses=[
+                apigw.IntegrationResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': "'*'"
+                    }
+                )
+            ]
+        )
+
+        knowledge_base_handler_resource.add_method(
+            'GET',
+            knowledge_base_handler_integration,
+            method_responses=[
+                apigw.MethodResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': True
+                    }
+                )
+            ]
+        )
+
     def create_file_upload_prerequisites(self, api, search_engine_key, vpc=None, vpc_subnets=None):
         # Now hardcode for testing first
         ACCOUNT = os.getenv('AWS_ACCOUNT_ID', '')
@@ -700,8 +767,7 @@ class LambdaVPCStack(Stack):
                 'ec2:CreateNetworkInterface',
                 'ec2:DescribeNetworkInterfaces',
                 'ec2:DeleteNetworkInterface',
-                'secretsmanager:SecretsManagerReadWrite',
-                'bedrock:*'
+                'secretsmanager:SecretsManagerReadWrite'
             ],
             resources=['*']  # 可根据需求进行更改
         )
@@ -788,6 +854,58 @@ class LambdaVPCStack(Stack):
             "integration.request.path.prefix": "method.request.path.prefix",
             "integration.request.path.sub_prefix": "method.request.path.sub_prefix",
         }
+
+        """
+        6. Create Lambda for list all indices from OpenSearch for front-end
+        """
+        function_name = 'knowledge_base_handler'
+
+        _knowledge_base_role_policy = _iam.PolicyStatement(
+            actions=[
+                's3:AmazonS3FullAccess',
+                'lambda:AWSLambdaBasicExecutionRole',
+                'secretsmanager:SecretsManagerReadWrite'
+            ],
+            resources=['*']  # 可根据需求进行更改
+        )
+        knowledge_base_handler_role = _iam.Role(
+            self, 'knowledge_base_handler_role',
+            assumed_by=_iam.ServicePrincipal('lambda.amazonaws.com')
+        )
+        knowledge_base_handler_role.add_to_policy(_data_load_role_policy)
+
+        knowledge_base_handler_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
+        )
+
+        knowledge_base_handler_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("SecretsManagerReadWrite")
+        )
+
+        knowledge_base_handler_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonS3FullAccess")
+        )
+
+        knowledge_base_handler_function = _lambda.Function(
+            self, function_name,
+            function_name=function_name,
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            role=knowledge_base_handler_role,
+            layers=[self.langchain_processor_qa_layer],
+            code=_lambda.Code.from_asset('../lambda/' + function_name),
+            handler='lambda_function' + '.lambda_handler',
+            timeout=Duration.minutes(10),
+            vpc=vpc,
+            vpc_subnets=vpc_subnets,
+            reserved_concurrent_executions=20
+        )
+        knowledge_base_handler_function.add_environment("host", search_engine_key)
+
+        self.create_apigw_resource_method_for_knowledge_base_handler(
+            api=api,
+            knowledge_base_handler_function=knowledge_base_handler_function
+        )
+
 
         # Create Integration Options
         """
