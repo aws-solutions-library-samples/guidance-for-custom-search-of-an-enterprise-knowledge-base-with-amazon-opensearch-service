@@ -169,7 +169,6 @@ class ResultMetaData:
     def _getter(
         self, key: Any, raiseerr: bool = True
     ) -> Optional[Callable[[Row[Any]], Any]]:
-
         index = self._index_for_key(key, raiseerr)
 
         if index is not None:
@@ -374,7 +373,7 @@ class SimpleResultMetaData(ResultMetaData):
         indexes: Sequence[int]
         new_keys: Sequence[str]
         extra: Sequence[Any]
-        indexes, new_keys, extra = zip(*metadata_for_keys)  # type: ignore
+        indexes, new_keys, extra = zip(*metadata_for_keys)
 
         if self._translated_indexes:
             indexes = [self._translated_indexes[idx] for idx in indexes]
@@ -460,7 +459,7 @@ class ResultInternal(InPlaceGenerative, Generic[_R]):
             else:
                 _proc = Row
 
-                def process_row(  # type: ignore
+                def process_row(
                     metadata: ResultMetaData,
                     processors: Optional[_ProcessorsType],
                     key_to_index: Mapping[_KeyType, int],
@@ -508,7 +507,6 @@ class ResultInternal(InPlaceGenerative, Generic[_R]):
 
     @HasMemoized_ro_memoized_attribute
     def _iterator_getter(self) -> Callable[..., Iterator[_R]]:
-
         make_row = self._row_getter
 
         post_creational_filter = self._post_creational_filter
@@ -549,7 +547,6 @@ class ResultInternal(InPlaceGenerative, Generic[_R]):
         return [make_row(row) for row in rows]
 
     def _allrows(self) -> List[_R]:
-
         post_creational_filter = self._post_creational_filter
 
         make_row = self._row_getter
@@ -1246,7 +1243,7 @@ class Result(_WithKeys, ResultInternal[Row[_TP]]):
 
             :attr:`_engine.Result.t` - shorter synonym
 
-            :attr:`_engine.Row.t` - :class:`_engine.Row` version
+            :attr:`_engine.Row._t` - :class:`_engine.Row` version
 
         """
 
@@ -1382,6 +1379,11 @@ class Result(_WithKeys, ResultInternal[Row[_TP]]):
         .. versionadded:: 1.4
 
         :return: a list of :class:`_engine.Row` objects.
+
+        .. seealso::
+
+            :ref:`engine_stream_results` - How to stream a large result set
+            without loading it completely in python.
 
         """
 

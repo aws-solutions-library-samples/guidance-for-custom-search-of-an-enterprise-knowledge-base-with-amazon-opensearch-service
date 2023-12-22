@@ -71,7 +71,7 @@ if TYPE_CHECKING:
     from ..sql.type_api import _TypeMemoDict
     from ..sql.type_api import TypeEngine
 
-ConnectArgsType = Tuple[Tuple[str], MutableMapping[str, Any]]
+ConnectArgsType = Tuple[Sequence[str], MutableMapping[str, Any]]
 
 _T = TypeVar("_T", bound="Any")
 
@@ -521,7 +521,7 @@ class ReflectedIndex(TypedDict):
     """index name"""
 
     column_names: List[Optional[str]]
-    """column names which the index refers towards.
+    """column names which the index references.
     An element of this list is ``None`` if it's an expression and is
     returned in the ``expressions`` list.
     """
@@ -536,7 +536,7 @@ class ReflectedIndex(TypedDict):
     """whether or not the index has a unique flag"""
 
     duplicates_constraint: NotRequired[Optional[str]]
-    "Indicates if this index mirrors a unique constraint with this name"
+    "Indicates if this index mirrors a constraint with this name"
 
     include_columns: NotRequired[List[str]]
     """columns to include in the INCLUDE clause for supporting databases.
@@ -1233,7 +1233,7 @@ class Dialect(EventTarget):
             def create_connect_args(self, url):
                 opts = url.translate_connect_args()
                 opts.update(url.query)
-                return [[], opts]
+                return ([], opts)
 
         :param url: a :class:`.URL` object
 

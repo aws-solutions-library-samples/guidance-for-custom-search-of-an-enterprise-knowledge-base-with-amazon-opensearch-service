@@ -1,12 +1,13 @@
+import warnings
 from typing import Any, Dict, List, Set
 
-from pydantic import validator
-
+from langchain.memory.chat_memory import BaseChatMemory
+from langchain.pydantic_v1 import validator
 from langchain.schema import BaseMemory
 
 
 class CombinedMemory(BaseMemory):
-    """Class for combining multiple memories' data together."""
+    """Combining multiple memories' data together."""
 
     memories: List[BaseMemory]
     """For tracking all the memories that should be accessed."""
@@ -25,6 +26,19 @@ class CombinedMemory(BaseMemory):
                 )
             all_variables |= set(val.memory_variables)
 
+        return value
+
+    @validator("memories")
+    def check_input_key(cls, value: List[BaseMemory]) -> List[BaseMemory]:
+        """Check that if memories are of type BaseChatMemory that input keys exist."""
+        for val in value:
+            if isinstance(val, BaseChatMemory):
+                if val.input_key is None:
+                    warnings.warn(
+                        "When using CombinedMemory, "
+                        "input keys should be so the input is known. "
+                        f" Was not set on {val}"
+                    )
         return value
 
     @property
@@ -46,10 +60,12 @@ class CombinedMemory(BaseMemory):
         # Collect vars from all sub-memories
         for memory in self.memories:
             data = memory.load_memory_variables(inputs)
-            memory_data = {
-                **memory_data,
-                **data,
-            }
+            for key, value in data.items():
+                if key in memory_data:
+                    raise ValueError(
+                        f"The variable {key} is repeated in the CombinedMemory."
+                    )
+                memory_data[key] = value
 
         return memory_data
 

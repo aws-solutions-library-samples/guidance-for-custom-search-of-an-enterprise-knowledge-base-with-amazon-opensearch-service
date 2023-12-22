@@ -20,7 +20,7 @@ import contextlib
 import numpy
 
 from pathlib import Path
-from numpy._utils import asunicode
+from numpy.compat import asbytes, asstr
 from numpy.testing import temppath, IS_WASM
 from importlib import import_module
 
@@ -144,7 +144,7 @@ def build_module(source_files, options=[], skip=[], only=[], module_name=None):
         out, err = p.communicate()
         if p.returncode != 0:
             raise RuntimeError("Running f2py failed: %s\n%s" %
-                               (cmd[4:], asunicode(out)))
+                               (cmd[4:], asstr(out)))
     finally:
         os.chdir(cwd)
 
@@ -318,7 +318,7 @@ if __name__ == "__main__":
     script = os.path.join(d, get_temp_module_name() + ".py")
     dst_sources.append(script)
     with open(script, "wb") as f:
-        f.write(code.encode('latin1'))
+        f.write(asbytes(code))
 
     # Build
     cwd = os.getcwd()

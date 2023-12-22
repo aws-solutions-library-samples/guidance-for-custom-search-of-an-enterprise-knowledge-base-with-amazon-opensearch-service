@@ -10031,20 +10031,3 @@ def test_argsort_int(N, dtype):
     arr = rnd.randint(low=minv, high=maxv, size=N, dtype=dtype)
     arr[N-1] = maxv
     assert_arg_sorted(arr, np.argsort(arr, kind='quick'))
-
-
-@pytest.mark.skipif(not HAS_REFCOUNT, reason="Python lacks refcounts")
-def test_gh_22683():
-    b = 777.68760986
-    a = np.array([b] * 10000, dtype=object)
-    refc_start = sys.getrefcount(b)
-    np.choose(np.zeros(10000, dtype=int), [a], out=a)
-    np.choose(np.zeros(10000, dtype=int), [a], out=a)
-    refc_end = sys.getrefcount(b)
-    assert refc_end - refc_start < 10
-
-
-def test_gh_24459():
-    a = np.zeros((50, 3), dtype=np.float64)
-    with pytest.raises(TypeError):
-        np.choose(a, [3, -1])

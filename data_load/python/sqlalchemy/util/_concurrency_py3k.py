@@ -30,7 +30,6 @@ _T = TypeVar("_T")
 if typing.TYPE_CHECKING:
 
     class greenlet(Protocol):
-
         dead: bool
         gr_context: Optional[Context]
 
@@ -70,7 +69,7 @@ def is_exit_exception(e: BaseException) -> bool:
 # Issue for context: https://github.com/python-greenlet/greenlet/issues/173
 
 
-class _AsyncIoGreenlet(greenlet):  # type: ignore
+class _AsyncIoGreenlet(greenlet):
     dead: bool
 
     def __init__(self, fn: Callable[..., Any], driver: greenlet):
@@ -141,7 +140,6 @@ def await_fallback(awaitable: Awaitable[_T]) -> _T:
     if not isinstance(current, _AsyncIoGreenlet):
         loop = get_event_loop()
         if loop.is_running():
-
             _safe_cancel_awaitable(awaitable)
 
             raise exc.MissingGreenlet(
@@ -149,7 +147,7 @@ def await_fallback(awaitable: Awaitable[_T]) -> _T:
                 "loop is already running; can't call await_fallback() here. "
                 "Was IO attempted in an unexpected place?"
             )
-        return loop.run_until_complete(awaitable)  # type: ignore[no-any-return]  # noqa: E501
+        return loop.run_until_complete(awaitable)
 
     return current.driver.switch(awaitable)  # type: ignore[no-any-return]
 
@@ -237,7 +235,6 @@ def _util_async_run_coroutine_function(
 def _util_async_run(
     fn: Callable[..., Coroutine[Any, Any, Any]], *args: Any, **kwargs: Any
 ) -> Any:
-
     """for test suite/ util only"""
 
     loop = get_event_loop()
@@ -258,4 +255,6 @@ def get_event_loop() -> asyncio.AbstractEventLoop:
     try:
         return asyncio.get_running_loop()
     except RuntimeError:
-        return asyncio.get_event_loop_policy().get_event_loop()
+        # avoid "During handling of the above exception, another exception..."
+        pass
+    return asyncio.get_event_loop_policy().get_event_loop()

@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import abc
+from argparse import Namespace
 import configparser
 import logging
 import os
@@ -51,7 +52,7 @@ file_config = None
 logging = None
 include_tags = set()
 exclude_tags = set()
-options = None
+options: Namespace = None  # type: ignore
 
 
 def setup_options(make_option):
@@ -411,13 +412,11 @@ def _init_symbols(options, file_config):
 @pre
 def _set_disable_asyncio(opt, file_config):
     if opt.disable_asyncio:
-
         asyncio.ENABLE_ASYNCIO = False
 
 
 @post
 def _engine_uri(options, file_config):
-
     from sqlalchemy import testing
     from sqlalchemy.testing import config
     from sqlalchemy.testing import provision
@@ -466,7 +465,6 @@ def _engine_uri(options, file_config):
 
 @post
 def _requirements(options, file_config):
-
     requirement_cls = file_config.get("sqla_testing", "requirement_cls")
     _setup_requirements(requirement_cls)
 
@@ -474,9 +472,6 @@ def _requirements(options, file_config):
 def _setup_requirements(argument):
     from sqlalchemy.testing import config
     from sqlalchemy import testing
-
-    if config.requirements is not None:
-        return
 
     modname, clsname = argument.split(":")
 
@@ -608,7 +603,6 @@ def _setup_engine(cls):
 
 
 def before_test(test, test_module_name, test_class, test_name):
-
     # format looks like:
     # "test.aaa_profiling.test_compiler.CompileTest.test_update_whereclause"
 

@@ -365,6 +365,7 @@ from ... import exc
 from ... import types as sqltypes
 from ... import util
 from ...connectors.pyodbc import PyODBCConnector
+from ...engine import cursor as _cursor
 
 
 class _ms_numeric_pyodbc:
@@ -377,7 +378,6 @@ class _ms_numeric_pyodbc:
     """
 
     def bind_processor(self, dialect):
-
         super_process = super().bind_processor(dialect)
 
         if not dialect._need_decimal_fix:
@@ -594,6 +594,8 @@ class MSExecutionContext_pyodbc(MSExecutionContext):
                     self.cursor.nextset()
 
             self._lastrowid = int(row[0])
+
+            self.cursor_fetch_strategy = _cursor._NO_CURSOR_DML
         else:
             super().post_exec()
 

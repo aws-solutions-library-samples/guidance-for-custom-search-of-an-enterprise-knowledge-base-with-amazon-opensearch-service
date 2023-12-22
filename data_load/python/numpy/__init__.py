@@ -66,7 +66,7 @@ testing
     NumPy testing tools
 distutils
     Enhancements to distutils with support for
-    Fortran compilers support and more  (for Python <= 3.11).
+    Fortran compilers support and more.
 
 Utilities
 ---------
@@ -107,11 +107,6 @@ from ._globals import _NoValue, _CopyMode
 from .exceptions import (
     ComplexWarning, ModuleDeprecationWarning, VisibleDeprecationWarning,
     TooHardError, AxisError)
-
-
-# If a version with git hash was stored, use that instead
-from . import version
-from .version import __version__
 
 # We first need to detect if we're being called as part of the numpy setup
 # procedure itself in a reliable manner.
@@ -239,12 +234,6 @@ else:
     __all__.extend(_mat.__all__)
     __all__.extend(lib.__all__)
     __all__.extend(['linalg', 'fft', 'random', 'ctypeslib', 'ma'])
-
-    # Remove min and max from __all__ to avoid `from numpy import *` override
-    # the builtins min/max. Temporary fix for 1.25.x/1.26.x, see gh-24229.
-    __all__.remove('min')
-    __all__.remove('max')
-    __all__.remove('round')
 
     # Remove one of the two occurrences of `issubdtype`, which is exposed as
     # both `numpy.core.issubdtype` and `numpy.lib.issubdtype`.
@@ -451,6 +440,9 @@ else:
     # Remove symbols imported for internal use
     del os
 
+
+# get the version using versioneer
+from .version import __version__, git_revision as __git_version__
 
 # Remove symbols imported for internal use
 del sys, warnings

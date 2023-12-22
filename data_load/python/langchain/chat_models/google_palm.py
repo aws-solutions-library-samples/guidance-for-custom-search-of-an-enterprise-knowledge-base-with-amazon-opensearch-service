@@ -1,21 +1,31 @@
 """Wrapper around Google's PaLM Chat API."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional
+import logging
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
-from pydantic import BaseModel, root_validator
+from tenacity import (
+    before_sleep_log,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from langchain.callbacks.manager import (
     AsyncCallbackManagerForLLMRun,
     CallbackManagerForLLMRun,
 )
 from langchain.chat_models.base import BaseChatModel
+from langchain.pydantic_v1 import BaseModel, root_validator
 from langchain.schema import (
+    ChatGeneration,
+    ChatResult,
+)
+from langchain.schema.messages import (
     AIMessage,
     BaseMessage,
-    ChatGeneration,
     ChatMessage,
-    ChatResult,
     HumanMessage,
     SystemMessage,
 )
@@ -24,9 +34,11 @@ from langchain.utils import get_from_dict_or_env
 if TYPE_CHECKING:
     import google.generativeai as genai
 
+logger = logging.getLogger(__name__)
+
 
 class ChatGooglePalmError(Exception):
-    pass
+    """Error with the `Google PaLM` API."""
 
 
 def _truncate_at_stop_tokens(
@@ -156,13 +168,58 @@ def _messages_to_prompt_dict(
     )
 
 
+def _create_retry_decorator() -> Callable[[Any], Any]:
+    """Returns a tenacity retry decorator, preconfigured to handle PaLM exceptions"""
+    import google.api_core.exceptions
+
+    multiplier = 2
+    min_seconds = 1
+    max_seconds = 60
+    max_retries = 10
+
+    return retry(
+        reraise=True,
+        stop=stop_after_attempt(max_retries),
+        wait=wait_exponential(multiplier=multiplier, min=min_seconds, max=max_seconds),
+        retry=(
+            retry_if_exception_type(google.api_core.exceptions.ResourceExhausted)
+            | retry_if_exception_type(google.api_core.exceptions.ServiceUnavailable)
+            | retry_if_exception_type(google.api_core.exceptions.GoogleAPIError)
+        ),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+
+
+def chat_with_retry(llm: ChatGooglePalm, **kwargs: Any) -> Any:
+    """Use tenacity to retry the completion call."""
+    retry_decorator = _create_retry_decorator()
+
+    @retry_decorator
+    def _chat_with_retry(**kwargs: Any) -> Any:
+        return llm.client.chat(**kwargs)
+
+    return _chat_with_retry(**kwargs)
+
+
+async def achat_with_retry(llm: ChatGooglePalm, **kwargs: Any) -> Any:
+    """Use tenacity to retry the async completion call."""
+    retry_decorator = _create_retry_decorator()
+
+    @retry_decorator
+    async def _achat_with_retry(**kwargs: Any) -> Any:
+        # Use OpenAI's async api https://github.com/openai/openai-python#async-api
+        return await llm.client.chat_async(**kwargs)
+
+    return await _achat_with_retry(**kwargs)
+
+
 class ChatGooglePalm(BaseChatModel, BaseModel):
-    """Wrapper around Google's PaLM Chat API.
+    """`Google PaLM` Chat models API.
 
     To use you must have the google.generativeai Python package installed and
     either:
 
-        1. The ``GOOGLE_API_KEY``` environment varaible set with your API key, or
+        1. The ``GOOGLE_API_KEY``` environment variable set with your API key, or
         2. Pass your API key using the google_api_key kwarg to the ChatGoogle
            constructor.
 
@@ -191,6 +248,14 @@ class ChatGooglePalm(BaseChatModel, BaseModel):
     """Number of chat completions to generate for each prompt. Note that the API may
        not return the full n completions if duplicates are generated."""
 
+    @property
+    def lc_secrets(self) -> Dict[str, str]:
+        return {"google_api_key": "GOOGLE_API_KEY"}
+
+    @classmethod
+    def is_lc_serializable(self) -> bool:
+        return True
+
     @root_validator()
     def validate_environment(cls, values: Dict) -> Dict:
         """Validate api key, python package exists, temperature, top_p, and top_k."""
@@ -203,7 +268,8 @@ class ChatGooglePalm(BaseChatModel, BaseModel):
             genai.configure(api_key=google_api_key)
         except ImportError:
             raise ChatGooglePalmError(
-                "Could not import google.generativeai python package."
+                "Could not import google.generativeai python package. "
+                "Please install it with `pip install google-generativeai`"
             )
 
         values["client"] = genai
@@ -224,16 +290,19 @@ class ChatGooglePalm(BaseChatModel, BaseModel):
         messages: List[BaseMessage],
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> ChatResult:
         prompt = _messages_to_prompt_dict(messages)
 
-        response: genai.types.ChatResponse = self.client.chat(
+        response: genai.types.ChatResponse = chat_with_retry(
+            self,
             model=self.model_name,
             prompt=prompt,
             temperature=self.temperature,
             top_p=self.top_p,
             top_k=self.top_k,
             candidate_count=self.n,
+            **kwargs,
         )
 
         return _response_to_result(response, stop)
@@ -243,10 +312,12 @@ class ChatGooglePalm(BaseChatModel, BaseModel):
         messages: List[BaseMessage],
         stop: Optional[List[str]] = None,
         run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> ChatResult:
         prompt = _messages_to_prompt_dict(messages)
 
-        response: genai.types.ChatResponse = await self.client.chat_async(
+        response: genai.types.ChatResponse = await achat_with_retry(
+            self,
             model=self.model_name,
             prompt=prompt,
             temperature=self.temperature,
@@ -258,7 +329,7 @@ class ChatGooglePalm(BaseChatModel, BaseModel):
         return _response_to_result(response, stop)
 
     @property
-    def _identifying_params(self) -> Mapping[str, Any]:
+    def _identifying_params(self) -> Dict[str, Any]:
         """Get the identifying parameters."""
         return {
             "model_name": self.model_name,

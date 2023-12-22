@@ -467,6 +467,8 @@
         {"shape":"InvalidParameterValueException"},
         {"shape":"ResourceNotFoundException"},
         {"shape":"ThrottlingException"},
+        {"shape":"LimitExceededException"},
+        {"shape":"PreconditionNotMetException"},
         {"shape":"InternalFailureException"},
         {"shape":"ResourceUnavailableException"}
       ],
@@ -989,6 +991,36 @@
       ],
       "documentation":"<p>Provides the read and write permissions for an analysis.</p>"
     },
+    "DescribeAssetBundleExportJob":{
+      "name":"DescribeAssetBundleExportJob",
+      "http":{
+        "method":"GET",
+        "requestUri":"/accounts/{AwsAccountId}/asset-bundle-export-jobs/{AssetBundleExportJobId}"
+      },
+      "input":{"shape":"DescribeAssetBundleExportJobRequest"},
+      "output":{"shape":"DescribeAssetBundleExportJobResponse"},
+      "errors":[
+        {"shape":"UnsupportedUserEditionException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"ResourceNotFoundException"}
+      ],
+      "documentation":"<p>Describes an existing export job.</p> <p>Poll job descriptions after a job starts to know the status of the job. When a job succeeds, a URL is provided to download the exported assets' data from. Download URLs are valid for five minutes after they are generated. You can call the <code>DescribeAssetBundleExportJob</code> API for a new download URL as needed.</p> <p>Job descriptions are available for 14 days after the job starts.</p>"
+    },
+    "DescribeAssetBundleImportJob":{
+      "name":"DescribeAssetBundleImportJob",
+      "http":{
+        "method":"GET",
+        "requestUri":"/accounts/{AwsAccountId}/asset-bundle-import-jobs/{AssetBundleImportJobId}"
+      },
+      "input":{"shape":"DescribeAssetBundleImportJobRequest"},
+      "output":{"shape":"DescribeAssetBundleImportJobResponse"},
+      "errors":[
+        {"shape":"UnsupportedUserEditionException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"ResourceNotFoundException"}
+      ],
+      "documentation":"<p>Describes an existing import job.</p> <p>Poll job descriptions after starting a job to know when it has succeeded or failed. Job descriptions are available for 14 days after job starts.</p>"
+    },
     "DescribeDashboard":{
       "name":"DescribeDashboard",
       "http":{
@@ -1043,6 +1075,42 @@
         {"shape":"InternalFailureException"}
       ],
       "documentation":"<p>Describes read and write permissions for a dashboard.</p>"
+    },
+    "DescribeDashboardSnapshotJob":{
+      "name":"DescribeDashboardSnapshotJob",
+      "http":{
+        "method":"GET",
+        "requestUri":"/accounts/{AwsAccountId}/dashboards/{DashboardId}/snapshot-jobs/{SnapshotJobId}"
+      },
+      "input":{"shape":"DescribeDashboardSnapshotJobRequest"},
+      "output":{"shape":"DescribeDashboardSnapshotJobResponse"},
+      "errors":[
+        {"shape":"AccessDeniedException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"UnsupportedUserEditionException"},
+        {"shape":"InternalFailureException"}
+      ],
+      "documentation":"<p>Describes an existing snapshot job.</p> <p>Poll job descriptions after a job starts to know the status of the job. For information on available status codes, see <code>JobStatus</code>.</p>"
+    },
+    "DescribeDashboardSnapshotJobResult":{
+      "name":"DescribeDashboardSnapshotJobResult",
+      "http":{
+        "method":"GET",
+        "requestUri":"/accounts/{AwsAccountId}/dashboards/{DashboardId}/snapshot-jobs/{SnapshotJobId}/result"
+      },
+      "input":{"shape":"DescribeDashboardSnapshotJobResultRequest"},
+      "output":{"shape":"DescribeDashboardSnapshotJobResultResponse"},
+      "errors":[
+        {"shape":"AccessDeniedException"},
+        {"shape":"InvalidParameterValueException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"UnsupportedUserEditionException"},
+        {"shape":"PreconditionNotMetException"},
+        {"shape":"InternalFailureException"}
+      ],
+      "documentation":"<p>Describes the result of an existing snapshot job that has finished running.</p> <p>A finished snapshot job will return a <code>COMPLETED</code> or <code>FAILED</code> status when you poll the job with a <code>DescribeDashboardSnapshotJob</code> API call.</p> <p>If the job has not finished running, this operation returns a message that says <code>Dashboard Snapshot Job with id &lt;SnapshotjobId&gt; has not reached a terminal state.</code>.</p>"
     },
     "DescribeDataSet":{
       "name":"DescribeDataSet",
@@ -1162,6 +1230,7 @@
         {"shape":"AccessDeniedException"},
         {"shape":"ResourceNotFoundException"},
         {"shape":"ThrottlingException"},
+        {"shape":"InvalidNextTokenException"},
         {"shape":"UnsupportedUserEditionException"},
         {"shape":"InternalFailureException"}
       ],
@@ -1180,6 +1249,7 @@
         {"shape":"AccessDeniedException"},
         {"shape":"ResourceNotFoundException"},
         {"shape":"ThrottlingException"},
+        {"shape":"InvalidNextTokenException"},
         {"shape":"UnsupportedUserEditionException"},
         {"shape":"InternalFailureException"}
       ],
@@ -1650,6 +1720,40 @@
         {"shape":"InternalFailureException"}
       ],
       "documentation":"<p>Lists Amazon QuickSight analyses that exist in the specified Amazon Web Services account.</p>"
+    },
+    "ListAssetBundleExportJobs":{
+      "name":"ListAssetBundleExportJobs",
+      "http":{
+        "method":"GET",
+        "requestUri":"/accounts/{AwsAccountId}/asset-bundle-export-jobs"
+      },
+      "input":{"shape":"ListAssetBundleExportJobsRequest"},
+      "output":{"shape":"ListAssetBundleExportJobsResponse"},
+      "errors":[
+        {"shape":"UnsupportedUserEditionException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"AccessDeniedException"},
+        {"shape":"InvalidNextTokenException"},
+        {"shape":"ResourceNotFoundException"}
+      ],
+      "documentation":"<p>Lists all asset bundle export jobs that have been taken place in the last 14 days. Jobs created more than 14 days ago are deleted forever and are not returned. If you are using the same job ID for multiple jobs, <code>ListAssetBundleExportJobs</code> only returns the most recent job that uses the repeated job ID.</p>"
+    },
+    "ListAssetBundleImportJobs":{
+      "name":"ListAssetBundleImportJobs",
+      "http":{
+        "method":"GET",
+        "requestUri":"/accounts/{AwsAccountId}/asset-bundle-import-jobs"
+      },
+      "input":{"shape":"ListAssetBundleImportJobsRequest"},
+      "output":{"shape":"ListAssetBundleImportJobsResponse"},
+      "errors":[
+        {"shape":"UnsupportedUserEditionException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"AccessDeniedException"},
+        {"shape":"InvalidNextTokenException"},
+        {"shape":"ResourceNotFoundException"}
+      ],
+      "documentation":"<p>Lists all asset bundle import jobs that have taken place in the last 14 days. Jobs created more than 14 days ago are deleted forever and are not returned. If you are using the same job ID for multiple jobs, <code>ListAssetBundleImportJobs</code> only returns the most recent job that uses the repeated job ID.</p>"
     },
     "ListDashboardVersions":{
       "name":"ListDashboardVersions",
@@ -2283,6 +2387,65 @@
       ],
       "documentation":"<p>Use the <code>SearchGroups</code> operation to search groups in a specified Amazon QuickSight namespace using the supplied filters.</p>"
     },
+    "StartAssetBundleExportJob":{
+      "name":"StartAssetBundleExportJob",
+      "http":{
+        "method":"POST",
+        "requestUri":"/accounts/{AwsAccountId}/asset-bundle-export-jobs/export"
+      },
+      "input":{"shape":"StartAssetBundleExportJobRequest"},
+      "output":{"shape":"StartAssetBundleExportJobResponse"},
+      "errors":[
+        {"shape":"UnsupportedUserEditionException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"InvalidParameterValueException"},
+        {"shape":"AccessDeniedException"},
+        {"shape":"LimitExceededException"},
+        {"shape":"ConflictException"},
+        {"shape":"ResourceNotFoundException"}
+      ],
+      "documentation":"<p>Starts an Asset Bundle export job.</p> <p>An Asset Bundle export job exports specified Amazon QuickSight assets. You can also choose to export any asset dependencies in the same job. Export jobs run asynchronously and can be polled with a <code>DescribeAssetBundleExportJob</code> API call. When a job is successfully completed, a download URL that contains the exported assets is returned. The URL is valid for 5 minutes and can be refreshed with a <code>DescribeAssetBundleExportJob</code> API call. Each Amazon QuickSight account can run up to 5 export jobs concurrently.</p> <p>The API caller must have the necessary permissions in their IAM role to access each resource before the resources can be exported.</p>"
+    },
+    "StartAssetBundleImportJob":{
+      "name":"StartAssetBundleImportJob",
+      "http":{
+        "method":"POST",
+        "requestUri":"/accounts/{AwsAccountId}/asset-bundle-import-jobs/import"
+      },
+      "input":{"shape":"StartAssetBundleImportJobRequest"},
+      "output":{"shape":"StartAssetBundleImportJobResponse"},
+      "errors":[
+        {"shape":"UnsupportedUserEditionException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"InvalidParameterValueException"},
+        {"shape":"AccessDeniedException"},
+        {"shape":"LimitExceededException"},
+        {"shape":"ConflictException"},
+        {"shape":"ResourceNotFoundException"}
+      ],
+      "documentation":"<p>Starts an Asset Bundle import job.</p> <p>An Asset Bundle import job imports specified Amazon QuickSight assets into an Amazon QuickSight account. You can also choose to import a naming prefix and specified configuration overrides. The assets that are contained in the bundle file that you provide are used to create or update a new or existing asset in your Amazon QuickSight account. Each Amazon QuickSight account can run up to 5 import jobs concurrently.</p> <p>The API caller must have the necessary <code>\"create\"</code>, <code>\"describe\"</code>, and <code>\"update\"</code> permissions in their IAM role to access each resource type that is contained in the bundle file before the resources can be imported.</p>"
+    },
+    "StartDashboardSnapshotJob":{
+      "name":"StartDashboardSnapshotJob",
+      "http":{
+        "method":"POST",
+        "requestUri":"/accounts/{AwsAccountId}/dashboards/{DashboardId}/snapshot-jobs"
+      },
+      "input":{"shape":"StartDashboardSnapshotJobRequest"},
+      "output":{"shape":"StartDashboardSnapshotJobResponse"},
+      "errors":[
+        {"shape":"AccessDeniedException"},
+        {"shape":"InvalidParameterValueException"},
+        {"shape":"LimitExceededException"},
+        {"shape":"ResourceExistsException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"UnsupportedUserEditionException"},
+        {"shape":"UnsupportedPricingPlanException"},
+        {"shape":"InternalFailureException"}
+      ],
+      "documentation":"<p>Starts an asynchronous job that generates a dashboard snapshot. You can request one of the following format configurations per API call.</p> <ul> <li> <p>1 paginated PDF</p> </li> <li> <p>1 Excel workbook</p> </li> <li> <p>5 CSVs</p> </li> </ul> <p>Poll job descriptions with a <code>DescribeDashboardSnapshotJob</code> API call. Once the job succeeds, use the <code>DescribeDashboardSnapshotJobResult</code> API to obtain the download URIs that the job generates.</p>"
+    },
     "TagResource":{
       "name":"TagResource",
       "http":{
@@ -2299,7 +2462,7 @@
         {"shape":"ThrottlingException"},
         {"shape":"InternalFailureException"}
       ],
-      "documentation":"<p>Assigns one or more tags (key-value pairs) to the specified Amazon QuickSight resource. </p> <p>Tags can help you organize and categorize your resources. You can also use them to scope user permissions, by granting a user permission to access or change only resources with certain tag values. You can use the <code>TagResource</code> operation with a resource that already has tags. If you specify a new tag key for the resource, this tag is appended to the list of tags associated with the resource. If you specify a tag key that is already associated with the resource, the new tag value that you specify replaces the previous value for that tag.</p> <p>You can associate as many as 50 tags with a resource. Amazon QuickSight supports tagging on data set, data source, dashboard, template, and topic. </p> <p>Tagging for Amazon QuickSight works in a similar way to tagging for other Amazon Web Services services, except for the following:</p> <ul> <li> <p>You can't use tags to track costs for Amazon QuickSight. This isn't possible because you can't tag the resources that Amazon QuickSight costs are based on, for example Amazon QuickSight storage capacity (SPICE), number of users, type of users, and usage metrics.</p> </li> <li> <p>Amazon QuickSight doesn't currently support the tag editor for Resource Groups.</p> </li> </ul>"
+      "documentation":"<p>Assigns one or more tags (key-value pairs) to the specified Amazon QuickSight resource. </p> <p>Tags can help you organize and categorize your resources. You can also use them to scope user permissions, by granting a user permission to access or change only resources with certain tag values. You can use the <code>TagResource</code> operation with a resource that already has tags. If you specify a new tag key for the resource, this tag is appended to the list of tags associated with the resource. If you specify a tag key that is already associated with the resource, the new tag value that you specify replaces the previous value for that tag.</p> <p>You can associate as many as 50 tags with a resource. Amazon QuickSight supports tagging on data set, data source, dashboard, template, topic, and user. </p> <p>Tagging for Amazon QuickSight works in a similar way to tagging for other Amazon Web Services services, except for the following:</p> <ul> <li> <p>Tags are used to track costs for users in Amazon QuickSight. You can't tag other resources that Amazon QuickSight costs are based on, such as storage capacoty (SPICE), session usage, alert consumption, or reporting units.</p> </li> <li> <p>Amazon QuickSight doesn't currently support the tag editor for Resource Groups.</p> </li> </ul>"
     },
     "UntagResource":{
       "name":"UntagResource",
@@ -2920,9 +3083,19 @@
         "AccountSubscriptionStatus":{
           "shape":"String",
           "documentation":"<p>The status of your account subscription.</p>"
+        },
+        "IAMIdentityCenterInstanceArn":{
+          "shape":"String",
+          "documentation":"<p>The Amazon Resource Name (ARN) for the IAM Identity Center instance.</p>"
         }
       },
       "documentation":"<p>A structure that contains the following account information elements:</p> <ul> <li> <p>Your Amazon QuickSight account name.</p> </li> <li> <p>The edition of Amazon QuickSight that your account is using.</p> </li> <li> <p>The notification email address that is associated with the Amazon QuickSight account. </p> </li> <li> <p>The authentication type of the Amazon QuickSight account.</p> </li> <li> <p>The status of the Amazon QuickSight account's subscription.</p> </li> </ul>"
+    },
+    "AccountName":{
+      "type":"string",
+      "max":62,
+      "min":1,
+      "pattern":"^(?!D-|d-)([\\da-zA-Z]+)([-]*[\\da-zA-Z])*"
     },
     "AccountSettings":{
       "type":"structure",
@@ -2957,7 +3130,7 @@
     "ActionList":{
       "type":"list",
       "member":{"shape":"String"},
-      "max":16,
+      "max":20,
       "min":1
     },
     "ActiveIAMPolicyAssignment":{
@@ -3008,6 +3181,10 @@
         "DateAggregationFunction":{
           "shape":"DateAggregationFunction",
           "documentation":"<p>Aggregation for date values.</p> <ul> <li> <p> <code>COUNT</code>: Aggregate by the total number of values, including duplicates.</p> </li> <li> <p> <code>DISTINCT_COUNT</code>: Aggregate by the total number of distinct values.</p> </li> <li> <p> <code>MIN</code>: Select the smallest date value.</p> </li> <li> <p> <code>MAX</code>: Select the largest date value.</p> </li> </ul>"
+        },
+        "AttributeAggregationFunction":{
+          "shape":"AttributeAggregationFunction",
+          "documentation":"<p>Aggregation for attributes.</p>"
         }
       },
       "documentation":"<p>An aggregation function aggregates values from a dimension or measure.</p> <p>This is a union type structure. For this structure to be valid, only one of the attributes can be defined.</p>"
@@ -3021,8 +3198,7 @@
       "type":"structure",
       "required":[
         "Column",
-        "SortDirection",
-        "AggregationFunction"
+        "SortDirection"
       ],
       "members":{
         "Column":{
@@ -3050,6 +3226,12 @@
       "max":2048,
       "min":1,
       "pattern":"[\\w\\-]+|(\\$LATEST)|(\\$PUBLISHED)"
+    },
+    "AllSheetsFilterScopeConfiguration":{
+      "type":"structure",
+      "members":{
+      },
+      "documentation":"<p>The configuration for applying a filter to all sheets. You can apply this filter to all visuals on every sheet.</p> <p>This is a union type structure. For this structure to be valid, only one of the attributes can be defined.</p>"
     },
     "AmazonElasticsearchParameters":{
       "type":"structure",
@@ -3373,6 +3555,20 @@
       },
       "documentation":"<p>The settings that you want to use with the Q search bar.</p>"
     },
+    "AnonymousUserSnapshotJobResult":{
+      "type":"structure",
+      "members":{
+        "FileGroups":{
+          "shape":"SnapshotJobResultFileGroupList",
+          "documentation":"<p>A list of <code>SnapshotJobResultFileGroup</code> objects that contain information on the files that are requested during a <code>StartDashboardSnapshotJob</code> API call. If the job succeeds, these objects contain the location where the snapshot artifacts are stored. If the job fails, the objects contain information about the error that caused the job to fail.</p>"
+        }
+      },
+      "documentation":"<p>A structure that contains the file groups that are requested for the artifact generation in a <code>StartDashboardSnapshotJob</code> API call. </p>"
+    },
+    "AnonymousUserSnapshotJobResultList":{
+      "type":"list",
+      "member":{"shape":"AnonymousUserSnapshotJobResult"}
+    },
     "ArcAxisConfiguration":{
       "type":"structure",
       "members":{
@@ -3450,6 +3646,734 @@
       "type":"list",
       "member":{"shape":"Arn"}
     },
+    "AssetBundleCloudFormationOverridePropertyConfiguration":{
+      "type":"structure",
+      "members":{
+        "ResourceIdOverrideConfiguration":{
+          "shape":"AssetBundleExportJobResourceIdOverrideConfiguration",
+          "documentation":"<p>An optional list of structures that control how resource IDs are parameterized in the returned CloudFormation template.</p>"
+        },
+        "VPCConnections":{
+          "shape":"AssetBundleExportJobVPCConnectionOverridePropertiesList",
+          "documentation":"<p>An optional list of structures that control how <code>VPCConnection</code> resources are parameterized in the returned CloudFormation template.</p>"
+        },
+        "RefreshSchedules":{
+          "shape":"AssetBundleExportJobRefreshScheduleOverridePropertiesList",
+          "documentation":"<p>An optional list of structures that control how <code>RefreshSchedule</code> resources are parameterized in the returned CloudFormation template.</p>"
+        },
+        "DataSources":{
+          "shape":"AssetBundleExportJobDataSourceOverridePropertiesList",
+          "documentation":"<p>An optional list of structures that control how <code>DataSource</code> resources are parameterized in the returned CloudFormation template.</p>"
+        },
+        "DataSets":{
+          "shape":"AssetBundleExportJobDataSetOverridePropertiesList",
+          "documentation":"<p>An optional list of structures that control how <code>DataSet</code> resources are parameterized in the returned CloudFormation template.</p>"
+        },
+        "Themes":{
+          "shape":"AssetBundleExportJobThemeOverridePropertiesList",
+          "documentation":"<p>An optional list of structures that control how <code>Theme</code> resources are parameterized in the returned CloudFormation template.</p>"
+        },
+        "Analyses":{
+          "shape":"AssetBundleExportJobAnalysisOverridePropertiesList",
+          "documentation":"<p>An optional list of structures that control how <code>Analysis</code> resources are parameterized in the returned CloudFormation template.</p>"
+        },
+        "Dashboards":{
+          "shape":"AssetBundleExportJobDashboardOverridePropertiesList",
+          "documentation":"<p>An optional list of structures that control how <code>Dashboard</code> resources are parameterized in the returned CloudFormation template.</p>"
+        }
+      },
+      "documentation":"<p>An optional collection of CloudFormation property configurations that control how the export job is generated.</p>"
+    },
+    "AssetBundleExportFormat":{
+      "type":"string",
+      "enum":[
+        "CLOUDFORMATION_JSON",
+        "QUICKSIGHT_JSON"
+      ]
+    },
+    "AssetBundleExportJobAnalysisOverrideProperties":{
+      "type":"structure",
+      "required":["Properties"],
+      "members":{
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The ARN of the specific <code>Analysis</code> resource whose override properties are configured in this structure.</p>"
+        },
+        "Properties":{
+          "shape":"AssetBundleExportJobAnalysisPropertyToOverrideList",
+          "documentation":"<p>A list of <code>Analysis</code> resource properties to generate variables for in the returned CloudFormation template.</p>"
+        }
+      },
+      "documentation":"<p>Controls how a specific <code>Analysis</code> resource is parameterized in the returned CloudFormation template.</p>"
+    },
+    "AssetBundleExportJobAnalysisOverridePropertiesList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleExportJobAnalysisOverrideProperties"},
+      "max":50,
+      "min":1
+    },
+    "AssetBundleExportJobAnalysisPropertyToOverride":{
+      "type":"string",
+      "enum":["Name"]
+    },
+    "AssetBundleExportJobAnalysisPropertyToOverrideList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleExportJobAnalysisPropertyToOverride"},
+      "max":10,
+      "min":1
+    },
+    "AssetBundleExportJobDashboardOverrideProperties":{
+      "type":"structure",
+      "required":["Properties"],
+      "members":{
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The ARN of the specific <code>Dashboard</code> resource whose override properties are configured in this structure.</p>"
+        },
+        "Properties":{
+          "shape":"AssetBundleExportJobDashboardPropertyToOverrideList",
+          "documentation":"<p>A list of <code>Dashboard</code> resource properties to generate variables for in the returned CloudFormation template.</p>"
+        }
+      },
+      "documentation":"<p>Controls how a specific <code>Dashboard</code> resource is parameterized in the returned CloudFormation template.</p>"
+    },
+    "AssetBundleExportJobDashboardOverridePropertiesList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleExportJobDashboardOverrideProperties"},
+      "max":50,
+      "min":1
+    },
+    "AssetBundleExportJobDashboardPropertyToOverride":{
+      "type":"string",
+      "enum":["Name"]
+    },
+    "AssetBundleExportJobDashboardPropertyToOverrideList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleExportJobDashboardPropertyToOverride"},
+      "max":10,
+      "min":1
+    },
+    "AssetBundleExportJobDataSetOverrideProperties":{
+      "type":"structure",
+      "required":["Properties"],
+      "members":{
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The ARN of the specific <code>DataSet</code> resource whose override properties are configured in this structure.</p>"
+        },
+        "Properties":{
+          "shape":"AssetBundleExportJobDataSetPropertyToOverrideList",
+          "documentation":"<p>A list of <code>DataSet</code> resource properties to generate variables for in the returned CloudFormation template.</p>"
+        }
+      },
+      "documentation":"<p>Controls how a specific <code>DataSet</code> resource is parameterized in the returned CloudFormation template.</p>"
+    },
+    "AssetBundleExportJobDataSetOverridePropertiesList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleExportJobDataSetOverrideProperties"},
+      "max":50,
+      "min":1
+    },
+    "AssetBundleExportJobDataSetPropertyToOverride":{
+      "type":"string",
+      "enum":["Name"]
+    },
+    "AssetBundleExportJobDataSetPropertyToOverrideList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleExportJobDataSetPropertyToOverride"},
+      "max":10,
+      "min":1
+    },
+    "AssetBundleExportJobDataSourceOverrideProperties":{
+      "type":"structure",
+      "required":["Properties"],
+      "members":{
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The ARN of the specific <code>DataSource</code> resource whose override properties are configured in this structure.</p>"
+        },
+        "Properties":{
+          "shape":"AssetBundleExportJobDataSourcePropertyToOverrideList",
+          "documentation":"<p>A list of <code>DataSource</code> resource properties to generate variables for in the returned CloudFormation template.</p>"
+        }
+      },
+      "documentation":"<p>Controls how a specific <code>DataSource</code> resource is parameterized in the returned CloudFormation template.</p>"
+    },
+    "AssetBundleExportJobDataSourceOverridePropertiesList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleExportJobDataSourceOverrideProperties"},
+      "max":50,
+      "min":1
+    },
+    "AssetBundleExportJobDataSourcePropertyToOverride":{
+      "type":"string",
+      "enum":[
+        "Name",
+        "DisableSsl",
+        "SecretArn",
+        "Username",
+        "Password",
+        "Domain",
+        "WorkGroup",
+        "Host",
+        "Port",
+        "Database",
+        "DataSetName",
+        "Catalog",
+        "InstanceId",
+        "ClusterId",
+        "ManifestFileLocation",
+        "Warehouse",
+        "RoleArn"
+      ]
+    },
+    "AssetBundleExportJobDataSourcePropertyToOverrideList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleExportJobDataSourcePropertyToOverride"},
+      "max":10,
+      "min":1
+    },
+    "AssetBundleExportJobError":{
+      "type":"structure",
+      "members":{
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The ARN of the resource whose processing caused an error.</p>"
+        },
+        "Type":{
+          "shape":"NonEmptyString",
+          "documentation":"<p>The specific error type of the error that occurred.</p>"
+        },
+        "Message":{
+          "shape":"NonEmptyString",
+          "documentation":"<p>A description of the error.</p>"
+        }
+      },
+      "documentation":"<p>Describes an error that occurred during an Asset Bundle export job.</p>"
+    },
+    "AssetBundleExportJobErrorList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleExportJobError"}
+    },
+    "AssetBundleExportJobRefreshScheduleOverrideProperties":{
+      "type":"structure",
+      "required":["Properties"],
+      "members":{
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The ARN of the specific <code>RefreshSchedule</code> resource whose override properties are configured in this structure.</p>"
+        },
+        "Properties":{
+          "shape":"AssetBundleExportJobRefreshSchedulePropertyToOverrideList",
+          "documentation":"<p>A list of <code>RefreshSchedule</code> resource properties to generate variables for in the returned CloudFormation template.</p>"
+        }
+      },
+      "documentation":"<p>Controls how a specific <code>RefreshSchedule</code> resource is parameterized in the returned CloudFormation template.</p>"
+    },
+    "AssetBundleExportJobRefreshScheduleOverridePropertiesList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleExportJobRefreshScheduleOverrideProperties"},
+      "max":50,
+      "min":1
+    },
+    "AssetBundleExportJobRefreshSchedulePropertyToOverride":{
+      "type":"string",
+      "enum":["StartAfterDateTime"]
+    },
+    "AssetBundleExportJobRefreshSchedulePropertyToOverrideList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleExportJobRefreshSchedulePropertyToOverride"},
+      "max":10,
+      "min":1
+    },
+    "AssetBundleExportJobResourceIdOverrideConfiguration":{
+      "type":"structure",
+      "members":{
+        "PrefixForAllResources":{
+          "shape":"Boolean",
+          "documentation":"<p>An option to request a CloudFormation variable for a prefix to be prepended to each resource's ID before import. The prefix is only added to the asset IDs and does not change the name of the asset.</p>"
+        }
+      },
+      "documentation":"<p>An optional structure that configures resource ID overrides for the export job.</p>"
+    },
+    "AssetBundleExportJobStatus":{
+      "type":"string",
+      "enum":[
+        "QUEUED_FOR_IMMEDIATE_EXECUTION",
+        "IN_PROGRESS",
+        "SUCCESSFUL",
+        "FAILED"
+      ]
+    },
+    "AssetBundleExportJobSummary":{
+      "type":"structure",
+      "members":{
+        "JobStatus":{
+          "shape":"AssetBundleExportJobStatus",
+          "documentation":"<p>The current status of the export job.</p>"
+        },
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The ARN of the export job.</p>"
+        },
+        "CreatedTime":{
+          "shape":"Timestamp",
+          "documentation":"<p>The time that the export job was created.</p>"
+        },
+        "AssetBundleExportJobId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the export job.</p>"
+        },
+        "IncludeAllDependencies":{
+          "shape":"Boolean",
+          "documentation":"<p>The flag that determines the inclusion of resource dependencies in the returned asset bundle.</p>"
+        },
+        "ExportFormat":{
+          "shape":"AssetBundleExportFormat",
+          "documentation":"<p>The format for the export job.</p>"
+        }
+      },
+      "documentation":"<p>A summary of the export job that includes details of the job's configuration and its current status.</p>"
+    },
+    "AssetBundleExportJobSummaryList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleExportJobSummary"}
+    },
+    "AssetBundleExportJobThemeOverrideProperties":{
+      "type":"structure",
+      "required":["Properties"],
+      "members":{
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The ARN of the specific <code>Theme</code> resource whose override properties are configured in this structure.</p>"
+        },
+        "Properties":{
+          "shape":"AssetBundleExportJobThemePropertyToOverrideList",
+          "documentation":"<p>A list of <code>Theme</code> resource properties to generate variables for in the returned CloudFormation template.</p>"
+        }
+      },
+      "documentation":"<p>Controls how a specific <code>Theme</code> resource is parameterized in the returned CloudFormation template.</p>"
+    },
+    "AssetBundleExportJobThemeOverridePropertiesList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleExportJobThemeOverrideProperties"},
+      "max":50,
+      "min":1
+    },
+    "AssetBundleExportJobThemePropertyToOverride":{
+      "type":"string",
+      "enum":["Name"]
+    },
+    "AssetBundleExportJobThemePropertyToOverrideList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleExportJobThemePropertyToOverride"},
+      "max":10,
+      "min":1
+    },
+    "AssetBundleExportJobVPCConnectionOverrideProperties":{
+      "type":"structure",
+      "required":["Properties"],
+      "members":{
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The ARN of the specific <code>VPCConnection</code> resource whose override properties are configured in this structure.</p>"
+        },
+        "Properties":{
+          "shape":"AssetBundleExportJobVPCConnectionPropertyToOverrideList",
+          "documentation":"<p>A list of <code>VPCConnection</code> resource properties to generate variables for in the returned CloudFormation template.</p>"
+        }
+      },
+      "documentation":"<p>Controls how a specific <code>VPCConnection</code> resource is parameterized in the outputted CloudFormation template.</p>"
+    },
+    "AssetBundleExportJobVPCConnectionOverridePropertiesList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleExportJobVPCConnectionOverrideProperties"},
+      "max":50,
+      "min":1
+    },
+    "AssetBundleExportJobVPCConnectionPropertyToOverride":{
+      "type":"string",
+      "enum":[
+        "Name",
+        "DnsResolvers",
+        "RoleArn"
+      ]
+    },
+    "AssetBundleExportJobVPCConnectionPropertyToOverrideList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleExportJobVPCConnectionPropertyToOverride"},
+      "max":10,
+      "min":1
+    },
+    "AssetBundleImportBodyBlob":{
+      "type":"blob",
+      "max":20971520,
+      "min":0,
+      "sensitive":true
+    },
+    "AssetBundleImportFailureAction":{
+      "type":"string",
+      "enum":[
+        "DO_NOTHING",
+        "ROLLBACK"
+      ]
+    },
+    "AssetBundleImportJobAnalysisOverrideParameters":{
+      "type":"structure",
+      "required":["AnalysisId"],
+      "members":{
+        "AnalysisId":{
+          "shape":"ResourceId",
+          "documentation":"<p>The ID of the analysis that you ant to apply overrides to.</p>"
+        },
+        "Name":{
+          "shape":"ResourceName",
+          "documentation":"<p>A new name for the analysis.</p>"
+        }
+      },
+      "documentation":"<p>The override parameters for a single analysis that is being imported.</p>"
+    },
+    "AssetBundleImportJobAnalysisOverrideParametersList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleImportJobAnalysisOverrideParameters"},
+      "max":50,
+      "min":1
+    },
+    "AssetBundleImportJobDashboardOverrideParameters":{
+      "type":"structure",
+      "required":["DashboardId"],
+      "members":{
+        "DashboardId":{
+          "shape":"ResourceId",
+          "documentation":"<p>The ID of the dashboard that you want to apply overrides to.</p>"
+        },
+        "Name":{
+          "shape":"ResourceName",
+          "documentation":"<p>A new name for the dashboard.</p>"
+        }
+      },
+      "documentation":"<p>The override parameters for a single dashboard that is being imported.</p>"
+    },
+    "AssetBundleImportJobDashboardOverrideParametersList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleImportJobDashboardOverrideParameters"},
+      "max":50,
+      "min":1
+    },
+    "AssetBundleImportJobDataSetOverrideParameters":{
+      "type":"structure",
+      "required":["DataSetId"],
+      "members":{
+        "DataSetId":{
+          "shape":"ResourceId",
+          "documentation":"<p>The ID of the dataset to apply overrides to.</p>"
+        },
+        "Name":{
+          "shape":"ResourceName",
+          "documentation":"<p>A new name for the dataset.</p>"
+        }
+      },
+      "documentation":"<p>The override parameters for a single dataset that is being imported.</p>"
+    },
+    "AssetBundleImportJobDataSetOverrideParametersList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleImportJobDataSetOverrideParameters"},
+      "max":50,
+      "min":1
+    },
+    "AssetBundleImportJobDataSourceCredentialPair":{
+      "type":"structure",
+      "required":[
+        "Username",
+        "Password"
+      ],
+      "members":{
+        "Username":{
+          "shape":"DbUsername",
+          "documentation":"<p>The username for the data source connection.</p>"
+        },
+        "Password":{
+          "shape":"Password",
+          "documentation":"<p>The password for the data source connection.</p>"
+        }
+      },
+      "documentation":"<p>A username and password credential pair to use to import a data source resource.</p>",
+      "sensitive":true
+    },
+    "AssetBundleImportJobDataSourceCredentials":{
+      "type":"structure",
+      "members":{
+        "CredentialPair":{
+          "shape":"AssetBundleImportJobDataSourceCredentialPair",
+          "documentation":"<p>A username and password credential pair to be used to create the imported data source. Keep this field blank if you are using a Secrets Manager secret to provide credentials.</p>"
+        },
+        "SecretArn":{
+          "shape":"SecretArn",
+          "documentation":"<p>The ARN of the Secrets Manager secret that's used to create the imported data source. Keep this field blank, unless you are using a secret in place of a credential pair.</p>"
+        }
+      },
+      "documentation":"<p>The login credentials to use to import a data source resource.</p>"
+    },
+    "AssetBundleImportJobDataSourceOverrideParameters":{
+      "type":"structure",
+      "required":["DataSourceId"],
+      "members":{
+        "DataSourceId":{
+          "shape":"ResourceId",
+          "documentation":"<p>The ID of the data source to apply overrides to.</p>"
+        },
+        "Name":{
+          "shape":"ResourceName",
+          "documentation":"<p>A new name for the data source.</p>"
+        },
+        "DataSourceParameters":{"shape":"DataSourceParameters"},
+        "VpcConnectionProperties":{"shape":"VpcConnectionProperties"},
+        "SslProperties":{"shape":"SslProperties"},
+        "Credentials":{
+          "shape":"AssetBundleImportJobDataSourceCredentials",
+          "documentation":"<p>An optional structure that provides the credentials to be used to create the imported data source.</p>"
+        }
+      },
+      "documentation":"<p>The override parameters for a single data source that is being imported.</p>"
+    },
+    "AssetBundleImportJobDataSourceOverrideParametersList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleImportJobDataSourceOverrideParameters"},
+      "max":50,
+      "min":1
+    },
+    "AssetBundleImportJobError":{
+      "type":"structure",
+      "members":{
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The ARN of the resource whose processing caused an error.</p>"
+        },
+        "Type":{
+          "shape":"NonEmptyString",
+          "documentation":"<p>The specific error type or the error that occurred.</p>"
+        },
+        "Message":{
+          "shape":"NonEmptyString",
+          "documentation":"<p>A description of the error.</p>"
+        }
+      },
+      "documentation":"<p>Describes an error that occurred within an Asset Bundle import execution.</p>"
+    },
+    "AssetBundleImportJobErrorList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleImportJobError"}
+    },
+    "AssetBundleImportJobOverrideParameters":{
+      "type":"structure",
+      "members":{
+        "ResourceIdOverrideConfiguration":{
+          "shape":"AssetBundleImportJobResourceIdOverrideConfiguration",
+          "documentation":"<p>An optional structure that configures resource ID overrides to be applied within the import job.</p>"
+        },
+        "VPCConnections":{
+          "shape":"AssetBundleImportJobVPCConnectionOverrideParametersList",
+          "documentation":"<p>A list of overrides for any <code>VPCConnection</code> resources that are present in the asset bundle that is imported.</p>"
+        },
+        "RefreshSchedules":{
+          "shape":"AssetBundleImportJobRefreshScheduleOverrideParametersList",
+          "documentation":"<p>A list of overrides for any <code>RefreshSchedule</code> resources that are present in the asset bundle that is imported.</p>"
+        },
+        "DataSources":{
+          "shape":"AssetBundleImportJobDataSourceOverrideParametersList",
+          "documentation":"<p> A list of overrides for any <code>DataSource</code> resources that are present in the asset bundle that is imported.</p>"
+        },
+        "DataSets":{
+          "shape":"AssetBundleImportJobDataSetOverrideParametersList",
+          "documentation":"<p>A list of overrides for any <code>DataSet</code> resources that are present in the asset bundle that is imported.</p>"
+        },
+        "Themes":{
+          "shape":"AssetBundleImportJobThemeOverrideParametersList",
+          "documentation":"<p>A list of overrides for any <code>Theme</code> resources that are present in the asset bundle that is imported.</p>"
+        },
+        "Analyses":{
+          "shape":"AssetBundleImportJobAnalysisOverrideParametersList",
+          "documentation":"<p>A list of overrides for any <code>Analysis</code> resources that are present in the asset bundle that is imported.</p>"
+        },
+        "Dashboards":{
+          "shape":"AssetBundleImportJobDashboardOverrideParametersList",
+          "documentation":"<p>A list of overrides for any <code>Dashboard</code> resources that are present in the asset bundle that is imported.</p>"
+        }
+      },
+      "documentation":"<p>A list of overrides that modify the asset bundle resource configuration before the resource is imported.</p>"
+    },
+    "AssetBundleImportJobRefreshScheduleOverrideParameters":{
+      "type":"structure",
+      "required":[
+        "DataSetId",
+        "ScheduleId"
+      ],
+      "members":{
+        "DataSetId":{
+          "shape":"ResourceId",
+          "documentation":"<p>A partial identifier for the specific <code>RefreshSchedule</code> resource that is being overridden. This structure is used together with the <code>ScheduleID</code> structure.</p>"
+        },
+        "ScheduleId":{
+          "shape":"String",
+          "documentation":"<p>A partial identifier for the specific <code>RefreshSchedule</code> resource being overridden. This structure is used together with the <code>DataSetId</code> structure.</p>"
+        },
+        "StartAfterDateTime":{
+          "shape":"Timestamp",
+          "documentation":"<p>An override for the <code>StartAfterDateTime</code> of a <code>RefreshSchedule</code>. Make sure that the <code>StartAfterDateTime</code> is set to a time that takes place in the future.</p>"
+        }
+      },
+      "documentation":"<p>A list of overrides for a specific <code>RefreshsSchedule</code> resource that is present in the asset bundle that is imported.</p>"
+    },
+    "AssetBundleImportJobRefreshScheduleOverrideParametersList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleImportJobRefreshScheduleOverrideParameters"},
+      "max":50,
+      "min":1
+    },
+    "AssetBundleImportJobResourceIdOverrideConfiguration":{
+      "type":"structure",
+      "members":{
+        "PrefixForAllResources":{
+          "shape":"String",
+          "documentation":"<p>An option to request a CloudFormation variable for a prefix to be prepended to each resource's ID before import. The prefix is only added to the asset IDs and does not change the name of the asset.</p>"
+        }
+      },
+      "documentation":"<p>An optional structure that configures resource ID overrides for the import job.</p>"
+    },
+    "AssetBundleImportJobStatus":{
+      "type":"string",
+      "enum":[
+        "QUEUED_FOR_IMMEDIATE_EXECUTION",
+        "IN_PROGRESS",
+        "SUCCESSFUL",
+        "FAILED",
+        "FAILED_ROLLBACK_IN_PROGRESS",
+        "FAILED_ROLLBACK_COMPLETED",
+        "FAILED_ROLLBACK_ERROR"
+      ]
+    },
+    "AssetBundleImportJobSummary":{
+      "type":"structure",
+      "members":{
+        "JobStatus":{
+          "shape":"AssetBundleImportJobStatus",
+          "documentation":"<p>The current status of the import job.</p>"
+        },
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The ARN of the import job.</p>"
+        },
+        "CreatedTime":{
+          "shape":"Timestamp",
+          "documentation":"<p>The time that the import job was created.</p>"
+        },
+        "AssetBundleImportJobId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the job. This ID is unique while the job is running. After the job is completed, you can reuse this ID for another job.</p>"
+        },
+        "FailureAction":{
+          "shape":"AssetBundleImportFailureAction",
+          "documentation":"<p>The failure action for the import job.</p>"
+        }
+      },
+      "documentation":"<p>A summary of the import job that includes details of the requested job's configuration and its current status.</p>"
+    },
+    "AssetBundleImportJobSummaryList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleImportJobSummary"}
+    },
+    "AssetBundleImportJobThemeOverrideParameters":{
+      "type":"structure",
+      "required":["ThemeId"],
+      "members":{
+        "ThemeId":{
+          "shape":"ResourceId",
+          "documentation":"<p>The ID of the theme to apply overrides to.</p>"
+        },
+        "Name":{
+          "shape":"ResourceName",
+          "documentation":"<p>A new name for the theme.</p>"
+        }
+      },
+      "documentation":"<p>The override parameters for a single theme that is imported.</p>"
+    },
+    "AssetBundleImportJobThemeOverrideParametersList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleImportJobThemeOverrideParameters"},
+      "max":50,
+      "min":1
+    },
+    "AssetBundleImportJobVPCConnectionOverrideParameters":{
+      "type":"structure",
+      "required":["VPCConnectionId"],
+      "members":{
+        "VPCConnectionId":{
+          "shape":"VPCConnectionResourceIdUnrestricted",
+          "documentation":"<p>The ID of the VPC Connection to apply overrides to.</p>"
+        },
+        "Name":{
+          "shape":"ResourceName",
+          "documentation":"<p>A new name for the VPC connection.</p>"
+        },
+        "SubnetIds":{
+          "shape":"SubnetIdList",
+          "documentation":"<p>A list of new subnet IDs for the VPC connection you are importing. This field is required if you are importing the VPC connection from another Amazon Web Services account or Region.</p>"
+        },
+        "SecurityGroupIds":{
+          "shape":"SecurityGroupIdList",
+          "documentation":"<p>A new security group ID for the VPC connection you are importing. This field is required if you are importing the VPC connection from another Amazon Web Services account or Region.</p>"
+        },
+        "DnsResolvers":{
+          "shape":"DnsResolverList",
+          "documentation":"<p>An optional override of DNS resolvers to be used by the VPC connection.</p>"
+        },
+        "RoleArn":{
+          "shape":"RoleArn",
+          "documentation":"<p>An optional override of the role ARN to be used by the VPC connection.</p>"
+        }
+      },
+      "documentation":"<p>The override parameters for a single VPC connection that is imported.</p>"
+    },
+    "AssetBundleImportJobVPCConnectionOverrideParametersList":{
+      "type":"list",
+      "member":{"shape":"AssetBundleImportJobVPCConnectionOverrideParameters"},
+      "max":50,
+      "min":1
+    },
+    "AssetBundleImportSource":{
+      "type":"structure",
+      "members":{
+        "Body":{
+          "shape":"AssetBundleImportBodyBlob",
+          "documentation":"<p>The bytes of the base64 encoded asset bundle import zip file. This file can't exceed 20 MB.</p> <p>If you are calling the API operations from the Amazon Web Services SDK for Java, JavaScript, Python, or PHP, the SDK encodes base64 automatically to allow the direct setting of the zip file's bytes. If you are using an SDK for a different language or receiving related errors, try to base64 encode your data.</p>"
+        },
+        "S3Uri":{
+          "shape":"S3Uri",
+          "documentation":"<p>The Amazon S3 URI for an asset bundle import file that exists in an Amazon S3 bucket that the caller has read access to. The file must be a zip format file and can't exceed 20 MB.</p>"
+        }
+      },
+      "documentation":"<p>The source of the asset bundle zip file that contains the data that you want to import. The file must be in <code>QUICKSIGHT_JSON</code> format.</p>"
+    },
+    "AssetBundleImportSourceDescription":{
+      "type":"structure",
+      "members":{
+        "Body":{
+          "shape":"String",
+          "documentation":"<p>An HTTPS download URL for the provided asset bundle that you optionally provided at the start of the import job. This URL is valid for five minutes after issuance. Call <code>DescribeAssetBundleExportJob</code> again for a fresh URL if needed. The downloaded asset bundle is a <code>.qs</code> zip file.</p>"
+        },
+        "S3Uri":{
+          "shape":"S3Uri",
+          "documentation":"<p>The Amazon S3 URI that you provided at the start of the import job.</p>"
+        }
+      },
+      "documentation":"<p>A description of the import source that you provide at the start of an import job. This value is set to either <code>Body</code> or <code>S3Uri</code>, depending on how the <code>StartAssetBundleImportJobRequest</code> is configured.</p>"
+    },
+    "AssetBundleResourceArns":{
+      "type":"list",
+      "member":{"shape":"Arn"},
+      "max":100,
+      "min":1
+    },
     "AssignmentStatus":{
       "type":"string",
       "enum":[
@@ -3471,6 +4395,20 @@
         }
       },
       "documentation":"<p>Parameters for Amazon Athena.</p>"
+    },
+    "AttributeAggregationFunction":{
+      "type":"structure",
+      "members":{
+        "SimpleAttributeAggregation":{
+          "shape":"SimpleAttributeAggregationFunction",
+          "documentation":"<p>The built-in aggregation functions for attributes.</p> <ul> <li> <p> <code>UNIQUE_VALUE</code>: Returns the unique value for a field, aggregated by the dimension fields.</p> </li> </ul>"
+        },
+        "ValueForMultipleValues":{
+          "shape":"String",
+          "documentation":"<p>Used by the <code>UNIQUE_VALUE</code> aggregation function. If there are multiple values for the field used by the aggregation, the value for this property will be returned instead. Defaults to '*'.</p>"
+        }
+      },
+      "documentation":"<p>Aggregation for attributes.</p>"
     },
     "AuroraParameters":{
       "type":"structure",
@@ -3523,7 +4461,8 @@
       "enum":[
         "IAM_AND_QUICKSIGHT",
         "IAM_ONLY",
-        "ACTIVE_DIRECTORY"
+        "ACTIVE_DIRECTORY",
+        "IAM_IDENTITY_CENTER"
       ]
     },
     "AuthorSpecifiedAggregation":{
@@ -4605,7 +5544,7 @@
       "members":{
         "ClusterMarker":{
           "shape":"ClusterMarker",
-          "documentation":"<p>The cluster marker that is a part of the cluster marker configuration</p>"
+          "documentation":"<p>The cluster marker that is a part of the cluster marker configuration.</p>"
         }
       },
       "documentation":"<p>The cluster marker configuration of the geospatial map selected point style.</p>"
@@ -4660,6 +5599,16 @@
       "max":3,
       "min":2
     },
+    "ColorsConfiguration":{
+      "type":"structure",
+      "members":{
+        "CustomColors":{
+          "shape":"CustomColorsList",
+          "documentation":"<p>A list of up to 50 custom colors.</p>"
+        }
+      },
+      "documentation":"<p>The color configurations for a column.</p>"
+    },
     "ColumnConfiguration":{
       "type":"structure",
       "required":["Column"],
@@ -4675,6 +5624,10 @@
         "Role":{
           "shape":"ColumnRole",
           "documentation":"<p>The role of the column.</p>"
+        },
+        "ColorsConfiguration":{
+          "shape":"ColorsConfiguration",
+          "documentation":"<p>The color configurations of the column.</p>"
         }
       },
       "documentation":"<p>The general configuration of a column.</p>"
@@ -5517,7 +6470,7 @@
           "locationName":"AwsAccountId"
         },
         "AccountName":{
-          "shape":"String",
+          "shape":"AccountName",
           "documentation":"<p>The name of your Amazon QuickSight account. This name is unique over all of Amazon Web Services, and it appears only when users sign in. You can't change <code>AccountName</code> value after the Amazon QuickSight account is created.</p>"
         },
         "NotificationEmail":{
@@ -5631,6 +6584,14 @@
         "Definition":{
           "shape":"AnalysisDefinition",
           "documentation":"<p>The definition of an analysis.</p> <p>A definition is the data model of all features in a Dashboard, Template, or Analysis.</p> <p>Either a <code>SourceEntity</code> or a <code>Definition</code> must be provided in order for the request to be valid.</p>"
+        },
+        "ValidationStrategy":{
+          "shape":"ValidationStrategy",
+          "documentation":"<p>The option to relax the validation needed to create an analysis with definition objects. This skips the validation step for specific errors.</p>"
+        },
+        "FolderArns":{
+          "shape":"FolderArnList",
+          "documentation":"<p>When you create the analysis, Amazon QuickSight adds the analysis to these folders.</p>"
         }
       }
     },
@@ -5726,6 +6687,14 @@
         "Definition":{
           "shape":"DashboardVersionDefinition",
           "documentation":"<p>The definition of a dashboard.</p> <p>A definition is the data model of all features in a Dashboard, Template, or Analysis.</p> <p>Either a <code>SourceEntity</code> or a <code>Definition</code> must be provided in order for the request to be valid.</p>"
+        },
+        "ValidationStrategy":{
+          "shape":"ValidationStrategy",
+          "documentation":"<p>The option to relax the validation needed to create a dashboard with definition objects. This option skips the validation step for specific errors.</p>"
+        },
+        "FolderArns":{
+          "shape":"FolderArnList",
+          "documentation":"<p>When you create the dashboard, Amazon QuickSight adds the dashboard to these folders.</p>"
         }
       }
     },
@@ -5827,6 +6796,10 @@
         "DatasetParameters":{
           "shape":"DatasetParameterList",
           "documentation":"<p>The parameter declarations of the dataset.</p>"
+        },
+        "FolderArns":{
+          "shape":"FolderArnList",
+          "documentation":"<p>When you create the dataset, Amazon QuickSight adds the dataset to these folders.</p>"
         }
       }
     },
@@ -5910,6 +6883,10 @@
         "Tags":{
           "shape":"TagList",
           "documentation":"<p>Contains a map of the key-value pairs for the resource tag or tags assigned to the data source.</p>"
+        },
+        "FolderArns":{
+          "shape":"FolderArnList",
+          "documentation":"<p>When you create the data source, Amazon QuickSight adds the data source to these folders.</p>"
         }
       }
     },
@@ -5962,13 +6939,13 @@
         },
         "MemberId":{
           "shape":"RestrictiveResourceId",
-          "documentation":"<p>The ID of the asset (the dashboard, analysis, or dataset).</p>",
+          "documentation":"<p>The ID of the asset that you want to add to the folder.</p>",
           "location":"uri",
           "locationName":"MemberId"
         },
         "MemberType":{
           "shape":"MemberType",
-          "documentation":"<p>The type of the member, including <code>DASHBOARD</code>, <code>ANALYSIS</code>, and <code>DATASET</code>.</p>",
+          "documentation":"<p>The member type of the asset that you want to add to a folder.</p>",
           "location":"uri",
           "locationName":"MemberType"
         }
@@ -6029,6 +7006,10 @@
         "Tags":{
           "shape":"TagList",
           "documentation":"<p>Tags for the folder.</p>"
+        },
+        "SharingModel":{
+          "shape":"SharingModel",
+          "documentation":"<p>An optional parameter that determines the sharing scope of the folder. The default value for this parameter is <code>ACCOUNT</code>.</p>"
         }
       }
     },
@@ -6491,6 +7472,10 @@
         "Definition":{
           "shape":"TemplateVersionDefinition",
           "documentation":"<p>The definition of a template.</p> <p>A definition is the data model of all features in a Dashboard, Template, or Analysis.</p> <p>Either a <code>SourceEntity</code> or a <code>Definition</code> must be provided in order for the request to be valid.</p>"
+        },
+        "ValidationStrategy":{
+          "shape":"ValidationStrategy",
+          "documentation":"<p>TThe option to relax the validation needed to create a template with definition objects. This skips the validation step for specific errors.</p>"
         }
       }
     },
@@ -6853,7 +7838,7 @@
       ],
       "members":{
         "Username":{
-          "shape":"Username",
+          "shape":"DbUsername",
           "documentation":"<p>User name.</p>"
         },
         "Password":{
@@ -6977,6 +7962,30 @@
         }
       },
       "documentation":"<p>The URL operation that opens a link to another webpage.</p>"
+    },
+    "CustomColor":{
+      "type":"structure",
+      "required":["Color"],
+      "members":{
+        "FieldValue":{
+          "shape":"FieldValue",
+          "documentation":"<p>The data value that the color is applied to.</p>"
+        },
+        "Color":{
+          "shape":"HexColor",
+          "documentation":"<p>The color that is applied to the data value.</p>"
+        },
+        "SpecialValue":{
+          "shape":"SpecialValue",
+          "documentation":"<p>The value of a special data value.</p>"
+        }
+      },
+      "documentation":"<p>Determines the color that's applied to a particular data value in a column.</p>"
+    },
+    "CustomColorsList":{
+      "type":"list",
+      "member":{"shape":"CustomColor"},
+      "max":50
     },
     "CustomContentConfiguration":{
       "type":"structure",
@@ -7835,12 +8844,18 @@
       },
       "documentation":"<p>Allows data paths to be sorted by a specific data value.</p>"
     },
+    "DataPathType":{
+      "type":"structure",
+      "members":{
+        "PivotTableDataPathType":{
+          "shape":"PivotTableDataPathType",
+          "documentation":"<p>The type of data path value utilized in a pivot table. Choose one of the following options:</p> <ul> <li> <p> <code>HIERARCHY_ROWS_LAYOUT_COLUMN</code> - The type of data path for the rows layout column, when <code>RowsLayout</code> is set to <code>HIERARCHY</code>.</p> </li> <li> <p> <code>MULTIPLE_ROW_METRICS_COLUMN</code> - The type of data path for the metric column when the row is set to Metric Placement.</p> </li> <li> <p> <code>EMPTY_COLUMN_HEADER</code> - The type of data path for the column with empty column header, when there is no field in <code>ColumnsFieldWell</code> and the row is set to Metric Placement.</p> </li> <li> <p> <code>COUNT_METRIC_COLUMN</code> - The type of data path for the column with <code>COUNT</code> as the metric, when there is no field in the <code>ValuesFieldWell</code>.</p> </li> </ul>"
+        }
+      },
+      "documentation":"<p>The type of the data path value.</p>"
+    },
     "DataPathValue":{
       "type":"structure",
-      "required":[
-        "FieldId",
-        "FieldValue"
-      ],
       "members":{
         "FieldId":{
           "shape":"FieldId",
@@ -7849,6 +8864,10 @@
         "FieldValue":{
           "shape":"FieldValue",
           "documentation":"<p>The actual value of the field that needs to be sorted.</p>"
+        },
+        "DataPathType":{
+          "shape":"DataPathType",
+          "documentation":"<p>The type configuration of the field.</p>"
         }
       },
       "documentation":"<p>The data path that needs to be sorted.</p>"
@@ -8385,7 +9404,15 @@
         },
         "DatabricksParameters":{
           "shape":"DatabricksParameters",
-          "documentation":"<p>The required parameters that are needed to connect to a Databricks data source.</p>"
+          "documentation":"<p>The parameters that are required to connect to a Databricks data source.</p>"
+        },
+        "StarburstParameters":{
+          "shape":"StarburstParameters",
+          "documentation":"<p>The parameters that are required to connect to a Starburst data source.</p>"
+        },
+        "TrinoParameters":{
+          "shape":"TrinoParameters",
+          "documentation":"<p>The parameters that are required to connect to a Trino data source.</p>"
         }
       },
       "documentation":"<p>The parameters that Amazon QuickSight uses to connect to your underlying data source. This is a variant type structure. For this structure to be valid, only one of the attributes can be non-null.</p>"
@@ -8495,6 +9522,22 @@
       "max":128,
       "min":1
     },
+    "DatabaseGroup":{
+      "type":"string",
+      "max":64,
+      "min":1
+    },
+    "DatabaseGroupList":{
+      "type":"list",
+      "member":{"shape":"DatabaseGroup"},
+      "max":50,
+      "min":1
+    },
+    "DatabaseUser":{
+      "type":"string",
+      "max":64,
+      "min":1
+    },
     "DatabricksParameters":{
       "type":"structure",
       "required":[
@@ -8516,7 +9559,7 @@
           "documentation":"<p>The HTTP path of the Databricks data source.</p>"
         }
       },
-      "documentation":"<p>The required parameters that are needed to connect to a Databricks data source.</p>"
+      "documentation":"<p>The parameters that are required to connect to a Databricks data source.</p>"
     },
     "DatasetMetadata":{
       "type":"structure",
@@ -8852,6 +9895,10 @@
         "DateTimeFormat":{
           "shape":"DateTimeFormat",
           "documentation":"<p>Customize how dates are formatted in controls.</p>"
+        },
+        "InfoIconLabelOptions":{
+          "shape":"SheetControlInfoIconLabelOptions",
+          "documentation":"<p>The configuration of info icon label options.</p>"
         }
       },
       "documentation":"<p>The display options of a control.</p>"
@@ -8887,6 +9934,11 @@
         "FRIDAY",
         "SATURDAY"
       ]
+    },
+    "DbUsername":{
+      "type":"string",
+      "max":64,
+      "min":1
     },
     "DecimalDatasetParameter":{
       "type":"structure",
@@ -9043,7 +10095,12 @@
         "MIN",
         "COUNT",
         "DISTINCT_COUNT",
-        "AVERAGE"
+        "AVERAGE",
+        "MEDIAN",
+        "STDEV",
+        "STDEVP",
+        "VAR",
+        "VARP"
       ]
     },
     "DefaultFormatting":{
@@ -9445,13 +10502,13 @@
         },
         "MemberId":{
           "shape":"RestrictiveResourceId",
-          "documentation":"<p>The ID of the asset (the dashboard, analysis, or dataset) that you want to delete.</p>",
+          "documentation":"<p>The ID of the asset that you want to delete.</p>",
           "location":"uri",
           "locationName":"MemberId"
         },
         "MemberType":{
           "shape":"MemberType",
-          "documentation":"<p>The type of the member, including <code>DASHBOARD</code>, <code>ANALYSIS</code>, and <code>DATASET</code> </p>",
+          "documentation":"<p>The member type of the asset that you want to delete from a folder.</p>",
           "location":"uri",
           "locationName":"MemberType"
         }
@@ -10438,6 +11495,160 @@
         }
       }
     },
+    "DescribeAssetBundleExportJobRequest":{
+      "type":"structure",
+      "required":[
+        "AwsAccountId",
+        "AssetBundleExportJobId"
+      ],
+      "members":{
+        "AwsAccountId":{
+          "shape":"AwsAccountId",
+          "documentation":"<p>The ID of the Amazon Web Services account the export job is executed in. </p>",
+          "location":"uri",
+          "locationName":"AwsAccountId"
+        },
+        "AssetBundleExportJobId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the job that you want described. The job ID is set when you start a new job with a <code>StartAssetBundleExportJob</code> API call.</p>",
+          "location":"uri",
+          "locationName":"AssetBundleExportJobId"
+        }
+      }
+    },
+    "DescribeAssetBundleExportJobResponse":{
+      "type":"structure",
+      "members":{
+        "JobStatus":{
+          "shape":"AssetBundleExportJobStatus",
+          "documentation":"<p>Indicates the status of a job through its queuing and execution.</p> <p>Poll this <code>DescribeAssetBundleExportApi</code> until <code>JobStatus</code> is either <code>SUCCESSFUL</code> or <code>FAILED</code>.</p>"
+        },
+        "DownloadUrl":{
+          "shape":"String",
+          "documentation":"<p>The URL to download the exported asset bundle data from.</p> <p>This URL is available only after the job has succeeded. This URL is valid for 5 minutes after issuance. Call <code>DescribeAssetBundleExportJob</code> again for a fresh URL if needed.</p> <p>The downloaded asset bundle is a zip file named <code>assetbundle-{jobId}.qs</code>. The file has a <code>.qs</code> extension.</p> <p>This URL can't be used in a <code>StartAssetBundleImportJob</code> API call and should only be used for download purposes.</p>"
+        },
+        "Errors":{
+          "shape":"AssetBundleExportJobErrorList",
+          "documentation":"<p>An array of error records that describes any failures that occurred during the export job processing.</p> <p>Error records accumulate while the job runs. The complete set of error records is available after the job has completed and failed.</p>"
+        },
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The Amazon Resource Name (ARN) for the export job.</p>"
+        },
+        "CreatedTime":{
+          "shape":"Timestamp",
+          "documentation":"<p>The time that the export job was created.</p>"
+        },
+        "AssetBundleExportJobId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the job. The job ID is set when you start a new job with a <code>StartAssetBundleExportJob</code> API call.</p>"
+        },
+        "AwsAccountId":{
+          "shape":"AwsAccountId",
+          "documentation":"<p>The ID of the Amazon Web Services account that the export job was executed in. </p>"
+        },
+        "ResourceArns":{
+          "shape":"AssetBundleResourceArns",
+          "documentation":"<p>A list of resource ARNs that exported with the job.</p>"
+        },
+        "IncludeAllDependencies":{
+          "shape":"Boolean",
+          "documentation":"<p>The include dependencies flag.</p>"
+        },
+        "ExportFormat":{
+          "shape":"AssetBundleExportFormat",
+          "documentation":"<p>The format of the exported asset bundle. A <code>QUICKSIGHT_JSON</code> formatted file can be used to make a <code>StartAssetBundleImportJob</code> API call. A <code>CLOUDFORMATION_JSON</code> formatted file can be used in the CloudFormation console and with the CloudFormation APIs.</p>"
+        },
+        "CloudFormationOverridePropertyConfiguration":{
+          "shape":"AssetBundleCloudFormationOverridePropertyConfiguration",
+          "documentation":"<p>The CloudFormation override property configuration for the export job.</p>"
+        },
+        "RequestId":{
+          "shape":"NonEmptyString",
+          "documentation":"<p>The Amazon Web Services request ID for this operation.</p>"
+        },
+        "Status":{
+          "shape":"StatusCode",
+          "documentation":"<p>The HTTP status of the response.</p>",
+          "location":"statusCode"
+        }
+      }
+    },
+    "DescribeAssetBundleImportJobRequest":{
+      "type":"structure",
+      "required":[
+        "AwsAccountId",
+        "AssetBundleImportJobId"
+      ],
+      "members":{
+        "AwsAccountId":{
+          "shape":"AwsAccountId",
+          "documentation":"<p>The ID of the Amazon Web Services account the import job was executed in. </p>",
+          "location":"uri",
+          "locationName":"AwsAccountId"
+        },
+        "AssetBundleImportJobId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the job. The job ID is set when you start a new job with a <code>StartAssetBundleImportJob</code> API call.</p>",
+          "location":"uri",
+          "locationName":"AssetBundleImportJobId"
+        }
+      }
+    },
+    "DescribeAssetBundleImportJobResponse":{
+      "type":"structure",
+      "members":{
+        "JobStatus":{
+          "shape":"AssetBundleImportJobStatus",
+          "documentation":"<p>Indicates the status of a job through its queuing and execution.</p> <p>Poll the <code>DescribeAssetBundleImport</code> API until <code>JobStatus</code> returns one of the following values:</p> <ul> <li> <p> <code>SUCCESSFUL</code> </p> </li> <li> <p> <code>FAILED</code> </p> </li> <li> <p> <code>FAILED_ROLLBACK_COMPLETED</code> </p> </li> <li> <p> <code>FAILED_ROLLBACK_ERROR</code> </p> </li> </ul>"
+        },
+        "Errors":{
+          "shape":"AssetBundleImportJobErrorList",
+          "documentation":"<p>An array of error records that describes any failures that occurred during the export job processing.</p> <p>Error records accumulate while the job is still running. The complete set of error records is available after the job has completed and failed.</p>"
+        },
+        "RollbackErrors":{
+          "shape":"AssetBundleImportJobErrorList",
+          "documentation":"<p>An array of error records that describes any failures that occurred while an import job was attempting a rollback.</p> <p>Error records accumulate while the job is still running. The complete set of error records is available after the job has completed and failed.</p>"
+        },
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The Amazon Resource Name (ARN) for the import job.</p>"
+        },
+        "CreatedTime":{
+          "shape":"Timestamp",
+          "documentation":"<p>The time that the import job was created.</p>"
+        },
+        "AssetBundleImportJobId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the job. The job ID is set when you start a new job with a <code>StartAssetBundleImportJob</code> API call.</p>"
+        },
+        "AwsAccountId":{
+          "shape":"AwsAccountId",
+          "documentation":"<p>The ID of the Amazon Web Services account the import job was executed in. </p>"
+        },
+        "AssetBundleImportSource":{
+          "shape":"AssetBundleImportSourceDescription",
+          "documentation":"<p>The source of the asset bundle zip file that contains the data that is imported by the job.</p>"
+        },
+        "OverrideParameters":{
+          "shape":"AssetBundleImportJobOverrideParameters",
+          "documentation":"<p>Optional overrides to be applied to the resource configuration before import.</p>"
+        },
+        "FailureAction":{
+          "shape":"AssetBundleImportFailureAction",
+          "documentation":"<p>The failure action for the import job.</p>"
+        },
+        "RequestId":{
+          "shape":"NonEmptyString",
+          "documentation":"<p>The Amazon Web Services request ID for this operation.</p>"
+        },
+        "Status":{
+          "shape":"StatusCode",
+          "documentation":"<p>The HTTP status of the response.</p>",
+          "location":"statusCode"
+        }
+      }
+    },
     "DescribeDashboardDefinitionRequest":{
       "type":"structure",
       "required":[
@@ -10612,6 +11823,149 @@
         "RequestId":{
           "shape":"String",
           "documentation":"<p>The Amazon Web Services request ID for this operation.</p>"
+        }
+      }
+    },
+    "DescribeDashboardSnapshotJobRequest":{
+      "type":"structure",
+      "required":[
+        "AwsAccountId",
+        "DashboardId",
+        "SnapshotJobId"
+      ],
+      "members":{
+        "AwsAccountId":{
+          "shape":"AwsAccountId",
+          "documentation":"<p>The ID of the Amazon Web Services account that the dashboard snapshot job is executed in.</p>",
+          "location":"uri",
+          "locationName":"AwsAccountId"
+        },
+        "DashboardId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the dashboard that you have started a snapshot job for.</p>",
+          "location":"uri",
+          "locationName":"DashboardId"
+        },
+        "SnapshotJobId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the job to be described. The job ID is set when you start a new job with a <code>StartDashboardSnapshotJob</code> API call.</p>",
+          "location":"uri",
+          "locationName":"SnapshotJobId"
+        }
+      }
+    },
+    "DescribeDashboardSnapshotJobResponse":{
+      "type":"structure",
+      "members":{
+        "AwsAccountId":{
+          "shape":"AwsAccountId",
+          "documentation":"<p> The ID of the Amazon Web Services account that the dashboard snapshot job is executed in. </p>"
+        },
+        "DashboardId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the dashboard that you have started a snapshot job for.</p>"
+        },
+        "SnapshotJobId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the job to be described. The job ID is set when you start a new job with a <code>StartDashboardSnapshotJob</code> API call.</p>"
+        },
+        "UserConfiguration":{
+          "shape":"SnapshotUserConfigurationRedacted",
+          "documentation":"<p>The user configuration for the snapshot job. This information is provided when you make a <code>StartDashboardSnapshotJob</code> API call.</p>"
+        },
+        "SnapshotConfiguration":{
+          "shape":"SnapshotConfiguration",
+          "documentation":"<p>The snapshot configuration of the job. This information is provided when you make a <code>StartDashboardSnapshotJob</code> API call.</p>"
+        },
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The Amazon Resource Name (ARN) for the snapshot job. The job ARN is generated when you start a new job with a <code>StartDashboardSnapshotJob</code> API call.</p>"
+        },
+        "JobStatus":{
+          "shape":"SnapshotJobStatus",
+          "documentation":"<p>Indicates the status of a job. The status updates as the job executes. This shows one of the following values.</p> <ul> <li> <p> <code>COMPLETED</code> - The job was completed successfully.</p> </li> <li> <p> <code>FAILED</code> - The job failed to execute.</p> </li> <li> <p> <code>QUEUED</code> - The job is queued and hasn't started yet.</p> </li> <li> <p> <code>RUNNING</code> - The job is still running.</p> </li> </ul>"
+        },
+        "CreatedTime":{
+          "shape":"Timestamp",
+          "documentation":"<p> The time that the snapshot job was created. </p>"
+        },
+        "LastUpdatedTime":{
+          "shape":"Timestamp",
+          "documentation":"<p> The time that the snapshot job status was last updated. </p>"
+        },
+        "RequestId":{
+          "shape":"NonEmptyString",
+          "documentation":"<p> The Amazon Web Services request ID for this operation. </p>"
+        },
+        "Status":{
+          "shape":"StatusCode",
+          "documentation":"<p>The HTTP status of the request</p>"
+        }
+      }
+    },
+    "DescribeDashboardSnapshotJobResultRequest":{
+      "type":"structure",
+      "required":[
+        "AwsAccountId",
+        "DashboardId",
+        "SnapshotJobId"
+      ],
+      "members":{
+        "AwsAccountId":{
+          "shape":"AwsAccountId",
+          "documentation":"<p>The ID of the Amazon Web Services account that the dashboard snapshot job is executed in.</p>",
+          "location":"uri",
+          "locationName":"AwsAccountId"
+        },
+        "DashboardId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the dashboard that you have started a snapshot job for.</p>",
+          "location":"uri",
+          "locationName":"DashboardId"
+        },
+        "SnapshotJobId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the job to be described. The job ID is set when you start a new job with a <code>StartDashboardSnapshotJob</code> API call.</p>",
+          "location":"uri",
+          "locationName":"SnapshotJobId"
+        }
+      }
+    },
+    "DescribeDashboardSnapshotJobResultResponse":{
+      "type":"structure",
+      "members":{
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The Amazon Resource Name (ARN) for the snapshot job. The job ARN is generated when you start a new job with a <code>StartDashboardSnapshotJob</code> API call.</p>"
+        },
+        "JobStatus":{
+          "shape":"SnapshotJobStatus",
+          "documentation":"<p>Indicates the status of a job after it has reached a terminal state. A finished snapshot job will retuen a <code>COMPLETED</code> or <code>FAILED</code> status.</p>"
+        },
+        "CreatedTime":{
+          "shape":"Timestamp",
+          "documentation":"<p>The time that a snapshot job was created.</p>"
+        },
+        "LastUpdatedTime":{
+          "shape":"Timestamp",
+          "documentation":"<p>The time that a snapshot job status was last updated.</p>"
+        },
+        "Result":{
+          "shape":"SnapshotJobResult",
+          "documentation":"<p>The result of the snapshot job. Jobs that have successfully completed will return the S3Uri where they are located. Jobs that have failedwill return information on the error that caused the job to fail.</p>"
+        },
+        "ErrorInfo":{
+          "shape":"SnapshotJobErrorInfo",
+          "documentation":"<p>Displays information for the error that caused a job to fail.</p>"
+        },
+        "RequestId":{
+          "shape":"NonEmptyString",
+          "documentation":"<p>The Amazon Web Services request ID for this operation.</p>"
+        },
+        "Status":{
+          "shape":"StatusCode",
+          "documentation":"<p>The HTTP status of the request</p>",
+          "location":"statusCode"
         }
       }
     },
@@ -10844,6 +12198,25 @@
           "documentation":"<p>The ID of the folder.</p>",
           "location":"uri",
           "locationName":"FolderId"
+        },
+        "Namespace":{
+          "shape":"Namespace",
+          "documentation":"<p>The namespace of the folder whose permissions you want described.</p>",
+          "location":"querystring",
+          "locationName":"namespace"
+        },
+        "MaxResults":{
+          "shape":"MaxResults",
+          "documentation":"<p>The maximum number of results to be returned per request.</p>",
+          "box":true,
+          "location":"querystring",
+          "locationName":"max-results"
+        },
+        "NextToken":{
+          "shape":"String",
+          "documentation":"<p>A pagination token for the next set of results.</p>",
+          "location":"querystring",
+          "locationName":"next-token"
         }
       }
     },
@@ -10870,6 +12243,10 @@
         "RequestId":{
           "shape":"String",
           "documentation":"<p>The Amazon Web Services request ID for this operation.</p>"
+        },
+        "NextToken":{
+          "shape":"String",
+          "documentation":"<p>The pagination token for the next set of results, or null if there are no more results.</p>"
         }
       }
     },
@@ -10912,6 +12289,25 @@
           "documentation":"<p>The ID of the folder.</p>",
           "location":"uri",
           "locationName":"FolderId"
+        },
+        "Namespace":{
+          "shape":"Namespace",
+          "documentation":"<p>The namespace of the folder whose permissions you want described.</p>",
+          "location":"querystring",
+          "locationName":"namespace"
+        },
+        "MaxResults":{
+          "shape":"MaxResults",
+          "documentation":"<p>The maximum number of results to be returned per request.</p>",
+          "box":true,
+          "location":"querystring",
+          "locationName":"max-results"
+        },
+        "NextToken":{
+          "shape":"String",
+          "documentation":"<p>A pagination token for the next set of results.</p>",
+          "location":"querystring",
+          "locationName":"next-token"
         }
       }
     },
@@ -10938,6 +12334,10 @@
         "RequestId":{
           "shape":"String",
           "documentation":"<p>The Amazon Web Services request ID for this operation.</p>"
+        },
+        "NextToken":{
+          "shape":"String",
+          "documentation":"<p>A pagination token for the next set of results, or null if there are no more results.</p>"
         }
       }
     },
@@ -12107,6 +13507,10 @@
         "TitleOptions":{
           "shape":"LabelOptions",
           "documentation":"<p>The options to configure the title visibility, name, and font size.</p>"
+        },
+        "InfoIconLabelOptions":{
+          "shape":"SheetControlInfoIconLabelOptions",
+          "documentation":"<p>The configuration of info icon label options.</p>"
         }
       },
       "documentation":"<p>The display options of a control.</p>"
@@ -12398,7 +13802,7 @@
     "FieldOrderList":{
       "type":"list",
       "member":{"shape":"FieldId"},
-      "max":100
+      "max":200
     },
     "FieldSeriesItem":{
       "type":"structure",
@@ -12853,6 +14257,10 @@
         "SelectAllOptions":{
           "shape":"CategoryFilterSelectAllOptions",
           "documentation":"<p>Select all of the values. Null is not the assigned value of select all.</p> <ul> <li> <p> <code>FILTER_ALL_VALUES</code> </p> </li> </ul>"
+        },
+        "NullOption":{
+          "shape":"FilterNullOption",
+          "documentation":"<p>This option determines how null values should be treated when filtering data.</p> <ul> <li> <p> <code>ALL_VALUES</code>: Include null values in filtered results.</p> </li> <li> <p> <code>NULLS_ONLY</code>: Only include null values in filtered results.</p> </li> <li> <p> <code>NON_NULLS_ONLY</code>: Exclude null values from filtered results.</p> </li> </ul>"
         }
       },
       "documentation":"<p>A list of filter configurations.</p>"
@@ -12983,6 +14391,10 @@
         "SelectedSheets":{
           "shape":"SelectedSheetsFilterScopeConfiguration",
           "documentation":"<p>The configuration for applying a filter to specific sheets.</p>"
+        },
+        "AllSheets":{
+          "shape":"AllSheetsFilterScopeConfiguration",
+          "documentation":"<p>The configuration for applying a filter to all sheets.</p>"
         }
       },
       "documentation":"<p>The scope configuration for a <code>FilterGroup</code>.</p> <p>This is a union type structure. For this structure to be valid, only one of the attributes can be defined.</p>"
@@ -13143,9 +14555,18 @@
         "LastUpdatedTime":{
           "shape":"Timestamp",
           "documentation":"<p>The time that the folder was last updated.</p>"
+        },
+        "SharingModel":{
+          "shape":"SharingModel",
+          "documentation":"<p>The sharing scope of the folder.</p>"
         }
       },
       "documentation":"<p>A folder in Amazon QuickSight.</p>"
+    },
+    "FolderArnList":{
+      "type":"list",
+      "member":{"shape":"Arn"},
+      "max":1
     },
     "FolderColumnList":{
       "type":"list",
@@ -13237,6 +14658,10 @@
         "LastUpdatedTime":{
           "shape":"Timestamp",
           "documentation":"<p>The time that the folder was last updated.</p>"
+        },
+        "SharingModel":{
+          "shape":"SharingModel",
+          "documentation":"<p>The sharing scope of the folder.</p>"
         }
       },
       "documentation":"<p>A summary of information about an existing Amazon QuickSight folder. </p>"
@@ -13248,7 +14673,10 @@
     },
     "FolderType":{
       "type":"string",
-      "enum":["SHARED"]
+      "enum":[
+        "SHARED",
+        "RESTRICTED"
+      ]
     },
     "Font":{
       "type":"structure",
@@ -13334,10 +14762,7 @@
     },
     "ForecastComputation":{
       "type":"structure",
-      "required":[
-        "ComputationId",
-        "Time"
-      ],
+      "required":["ComputationId"],
       "members":{
         "ComputationId":{
           "shape":"ShortRestrictiveResourceId",
@@ -14089,6 +15514,43 @@
       },
       "documentation":"<p>The bound options (north, south, west, east) of the geospatial window options.</p>"
     },
+    "GeospatialHeatmapColorScale":{
+      "type":"structure",
+      "members":{
+        "Colors":{
+          "shape":"GeospatialHeatmapDataColorList",
+          "documentation":"<p>The list of colors to be used in heatmap point style.</p>"
+        }
+      },
+      "documentation":"<p>The color scale specification for the heatmap point style.</p>"
+    },
+    "GeospatialHeatmapConfiguration":{
+      "type":"structure",
+      "members":{
+        "HeatmapColor":{
+          "shape":"GeospatialHeatmapColorScale",
+          "documentation":"<p>The color scale specification for the heatmap point style.</p>"
+        }
+      },
+      "documentation":"<p>The heatmap configuration of the geospatial point style.</p>"
+    },
+    "GeospatialHeatmapDataColor":{
+      "type":"structure",
+      "required":["Color"],
+      "members":{
+        "Color":{
+          "shape":"HexColor",
+          "documentation":"<p>The hex color to be used in the heatmap point style.</p>"
+        }
+      },
+      "documentation":"<p>The color to be used in the heatmap point style.</p>"
+    },
+    "GeospatialHeatmapDataColorList":{
+      "type":"list",
+      "member":{"shape":"GeospatialHeatmapDataColor"},
+      "max":2,
+      "min":2
+    },
     "GeospatialMapAggregatedFieldWells":{
       "type":"structure",
       "members":{
@@ -14199,6 +15661,10 @@
         "ClusterMarkerConfiguration":{
           "shape":"ClusterMarkerConfiguration",
           "documentation":"<p>The cluster marker configuration of the geospatial point style.</p>"
+        },
+        "HeatmapConfiguration":{
+          "shape":"GeospatialHeatmapConfiguration",
+          "documentation":"<p>The heatmap configuration of the geospatial point style.</p>"
         }
       },
       "documentation":"<p>The point style of the geospatial map.</p>"
@@ -14207,7 +15673,8 @@
       "type":"string",
       "enum":[
         "POINT",
-        "CLUSTER"
+        "CLUSTER",
+        "HEATMAP"
       ]
     },
     "GeospatialWindowOptions":{
@@ -14612,10 +16079,7 @@
     },
     "GrowthRateComputation":{
       "type":"structure",
-      "required":[
-        "ComputationId",
-        "Time"
-      ],
+      "required":["ComputationId"],
       "members":{
         "ComputationId":{
           "shape":"ShortRestrictiveResourceId",
@@ -15070,7 +16534,8 @@
       "type":"string",
       "enum":[
         "IAM",
-        "QUICKSIGHT"
+        "QUICKSIGHT",
+        "IAM_IDENTITY_CENTER"
       ]
     },
     "IdentityTypeNotSupportedException":{
@@ -15615,6 +17080,34 @@
         "RIGHT"
       ]
     },
+    "KPIActualValueConditionalFormatting":{
+      "type":"structure",
+      "members":{
+        "TextColor":{
+          "shape":"ConditionalFormattingColor",
+          "documentation":"<p>The conditional formatting of the actual value's text color.</p>"
+        },
+        "Icon":{
+          "shape":"ConditionalFormattingIcon",
+          "documentation":"<p>The conditional formatting of the actual value's icon.</p>"
+        }
+      },
+      "documentation":"<p>The conditional formatting for the actual value of a KPI visual.</p>"
+    },
+    "KPIComparisonValueConditionalFormatting":{
+      "type":"structure",
+      "members":{
+        "TextColor":{
+          "shape":"ConditionalFormattingColor",
+          "documentation":"<p>The conditional formatting of the comparison value's text color.</p>"
+        },
+        "Icon":{
+          "shape":"ConditionalFormattingIcon",
+          "documentation":"<p>The conditional formatting of the comparison value's icon.</p>"
+        }
+      },
+      "documentation":"<p>The conditional formatting for the comparison value of a KPI visual.</p>"
+    },
     "KPIConditionalFormatting":{
       "type":"structure",
       "members":{
@@ -15635,6 +17128,14 @@
         "ProgressBar":{
           "shape":"KPIProgressBarConditionalFormatting",
           "documentation":"<p>The conditional formatting for the progress bar of a KPI visual.</p>"
+        },
+        "ActualValue":{
+          "shape":"KPIActualValueConditionalFormatting",
+          "documentation":"<p>The conditional formatting for the actual value of a KPI visual.</p>"
+        },
+        "ComparisonValue":{
+          "shape":"KPIComparisonValueConditionalFormatting",
+          "documentation":"<p>The conditional formatting for the comparison value of a KPI visual.</p>"
         }
       },
       "documentation":"<p>The conditional formatting options of a KPI visual.</p>"
@@ -15710,6 +17211,14 @@
         "SecondaryValueFontConfiguration":{
           "shape":"FontConfiguration",
           "documentation":"<p>The options that determine the secondary value font configuration.</p>"
+        },
+        "Sparkline":{
+          "shape":"KPISparklineOptions",
+          "documentation":"<p>The options that determine the visibility, color, type, and tooltip visibility of the sparkline of a KPI visual.</p>"
+        },
+        "VisualLayoutOptions":{
+          "shape":"KPIVisualLayoutOptions",
+          "documentation":"<p>The options that determine the layout a KPI visual.</p>"
         }
       },
       "documentation":"<p>The options that determine the presentation of a KPI visual.</p>"
@@ -15748,6 +17257,36 @@
       },
       "documentation":"<p>The sort configuration of a KPI visual.</p>"
     },
+    "KPISparklineOptions":{
+      "type":"structure",
+      "required":["Type"],
+      "members":{
+        "Visibility":{
+          "shape":"Visibility",
+          "documentation":"<p>The visibility of the sparkline.</p>"
+        },
+        "Type":{
+          "shape":"KPISparklineType",
+          "documentation":"<p>The type of the sparkline.</p>"
+        },
+        "Color":{
+          "shape":"HexColor",
+          "documentation":"<p>The color of the sparkline.</p>"
+        },
+        "TooltipVisibility":{
+          "shape":"Visibility",
+          "documentation":"<p>The tooltip visibility of the sparkline.</p>"
+        }
+      },
+      "documentation":"<p>The options that determine the visibility, color, type, and tooltip visibility of the sparkline of a KPI visual.</p>"
+    },
+    "KPISparklineType":{
+      "type":"string",
+      "enum":[
+        "LINE",
+        "AREA"
+      ]
+    },
     "KPIVisual":{
       "type":"structure",
       "required":["VisualId"],
@@ -15782,6 +17321,34 @@
         }
       },
       "documentation":"<p>A key performance indicator (KPI).</p> <p>For more information, see <a href=\"https://docs.aws.amazon.com/quicksight/latest/user/kpi.html\">Using KPIs</a> in the <i>Amazon QuickSight User Guide</i>.</p>"
+    },
+    "KPIVisualLayoutOptions":{
+      "type":"structure",
+      "members":{
+        "StandardLayout":{
+          "shape":"KPIVisualStandardLayout",
+          "documentation":"<p>The standard layout of the KPI visual.</p>"
+        }
+      },
+      "documentation":"<p>The options that determine the layout a KPI visual.</p>"
+    },
+    "KPIVisualStandardLayout":{
+      "type":"structure",
+      "required":["Type"],
+      "members":{
+        "Type":{
+          "shape":"KPIVisualStandardLayoutType",
+          "documentation":"<p>The standard layout type.</p>"
+        }
+      },
+      "documentation":"<p>The standard layout of the KPI visual.</p>"
+    },
+    "KPIVisualStandardLayoutType":{
+      "type":"string",
+      "enum":[
+        "CLASSIC",
+        "VERTICAL"
+      ]
     },
     "LabelOptions":{
       "type":"structure",
@@ -16262,6 +17829,100 @@
         }
       }
     },
+    "ListAssetBundleExportJobsRequest":{
+      "type":"structure",
+      "required":["AwsAccountId"],
+      "members":{
+        "AwsAccountId":{
+          "shape":"AwsAccountId",
+          "documentation":"<p>The ID of the Amazon Web Services account that the export jobs were executed in. </p>",
+          "location":"uri",
+          "locationName":"AwsAccountId"
+        },
+        "NextToken":{
+          "shape":"String",
+          "documentation":"<p>The token for the next set of results, or null if there are no more results.</p>",
+          "location":"querystring",
+          "locationName":"next-token"
+        },
+        "MaxResults":{
+          "shape":"MaxResults",
+          "documentation":"<p>The maximum number of results to be returned per request.</p>",
+          "box":true,
+          "location":"querystring",
+          "locationName":"max-results"
+        }
+      }
+    },
+    "ListAssetBundleExportJobsResponse":{
+      "type":"structure",
+      "members":{
+        "AssetBundleExportJobSummaryList":{
+          "shape":"AssetBundleExportJobSummaryList",
+          "documentation":"<p>A list of export job summaries.</p>"
+        },
+        "NextToken":{
+          "shape":"String",
+          "documentation":"<p>The token for the next set of results, or null if there are no more results.</p>"
+        },
+        "RequestId":{
+          "shape":"NonEmptyString",
+          "documentation":"<p>The Amazon Web Services request ID for this operation.</p>"
+        },
+        "Status":{
+          "shape":"StatusCode",
+          "documentation":"<p>The HTTP status of the request.</p>",
+          "location":"statusCode"
+        }
+      }
+    },
+    "ListAssetBundleImportJobsRequest":{
+      "type":"structure",
+      "required":["AwsAccountId"],
+      "members":{
+        "AwsAccountId":{
+          "shape":"AwsAccountId",
+          "documentation":"<p>The ID of the Amazon Web Services account that the import jobs were executed in.</p>",
+          "location":"uri",
+          "locationName":"AwsAccountId"
+        },
+        "NextToken":{
+          "shape":"String",
+          "documentation":"<p>The token for the next set of results, or null if there are no more results.</p>",
+          "location":"querystring",
+          "locationName":"next-token"
+        },
+        "MaxResults":{
+          "shape":"MaxResults",
+          "documentation":"<p>The maximum number of results to be returned per request.</p>",
+          "box":true,
+          "location":"querystring",
+          "locationName":"max-results"
+        }
+      }
+    },
+    "ListAssetBundleImportJobsResponse":{
+      "type":"structure",
+      "members":{
+        "AssetBundleImportJobSummaryList":{
+          "shape":"AssetBundleImportJobSummaryList",
+          "documentation":"<p>A list of import job summaries.</p>"
+        },
+        "NextToken":{
+          "shape":"String",
+          "documentation":"<p>The token for the next set of results, or null if there are no more results.</p>"
+        },
+        "RequestId":{
+          "shape":"NonEmptyString",
+          "documentation":"<p>The Amazon Web Services request ID for this operation.</p>"
+        },
+        "Status":{
+          "shape":"StatusCode",
+          "documentation":"<p>The HTTP status of the response.</p>",
+          "location":"statusCode"
+        }
+      }
+    },
     "ListControlDisplayOptions":{
       "type":"structure",
       "members":{
@@ -16276,6 +17937,10 @@
         "TitleOptions":{
           "shape":"LabelOptions",
           "documentation":"<p>The options to configure the title visibility, name, and font size.</p>"
+        },
+        "InfoIconLabelOptions":{
+          "shape":"SheetControlInfoIconLabelOptions",
+          "documentation":"<p>The configuration of info icon label options.</p>"
         }
       },
       "documentation":"<p>The display options of a control.</p>"
@@ -17844,7 +19509,6 @@
       "type":"structure",
       "required":[
         "ComputationId",
-        "Time",
         "Type"
       ],
       "members":{
@@ -17924,17 +19588,14 @@
       "enum":[
         "DASHBOARD",
         "ANALYSIS",
-        "DATASET"
+        "DATASET",
+        "DATASOURCE",
+        "TOPIC"
       ]
     },
     "MetricComparisonComputation":{
       "type":"structure",
-      "required":[
-        "ComputationId",
-        "Time",
-        "FromValue",
-        "TargetValue"
-      ],
+      "required":["ComputationId"],
       "members":{
         "ComputationId":{
           "shape":"ShortRestrictiveResourceId",
@@ -19211,10 +20872,7 @@
     },
     "PeriodOverPeriodComputation":{
       "type":"structure",
-      "required":[
-        "ComputationId",
-        "Time"
-      ],
+      "required":["ComputationId"],
       "members":{
         "ComputationId":{
           "shape":"ShortRestrictiveResourceId",
@@ -19237,10 +20895,7 @@
     },
     "PeriodToDateComputation":{
       "type":"structure",
-      "required":[
-        "ComputationId",
-        "Time"
-      ],
+      "required":["ComputationId"],
       "members":{
         "ComputationId":{
           "shape":"ShortRestrictiveResourceId",
@@ -19498,6 +21153,10 @@
         "Scope":{
           "shape":"PivotTableConditionalFormattingScope",
           "documentation":"<p>The scope of the cell for conditional formatting.</p>"
+        },
+        "Scopes":{
+          "shape":"PivotTableConditionalFormattingScopeList",
+          "documentation":"<p>A list of cell scopes for conditional formatting.</p>"
         }
       },
       "documentation":"<p>The cell conditional formatting option for a pivot table.</p>"
@@ -19536,6 +21195,11 @@
         }
       },
       "documentation":"<p>The scope of the cell for conditional formatting.</p>"
+    },
+    "PivotTableConditionalFormattingScopeList":{
+      "type":"list",
+      "member":{"shape":"PivotTableConditionalFormattingScope"},
+      "max":3
     },
     "PivotTableConditionalFormattingScopeRole":{
       "type":"string",
@@ -19595,10 +21259,59 @@
       "member":{"shape":"PivotTableDataPathOption"},
       "max":100
     },
+    "PivotTableDataPathType":{
+      "type":"string",
+      "enum":[
+        "HIERARCHY_ROWS_LAYOUT_COLUMN",
+        "MULTIPLE_ROW_METRICS_COLUMN",
+        "EMPTY_COLUMN_HEADER",
+        "COUNT_METRIC_COLUMN"
+      ]
+    },
     "PivotTableDimensionList":{
       "type":"list",
       "member":{"shape":"DimensionField"},
       "max":40
+    },
+    "PivotTableFieldCollapseState":{
+      "type":"string",
+      "enum":[
+        "COLLAPSED",
+        "EXPANDED"
+      ]
+    },
+    "PivotTableFieldCollapseStateOption":{
+      "type":"structure",
+      "required":["Target"],
+      "members":{
+        "Target":{
+          "shape":"PivotTableFieldCollapseStateTarget",
+          "documentation":"<p>A tagged-union object that sets the collapse state.</p>"
+        },
+        "State":{
+          "shape":"PivotTableFieldCollapseState",
+          "documentation":"<p>The state of the field target of a pivot table. Choose one of the following options:</p> <ul> <li> <p> <code>COLLAPSED</code> </p> </li> <li> <p> <code>EXPANDED</code> </p> </li> </ul>"
+        }
+      },
+      "documentation":"<p>The collapse state options for the pivot table field options.</p>"
+    },
+    "PivotTableFieldCollapseStateOptionList":{
+      "type":"list",
+      "member":{"shape":"PivotTableFieldCollapseStateOption"}
+    },
+    "PivotTableFieldCollapseStateTarget":{
+      "type":"structure",
+      "members":{
+        "FieldId":{
+          "shape":"String",
+          "documentation":"<p>The field ID of the pivot table that the collapse state needs to be set to.</p>"
+        },
+        "FieldDataPathValues":{
+          "shape":"DataPathValueList",
+          "documentation":"<p>The data path of the pivot table's header. Used to set the collapse state.</p>"
+        }
+      },
+      "documentation":"<p>The target of a pivot table field collapse state.</p>"
     },
     "PivotTableFieldOption":{
       "type":"structure",
@@ -19634,6 +21347,10 @@
         "DataPathOptions":{
           "shape":"PivotTableDataPathOptionList",
           "documentation":"<p>The data path options for the pivot table field options.</p>"
+        },
+        "CollapseStateOptions":{
+          "shape":"PivotTableFieldCollapseStateOptionList",
+          "documentation":"<p>The collapse state options for the pivot table field options.</p>"
         }
       },
       "documentation":"<p>The field options for a pivot table visual.</p>"
@@ -19712,6 +21429,18 @@
         "CollapsedRowDimensionsVisibility":{
           "shape":"Visibility",
           "documentation":"<p>The visibility setting of a pivot table's collapsed row dimension fields. If the value of this structure is <code>HIDDEN</code>, all collapsed columns in a pivot table are automatically hidden. The default value is <code>VISIBLE</code>.</p>"
+        },
+        "RowsLayout":{
+          "shape":"PivotTableRowsLayout",
+          "documentation":"<p>The layout for the row dimension headers of a pivot table. Choose one of the following options.</p> <ul> <li> <p> <code>TABULAR</code>: (Default) Each row field is displayed in a separate column.</p> </li> <li> <p> <code>HIERARCHY</code>: All row fields are displayed in a single column. Indentation is used to differentiate row headers of different fields.</p> </li> </ul>"
+        },
+        "RowsLabelOptions":{
+          "shape":"PivotTableRowsLabelOptions",
+          "documentation":"<p>The options for the label that is located above the row headers. This option is only applicable when <code>RowsLayout</code> is set to <code>HIERARCHY</code>.</p>"
+        },
+        "DefaultCellWidth":{
+          "shape":"PixelLength",
+          "documentation":"<p>The default cell width of the pivot table.</p>"
         }
       },
       "documentation":"<p>The table options for a pivot table visual.</p>"
@@ -19729,6 +21458,32 @@
         }
       },
       "documentation":"<p>The paginated report options for a pivot table visual.</p>"
+    },
+    "PivotTableRowsLabelOptions":{
+      "type":"structure",
+      "members":{
+        "Visibility":{
+          "shape":"Visibility",
+          "documentation":"<p>The visibility of the rows label.</p>"
+        },
+        "CustomLabel":{
+          "shape":"PivotTableRowsLabelText",
+          "documentation":"<p>The custom label string for the rows label.</p>"
+        }
+      },
+      "documentation":"<p>The options for the label thta is located above the row headers. This option is only applicable when <code>RowsLayout</code> is set to <code>HIERARCHY</code>.</p>"
+    },
+    "PivotTableRowsLabelText":{
+      "type":"string",
+      "max":1024,
+      "min":1
+    },
+    "PivotTableRowsLayout":{
+      "type":"string",
+      "enum":[
+        "TABULAR",
+        "HIERARCHY"
+      ]
     },
     "PivotTableSortBy":{
       "type":"structure",
@@ -19849,6 +21604,10 @@
         "MetricHeaderCellStyle":{
           "shape":"TableCellStyle",
           "documentation":"<p>The cell styling options for the total of header cells.</p>"
+        },
+        "TotalAggregationOptions":{
+          "shape":"TotalAggregationOptionList",
+          "documentation":"<p>The total aggregation options for each value field.</p>"
         }
       },
       "documentation":"<p>The optional configuration of totals cells in a <code>PivotTableVisual</code>.</p>"
@@ -20133,6 +21892,14 @@
       },
       "documentation":"<p>The configured style settings of a radar chart.</p>"
     },
+    "RadarChartAxesRangeScale":{
+      "type":"string",
+      "enum":[
+        "AUTO",
+        "INDEPENDENT",
+        "SHARED"
+      ]
+    },
     "RadarChartCategoryFieldList":{
       "type":"list",
       "member":{"shape":"DimensionField"},
@@ -20201,6 +21968,10 @@
         "Legend":{
           "shape":"LegendOptions",
           "documentation":"<p>The legend display setup of the visual.</p>"
+        },
+        "AxesRangeScale":{
+          "shape":"RadarChartAxesRangeScale",
+          "documentation":"<p>The axis behavior options of a radar chart.</p>"
         }
       },
       "documentation":"<p>The configuration of a <code>RadarChartVisual</code>.</p>"
@@ -20342,6 +22113,32 @@
       "max":30,
       "min":7
     },
+    "RedshiftIAMParameters":{
+      "type":"structure",
+      "required":[
+        "RoleArn",
+        "DatabaseUser"
+      ],
+      "members":{
+        "RoleArn":{
+          "shape":"RoleArn",
+          "documentation":"<p>Use the <code>RoleArn</code> structure to allow Amazon QuickSight to call <code>redshift:GetClusterCredentials</code> on your cluster. The calling principal must have <code>iam:PassRole</code> access to pass the role to Amazon QuickSight. The role's trust policy must allow the Amazon QuickSight service principal to assume the role.</p>"
+        },
+        "DatabaseUser":{
+          "shape":"DatabaseUser",
+          "documentation":"<p>The user whose permissions and group memberships will be used by Amazon QuickSight to access the cluster. If this user already exists in your database, Amazon QuickSight is granted the same permissions that the user has. If the user doesn't exist, set the value of <code>AutoCreateDatabaseUser</code> to <code>True</code> to create a new user with PUBLIC permissions.</p>"
+        },
+        "DatabaseGroups":{
+          "shape":"DatabaseGroupList",
+          "documentation":"<p>A list of groups whose permissions will be granted to Amazon QuickSight to access the cluster. These permissions are combined with the permissions granted to Amazon QuickSight by the <code>DatabaseUser</code>. If you choose to include this parameter, the <code>RoleArn</code> must grant access to <code>redshift:JoinGroup</code>.</p>"
+        },
+        "AutoCreateDatabaseUser":{
+          "shape":"Boolean",
+          "documentation":"<p>Automatically creates a database user. If your database doesn't have a <code>DatabaseUser</code>, set this parameter to <code>True</code>. If there is no <code>DatabaseUser</code>, Amazon QuickSight can't connect to your cluster. The <code>RoleArn</code> that you use for this operation must grant access to <code>redshift:CreateClusterUser</code> to successfully create the user.</p>"
+        }
+      },
+      "documentation":"<p>A structure that grants Amazon QuickSight access to your cluster and make a call to the <code>redshift:GetClusterCredentials</code> API. For more information on the <code>redshift:GetClusterCredentials</code> API, see <a href=\"https://docs.aws.amazon.com/redshift/latest/APIReference/API_GetClusterCredentials.html\"> <code>GetClusterCredentials</code> </a>.</p>"
+    },
     "RedshiftParameters":{
       "type":"structure",
       "required":["Database"],
@@ -20361,6 +22158,10 @@
         "ClusterId":{
           "shape":"ClusterId",
           "documentation":"<p>Cluster ID. This field can be blank if the <code>Host</code> and <code>Port</code> are provided.</p>"
+        },
+        "IAMParameters":{
+          "shape":"RedshiftIAMParameters",
+          "documentation":"<p>An optional parameter that uses IAM authentication to grant Amazon QuickSight access to your cluster. This parameter can be used instead of <a href=\"https://docs.aws.amazon.com/quicksight/latest/APIReference/API_DataSourceCredentials.html\">DataSourceCredentials</a>.</p>"
         }
       },
       "documentation":"<p>The parameters for Amazon Redshift. The <code>ClusterId</code> field can be blank if <code>Host</code> and <code>Port</code> are both set. The <code>Host</code> and <code>Port</code> fields can be blank if the <code>ClusterId</code> field is set.</p>"
@@ -20412,7 +22213,11 @@
         },
         "AxisBinding":{
           "shape":"AxisBinding",
-          "documentation":"<p>The axis binding type of the reference line. Choose one of the following options:</p> <ul> <li> <p>PrimaryY</p> </li> <li> <p>SecondaryY</p> </li> </ul>"
+          "documentation":"<p>The axis binding type of the reference line. Choose one of the following options:</p> <ul> <li> <p> <code>PrimaryY</code> </p> </li> <li> <p> <code>SecondaryY</code> </p> </li> </ul>"
+        },
+        "SeriesType":{
+          "shape":"ReferenceLineSeriesType",
+          "documentation":"<p>The series type of the reference line data configuration. Choose one of the following options:</p> <ul> <li> <p> <code>BAR</code> </p> </li> <li> <p> <code>LINE</code> </p> </li> </ul>"
         }
       },
       "documentation":"<p>The data configuration of the reference line.</p>"
@@ -20495,6 +22300,13 @@
         "SOLID",
         "DASHED",
         "DOTTED"
+      ]
+    },
+    "ReferenceLineSeriesType":{
+      "type":"string",
+      "enum":[
+        "BAR",
+        "LINE"
       ]
     },
     "ReferenceLineStaticDataConfiguration":{
@@ -20687,6 +22499,10 @@
         "ExternalLoginId":{
           "shape":"String",
           "documentation":"<p>The identity ID for a user in the external login provider.</p>"
+        },
+        "Tags":{
+          "shape":"TagList",
+          "documentation":"<p>The tags to associate with the user.</p>"
         }
       }
     },
@@ -20845,12 +22661,12 @@
     },
     "RelationalTableName":{
       "type":"string",
-      "max":64,
+      "max":256,
       "min":1
     },
     "RelationalTableSchema":{
       "type":"string",
-      "max":64
+      "max":256
     },
     "RelativeDateTimeControlDisplayOptions":{
       "type":"structure",
@@ -20862,6 +22678,10 @@
         "DateTimeFormat":{
           "shape":"DateTimeFormat",
           "documentation":"<p>Customize how dates are formatted in controls.</p>"
+        },
+        "InfoIconLabelOptions":{
+          "shape":"SheetControlInfoIconLabelOptions",
+          "documentation":"<p>The configuration of info icon label options.</p>"
         }
       },
       "documentation":"<p>The display options of a control.</p>"
@@ -21155,6 +22975,10 @@
         "RowAlternateColors":{
           "shape":"RowAlternateColorList",
           "documentation":"<p>Determines the list of row alternate colors.</p>"
+        },
+        "UsePrimaryBackgroundColor":{
+          "shape":"WidgetStatus",
+          "documentation":"<p>The primary background color options for alternate rows.</p>"
         }
       },
       "documentation":"<p>Determines the row alternate color options.</p>"
@@ -21301,6 +23125,29 @@
       "max":1024,
       "min":1
     },
+    "S3BucketConfiguration":{
+      "type":"structure",
+      "required":[
+        "BucketName",
+        "BucketPrefix",
+        "BucketRegion"
+      ],
+      "members":{
+        "BucketName":{
+          "shape":"NonEmptyString",
+          "documentation":"<p>The name of an existing Amazon S3 bucket where the generated snapshot artifacts are sent.</p>"
+        },
+        "BucketPrefix":{
+          "shape":"NonEmptyString",
+          "documentation":"<p>The prefix of the Amazon S3 bucket that the generated snapshots are stored in.</p>"
+        },
+        "BucketRegion":{
+          "shape":"NonEmptyString",
+          "documentation":"<p>The region that the Amazon S3 bucket is located in. The bucket must be located in the same region that the <code>StartDashboardSnapshotJob</code> API call is made.</p>"
+        }
+      },
+      "documentation":"<p>An optional structure that contains the Amazon S3 bucket configuration that the generated snapshots are stored in. If you don't provide this information, generated snapshots are stored in the default Amazon QuickSight bucket.</p>"
+    },
     "S3Key":{
       "type":"string",
       "max":1024,
@@ -21342,6 +23189,10 @@
         }
       },
       "documentation":"<p>A physical table type for an S3 data source.</p>"
+    },
+    "S3Uri":{
+      "type":"string",
+      "pattern":"^(https|s3)://([^/]+)/?(.*)$"
     },
     "SameSheetTargetVisualConfiguration":{
       "type":"structure",
@@ -22174,6 +24025,11 @@
       "type":"long",
       "sensitive":true
     },
+    "SensitiveS3Uri":{
+      "type":"string",
+      "pattern":"^(https|s3)://([^/]+)/?(.*)$",
+      "sensitive":true
+    },
     "SensitiveString":{
       "type":"string",
       "sensitive":true
@@ -22265,6 +24121,12 @@
       "max":128,
       "min":1
     },
+    "SessionTagKeyList":{
+      "type":"list",
+      "member":{"shape":"SessionTagKey"},
+      "max":50,
+      "min":1
+    },
     "SessionTagList":{
       "type":"list",
       "member":{"shape":"SessionTag"},
@@ -22309,6 +24171,13 @@
       },
       "documentation":"<p>The shape conditional formatting of a filled map visual.</p>"
     },
+    "SharingModel":{
+      "type":"string",
+      "enum":[
+        "ACCOUNT",
+        "NAMESPACE"
+      ]
+    },
     "Sheet":{
       "type":"structure",
       "members":{
@@ -22336,6 +24205,25 @@
         "SINGLE_VALUED",
         "DATE_RANGE"
       ]
+    },
+    "SheetControlInfoIconLabelOptions":{
+      "type":"structure",
+      "members":{
+        "Visibility":{
+          "shape":"Visibility",
+          "documentation":"<p>The visibility configuration of info icon label options.</p>"
+        },
+        "InfoIconText":{
+          "shape":"SheetControlInfoIconText",
+          "documentation":"<p> The text content of info icon.</p>"
+        }
+      },
+      "documentation":"<p>A control to display info icons for filters and parameters.</p>"
+    },
+    "SheetControlInfoIconText":{
+      "type":"string",
+      "max":100,
+      "min":1
     },
     "SheetControlLayout":{
       "type":"structure",
@@ -22630,6 +24518,10 @@
       },
       "documentation":"<p>A <code>SignupResponse</code> object that contains a summary of a newly created account.</p>"
     },
+    "SimpleAttributeAggregationFunction":{
+      "type":"string",
+      "enum":["UNIQUE_VALUE"]
+    },
     "SimpleClusterMarker":{
       "type":"structure",
       "members":{
@@ -22656,6 +24548,17 @@
         "MEDIAN"
       ]
     },
+    "SimpleTotalAggregationFunction":{
+      "type":"string",
+      "enum":[
+        "DEFAULT",
+        "SUM",
+        "AVERAGE",
+        "MIN",
+        "MAX",
+        "NONE"
+      ]
+    },
     "SiteBaseUrl":{
       "type":"string",
       "max":1024,
@@ -22667,9 +24570,41 @@
         "TitleOptions":{
           "shape":"LabelOptions",
           "documentation":"<p>The options to configure the title visibility, name, and font size.</p>"
+        },
+        "InfoIconLabelOptions":{
+          "shape":"SheetControlInfoIconLabelOptions",
+          "documentation":"<p>The configuration of info icon label options.</p>"
         }
       },
       "documentation":"<p>The display options of a control.</p>"
+    },
+    "SmallMultiplesAxisPlacement":{
+      "type":"string",
+      "enum":[
+        "OUTSIDE",
+        "INSIDE"
+      ]
+    },
+    "SmallMultiplesAxisProperties":{
+      "type":"structure",
+      "members":{
+        "Scale":{
+          "shape":"SmallMultiplesAxisScale",
+          "documentation":"<p>Determines whether scale of the axes are shared or independent. The default value is <code>SHARED</code>.</p>"
+        },
+        "Placement":{
+          "shape":"SmallMultiplesAxisPlacement",
+          "documentation":"<p>Defines the placement of the axis. By default, axes are rendered <code>OUTSIDE</code> of the panels. Axes with <code>INDEPENDENT</code> scale are rendered <code>INSIDE</code> the panels.</p>"
+        }
+      },
+      "documentation":"<p>Configures the properties of a chart's axes that are used by small multiples panels.</p>"
+    },
+    "SmallMultiplesAxisScale":{
+      "type":"string",
+      "enum":[
+        "SHARED",
+        "INDEPENDENT"
+      ]
     },
     "SmallMultiplesDimensionFieldList":{
       "type":"list",
@@ -22690,9 +24625,291 @@
         "PanelConfiguration":{
           "shape":"PanelConfiguration",
           "documentation":"<p>Configures the display options for each small multiples panel.</p>"
+        },
+        "XAxis":{
+          "shape":"SmallMultiplesAxisProperties",
+          "documentation":"<p>The properties of a small multiples X axis.</p>"
+        },
+        "YAxis":{
+          "shape":"SmallMultiplesAxisProperties",
+          "documentation":"<p>The properties of a small multiples Y axis.</p>"
         }
       },
       "documentation":"<p>Options that determine the layout and display options of a chart's small multiples.</p>"
+    },
+    "SnapshotAnonymousUser":{
+      "type":"structure",
+      "members":{
+        "RowLevelPermissionTags":{
+          "shape":"SessionTagList",
+          "documentation":"<p>The tags to be used for row-level security (RLS). Make sure that the relevant datasets have RLS tags configured before you start a snapshot export job. You can configure the RLS tags of a dataset with a <code>DataSet$RowLevelPermissionTagConfiguration</code> API call.</p> <p>These are not the tags that are used for Amazon Web Services resource tagging. For more information on row level security in Amazon QuickSight, see <a href=\"https://docs.aws.amazon.com/quicksight/latest/user/quicksight-dev-rls-tags.html\">Using Row-Level Security (RLS) with Tags</a>in the <i>Amazon QuickSight User Guide</i>.</p>"
+        }
+      },
+      "documentation":"<p>A structure that contains information on the anonymous user configuration.</p>"
+    },
+    "SnapshotAnonymousUserList":{
+      "type":"list",
+      "member":{"shape":"SnapshotAnonymousUser"},
+      "max":1,
+      "min":1
+    },
+    "SnapshotAnonymousUserRedacted":{
+      "type":"structure",
+      "members":{
+        "RowLevelPermissionTagKeys":{
+          "shape":"SessionTagKeyList",
+          "documentation":"<p>The tag keys for the <code>RowLevelPermissionTags</code>.</p>"
+        }
+      },
+      "documentation":"<p>Use this structure to redact sensitive information that you provide about an anonymous user from the snapshot.</p>"
+    },
+    "SnapshotAnonymousUserRedactedList":{
+      "type":"list",
+      "member":{"shape":"SnapshotAnonymousUserRedacted"},
+      "max":1,
+      "min":1
+    },
+    "SnapshotConfiguration":{
+      "type":"structure",
+      "required":["FileGroups"],
+      "members":{
+        "FileGroups":{
+          "shape":"SnapshotFileGroupList",
+          "documentation":"<p>A list of <code>SnapshotJobResultFileGroup</code> objects that contain information about the snapshot that is generated. This list can hold a maximum of 6 <code>FileGroup</code> configurations.</p>"
+        },
+        "DestinationConfiguration":{
+          "shape":"SnapshotDestinationConfiguration",
+          "documentation":"<p>A structure that contains information on the Amazon S3 bucket that the generated snapshot is stored in.</p>"
+        },
+        "Parameters":{"shape":"Parameters"}
+      },
+      "documentation":"<p>Describes the configuration of the dashboard snapshot.</p>"
+    },
+    "SnapshotDestinationConfiguration":{
+      "type":"structure",
+      "members":{
+        "S3Destinations":{
+          "shape":"SnapshotS3DestinationConfigurationList",
+          "documentation":"<p> A list of <code>SnapshotS3DestinationConfiguration</code> objects that contain Amazon S3 destination configurations. This structure can hold a maximum of 1 <code>S3DestinationConfiguration</code>. </p>"
+        }
+      },
+      "documentation":"<p>A structure that contains information on the Amazon S3 destinations of the generated snapshot.</p>"
+    },
+    "SnapshotFile":{
+      "type":"structure",
+      "required":[
+        "SheetSelections",
+        "FormatType"
+      ],
+      "members":{
+        "SheetSelections":{
+          "shape":"SnapshotFileSheetSelectionList",
+          "documentation":"<p>A list of <code>SnapshotFileSheetSelection</code> objects that contain information on the dashboard sheet that is exported. These objects provide information about the snapshot artifacts that are generated during the job. This structure can hold a maximum of 5 CSV configurations, 5 Excel configurations, or 1 configuration for PDF.</p>"
+        },
+        "FormatType":{
+          "shape":"SnapshotFileFormatType",
+          "documentation":"<p>The format of the snapshot file to be generated. You can choose between <code>CSV</code>, <code>Excel</code>, or <code>PDF</code>.</p>"
+        }
+      },
+      "documentation":"<p>A structure that contains the information for the snapshot that you want to generate. This information is provided by you when you start a new snapshot job.</p>"
+    },
+    "SnapshotFileFormatType":{
+      "type":"string",
+      "enum":[
+        "CSV",
+        "PDF",
+        "EXCEL"
+      ]
+    },
+    "SnapshotFileGroup":{
+      "type":"structure",
+      "members":{
+        "Files":{
+          "shape":"SnapshotFileList",
+          "documentation":"<p>A list of <code>SnapshotFile</code> objects that contain the information on the snapshot files that need to be generated. This structure can hold 1 configuration at a time.</p>"
+        }
+      },
+      "documentation":"<p>A structure that contains the information on the snapshot files.</p>"
+    },
+    "SnapshotFileGroupList":{
+      "type":"list",
+      "member":{"shape":"SnapshotFileGroup"},
+      "max":7,
+      "min":1
+    },
+    "SnapshotFileList":{
+      "type":"list",
+      "member":{"shape":"SnapshotFile"},
+      "max":1,
+      "min":1
+    },
+    "SnapshotFileSheetSelection":{
+      "type":"structure",
+      "required":[
+        "SheetId",
+        "SelectionScope"
+      ],
+      "members":{
+        "SheetId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The sheet ID of the dashboard to generate the snapshot artifact from. This value is required for CSV, Excel, and PDF format types.</p>"
+        },
+        "SelectionScope":{
+          "shape":"SnapshotFileSheetSelectionScope",
+          "documentation":"<p>The selection scope of the visuals on a sheet of a dashboard that you are generating a snapthot of. You can choose one of the following options.</p> <ul> <li> <p> <code>ALL_VISUALS</code> - Selects all visuals that are on the sheet. This value is required if the snapshot is a PDF.</p> </li> <li> <p> <code>SELECTED_VISUALS</code> - Select the visual that you want to add to the snapshot. This value is required if the snapshot is a CSV or Excel workbook.</p> </li> </ul>"
+        },
+        "VisualIds":{
+          "shape":"SnapshotFileSheetSelectionVisualIdList",
+          "documentation":"<p> A structure that lists the IDs of the visuals in the selected sheet. Supported visual types are table, pivot table visuals. This value is required if you are generating a CSV or Excel workbook. This value supports a maximum of 1 visual ID for CSV and 5 visual IDs across up to 5 sheet selections for Excel. If you are generating an Excel workbook, the order of the visual IDs provided in this structure determines the order of the worksheets in the Excel file. </p>"
+        }
+      },
+      "documentation":"<p>A structure that contains information that identifies the snapshot that needs to be generated.</p>"
+    },
+    "SnapshotFileSheetSelectionList":{
+      "type":"list",
+      "member":{"shape":"SnapshotFileSheetSelection"},
+      "max":5,
+      "min":1
+    },
+    "SnapshotFileSheetSelectionScope":{
+      "type":"string",
+      "enum":[
+        "ALL_VISUALS",
+        "SELECTED_VISUALS"
+      ]
+    },
+    "SnapshotFileSheetSelectionVisualIdList":{
+      "type":"list",
+      "member":{"shape":"ShortRestrictiveResourceId"},
+      "max":5,
+      "min":1
+    },
+    "SnapshotJobErrorInfo":{
+      "type":"structure",
+      "members":{
+        "ErrorMessage":{
+          "shape":"String",
+          "documentation":"<p>The error message.</p>"
+        },
+        "ErrorType":{
+          "shape":"String",
+          "documentation":"<p>The error type.</p>"
+        }
+      },
+      "documentation":"<p>An object that contains information on the error that caused the snapshot job to fail.</p>"
+    },
+    "SnapshotJobResult":{
+      "type":"structure",
+      "members":{
+        "AnonymousUsers":{
+          "shape":"AnonymousUserSnapshotJobResultList",
+          "documentation":"<p> A list of <code>AnonymousUserSnapshotJobResult</code> objects that contain information on anonymous users and their user configurations. This data provided by you when you make a <code>StartDashboardSnapshotJob</code> API call.</p>"
+        }
+      },
+      "documentation":"<p>An object that provides information on the result of a snapshot job. This object provides information about the job, the job status, and the location of the generated file.</p>"
+    },
+    "SnapshotJobResultErrorInfo":{
+      "type":"structure",
+      "members":{
+        "ErrorMessage":{
+          "shape":"String",
+          "documentation":"<p>The error message.</p>"
+        },
+        "ErrorType":{
+          "shape":"String",
+          "documentation":"<p>The error type.</p>"
+        }
+      },
+      "documentation":"<p>Information on the error that caused the snapshot job to fail.</p>"
+    },
+    "SnapshotJobResultErrorInfoList":{
+      "type":"list",
+      "member":{"shape":"SnapshotJobResultErrorInfo"}
+    },
+    "SnapshotJobResultFileGroup":{
+      "type":"structure",
+      "members":{
+        "Files":{
+          "shape":"SnapshotFileList",
+          "documentation":"<p> A list of <code>SnapshotFile</code> objects.</p>"
+        },
+        "S3Results":{
+          "shape":"SnapshotJobS3ResultList",
+          "documentation":"<p> A list of <code>SnapshotJobS3Result</code> objects.</p>"
+        }
+      },
+      "documentation":"<p>A structure that contains information on the generated snapshot file groups.</p>"
+    },
+    "SnapshotJobResultFileGroupList":{
+      "type":"list",
+      "member":{"shape":"SnapshotJobResultFileGroup"}
+    },
+    "SnapshotJobS3Result":{
+      "type":"structure",
+      "members":{
+        "S3DestinationConfiguration":{
+          "shape":"SnapshotS3DestinationConfiguration",
+          "documentation":"<p>A list of Amazon S3 bucket configurations that are provided when you make a <code>StartDashboardSnapshotJob</code> API call. </p>"
+        },
+        "S3Uri":{
+          "shape":"SensitiveS3Uri",
+          "documentation":"<p>The Amazon S3 Uri.</p>"
+        },
+        "ErrorInfo":{
+          "shape":"SnapshotJobResultErrorInfoList",
+          "documentation":"<p>An array of error records that describe any failures that occur while the dashboard snapshot job runs.</p>"
+        }
+      },
+      "documentation":"<p>The Amazon S3 result from the snapshot job. The result includes the <code>DestinationConfiguration</code> and the Amazon S3 Uri. If an error occured during the job, the result returns information on the error.</p>"
+    },
+    "SnapshotJobS3ResultList":{
+      "type":"list",
+      "member":{"shape":"SnapshotJobS3Result"}
+    },
+    "SnapshotJobStatus":{
+      "type":"string",
+      "enum":[
+        "QUEUED",
+        "RUNNING",
+        "COMPLETED",
+        "FAILED"
+      ]
+    },
+    "SnapshotS3DestinationConfiguration":{
+      "type":"structure",
+      "members":{
+        "BucketConfiguration":{
+          "shape":"S3BucketConfiguration",
+          "documentation":"<p>A structure that contains details about the Amazon S3 bucket that the generated dashboard snapshot is saved in.</p>"
+        }
+      },
+      "documentation":"<p>A structure that describes the Amazon S3 settings to use to save the generated dashboard snapshot.</p>"
+    },
+    "SnapshotS3DestinationConfigurationList":{
+      "type":"list",
+      "member":{"shape":"SnapshotS3DestinationConfiguration"},
+      "max":1,
+      "min":1
+    },
+    "SnapshotUserConfiguration":{
+      "type":"structure",
+      "members":{
+        "AnonymousUsers":{
+          "shape":"SnapshotAnonymousUserList",
+          "documentation":"<p>An array of records that describe the anonymous users that the dashboard snapshot is generated for.</p>"
+        }
+      },
+      "documentation":"<p>A structure that contains information about the users that the dashboard snapshot is generated for.</p>"
+    },
+    "SnapshotUserConfigurationRedacted":{
+      "type":"structure",
+      "members":{
+        "AnonymousUsers":{
+          "shape":"SnapshotAnonymousUserRedactedList",
+          "documentation":"<p> An array of records that describe anonymous users that the dashboard snapshot is generated for. Sensitive user information is excluded. </p>"
+        }
+      },
+      "documentation":"<p>A structure that contains information about the users that the dashboard snapshot is generated for. Sensitive user information is excluded. </p>"
     },
     "SnowflakeParameters":{
       "type":"structure",
@@ -22764,6 +24981,14 @@
       },
       "documentation":"<p>The parameters for Spark.</p>"
     },
+    "SpecialValue":{
+      "type":"string",
+      "enum":[
+        "EMPTY",
+        "NULL",
+        "OTHER"
+      ]
+    },
     "SqlEndpointPath":{
       "type":"string",
       "max":4096,
@@ -22806,6 +25031,211 @@
         }
       },
       "documentation":"<p>Secure Socket Layer (SSL) properties that apply when Amazon QuickSight connects to your underlying data source.</p>"
+    },
+    "StarburstParameters":{
+      "type":"structure",
+      "required":[
+        "Host",
+        "Port",
+        "Catalog"
+      ],
+      "members":{
+        "Host":{
+          "shape":"Host",
+          "documentation":"<p>The host name of the Starburst data source.</p>"
+        },
+        "Port":{
+          "shape":"Port",
+          "documentation":"<p>The port for the Starburst data source.</p>"
+        },
+        "Catalog":{
+          "shape":"Catalog",
+          "documentation":"<p>The catalog name for the Starburst data source.</p>"
+        },
+        "ProductType":{
+          "shape":"StarburstProductType",
+          "documentation":"<p>The product type for the Starburst data source.</p>"
+        }
+      },
+      "documentation":"<p>The parameters that are required to connect to a Starburst data source.</p>"
+    },
+    "StarburstProductType":{
+      "type":"string",
+      "enum":[
+        "GALAXY",
+        "ENTERPRISE"
+      ]
+    },
+    "StartAssetBundleExportJobRequest":{
+      "type":"structure",
+      "required":[
+        "AwsAccountId",
+        "AssetBundleExportJobId",
+        "ResourceArns",
+        "ExportFormat"
+      ],
+      "members":{
+        "AwsAccountId":{
+          "shape":"AwsAccountId",
+          "documentation":"<p>The ID of the Amazon Web Services account to export assets from.</p>",
+          "location":"uri",
+          "locationName":"AwsAccountId"
+        },
+        "AssetBundleExportJobId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the job. This ID is unique while the job is running. After the job is completed, you can reuse this ID for another job.</p>"
+        },
+        "ResourceArns":{
+          "shape":"AssetBundleResourceArns",
+          "documentation":"<p>An array of resource ARNs to export. The following resources are supported.</p> <ul> <li> <p> <code>Analysis</code> </p> </li> <li> <p> <code>Dashboard</code> </p> </li> <li> <p> <code>DataSet</code> </p> </li> <li> <p> <code>DataSource</code> </p> </li> <li> <p> <code>RefreshSchedule</code> </p> </li> <li> <p> <code>Theme</code> </p> </li> <li> <p> <code>VPCConnection</code> </p> </li> </ul> <p>The API caller must have the necessary permissions in their IAM role to access each resource before the resources can be exported.</p>"
+        },
+        "IncludeAllDependencies":{
+          "shape":"Boolean",
+          "documentation":"<p>A Boolean that determines whether all dependencies of each resource ARN are recursively exported with the job. For example, say you provided a Dashboard ARN to the <code>ResourceArns</code> parameter. If you set <code>IncludeAllDependencies</code> to <code>TRUE</code>, any theme, dataset, and data source resource that is a dependency of the dashboard is also exported.</p>"
+        },
+        "ExportFormat":{
+          "shape":"AssetBundleExportFormat",
+          "documentation":"<p>The export data format.</p>"
+        },
+        "CloudFormationOverridePropertyConfiguration":{
+          "shape":"AssetBundleCloudFormationOverridePropertyConfiguration",
+          "documentation":"<p>An optional collection of structures that generate CloudFormation parameters to override the existing resource property values when the resource is exported to a new CloudFormation template.</p> <p>Use this field if the <code>ExportFormat</code> field of a <code>StartAssetBundleExportJobRequest</code> API call is set to <code>CLOUDFORMATION_JSON</code>.</p>"
+        }
+      }
+    },
+    "StartAssetBundleExportJobResponse":{
+      "type":"structure",
+      "members":{
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The Amazon Resource Name (ARN) for the export job.</p>"
+        },
+        "AssetBundleExportJobId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the job. This ID is unique while the job is running. After the job is completed, you can reuse this ID for another job.</p>"
+        },
+        "RequestId":{
+          "shape":"NonEmptyString",
+          "documentation":"<p>The Amazon Web Services response ID for this operation.</p>"
+        },
+        "Status":{
+          "shape":"StatusCode",
+          "documentation":"<p>The HTTP status of the response.</p>",
+          "location":"statusCode"
+        }
+      }
+    },
+    "StartAssetBundleImportJobRequest":{
+      "type":"structure",
+      "required":[
+        "AwsAccountId",
+        "AssetBundleImportJobId",
+        "AssetBundleImportSource"
+      ],
+      "members":{
+        "AwsAccountId":{
+          "shape":"AwsAccountId",
+          "documentation":"<p>The ID of the Amazon Web Services account to import assets into. </p>",
+          "location":"uri",
+          "locationName":"AwsAccountId"
+        },
+        "AssetBundleImportJobId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the job. This ID is unique while the job is running. After the job is completed, you can reuse this ID for another job.</p>"
+        },
+        "AssetBundleImportSource":{
+          "shape":"AssetBundleImportSource",
+          "documentation":"<p>The source of the asset bundle zip file that contains the data that you want to import. The file must be in <code>QUICKSIGHT_JSON</code> format. </p>"
+        },
+        "OverrideParameters":{
+          "shape":"AssetBundleImportJobOverrideParameters",
+          "documentation":"<p>Optional overrides to be applied to the resource configuration before import.</p>"
+        },
+        "FailureAction":{
+          "shape":"AssetBundleImportFailureAction",
+          "documentation":"<p>The failure action for the import job.</p> <p>If you choose <code>ROLLBACK</code>, failed import jobs will attempt to undo any asset changes caused by the failed job.</p> <p>If you choose <code>DO_NOTHING</code>, failed import jobs will not attempt to roll back any asset changes caused by the failed job, possibly keeping the Amazon QuickSight account in an inconsistent state.</p>"
+        }
+      }
+    },
+    "StartAssetBundleImportJobResponse":{
+      "type":"structure",
+      "members":{
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The Amazon Resource Name (ARN) for the import job.</p>"
+        },
+        "AssetBundleImportJobId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the job. This ID is unique while the job is running. After the job is completed, you can reuse this ID for another job.</p>"
+        },
+        "RequestId":{
+          "shape":"NonEmptyString",
+          "documentation":"<p>The Amazon Web Services response ID for this operation.</p>"
+        },
+        "Status":{
+          "shape":"StatusCode",
+          "documentation":"<p>The HTTP status of the response.</p>",
+          "location":"statusCode"
+        }
+      }
+    },
+    "StartDashboardSnapshotJobRequest":{
+      "type":"structure",
+      "required":[
+        "AwsAccountId",
+        "DashboardId",
+        "SnapshotJobId",
+        "UserConfiguration",
+        "SnapshotConfiguration"
+      ],
+      "members":{
+        "AwsAccountId":{
+          "shape":"AwsAccountId",
+          "documentation":"<p>The ID of the Amazon Web Services account that the dashboard snapshot job is executed in.</p>",
+          "location":"uri",
+          "locationName":"AwsAccountId"
+        },
+        "DashboardId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the dashboard that you want to start a snapshot job for. </p>",
+          "location":"uri",
+          "locationName":"DashboardId"
+        },
+        "SnapshotJobId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>An ID for the dashboard snapshot job. This ID is unique to the dashboard while the job is running. This ID can be used to poll the status of a job with a <code>DescribeDashboardSnapshotJob</code> while the job runs. You can reuse this ID for another job 24 hours after the current job is completed.</p>"
+        },
+        "UserConfiguration":{
+          "shape":"SnapshotUserConfiguration",
+          "documentation":"<p> A structure that contains information about the anonymous users that the generated snapshot is for. This API will not return information about registered Amazon QuickSight.</p>"
+        },
+        "SnapshotConfiguration":{
+          "shape":"SnapshotConfiguration",
+          "documentation":"<p>A structure that describes the configuration of the dashboard snapshot.</p>"
+        }
+      }
+    },
+    "StartDashboardSnapshotJobResponse":{
+      "type":"structure",
+      "members":{
+        "Arn":{
+          "shape":"Arn",
+          "documentation":"<p>The Amazon Resource Name (ARN) for the dashboard snapshot job.</p>"
+        },
+        "SnapshotJobId":{
+          "shape":"ShortRestrictiveResourceId",
+          "documentation":"<p>The ID of the job. The job ID is set when you start a new job with a <code>StartDashboardSnapshotJob</code> API call.</p>"
+        },
+        "RequestId":{
+          "shape":"NonEmptyString",
+          "documentation":"<p> The Amazon Web Services request ID for this operation. </p>"
+        },
+        "Status":{
+          "shape":"StatusCode",
+          "documentation":"<p>The HTTP status of the request</p>",
+          "location":"statusCode"
+        }
+      }
     },
     "StatePersistenceConfigurations":{
       "type":"structure",
@@ -22977,6 +25407,14 @@
       },
       "documentation":"<p>The configuration that defines the default value of a <code>String</code> parameter when a value has not been set.</p>"
     },
+    "StyledCellType":{
+      "type":"string",
+      "enum":[
+        "TOTAL",
+        "METRIC_HEADER",
+        "VALUE"
+      ]
+    },
     "SubnetId":{
       "type":"string",
       "max":255,
@@ -23019,6 +25457,10 @@
         "MetricHeaderCellStyle":{
           "shape":"TableCellStyle",
           "documentation":"<p>The cell styling options for the subtotals of header cells.</p>"
+        },
+        "StyleTargets":{
+          "shape":"TableStyleTargetList",
+          "documentation":"<p>The style targets options for subtotals.</p>"
         }
       },
       "documentation":"<p>The subtotal options.</p>"
@@ -23324,14 +25766,24 @@
       "members":{
         "SelectedFieldOptions":{
           "shape":"TableFieldOptionList",
-          "documentation":"<p>The selected field options for the table field options.</p>"
+          "documentation":"<p>The field options to be configured to a table.</p>"
         },
         "Order":{
           "shape":"FieldOrderList",
-          "documentation":"<p>The order of field IDs of the field options for a table visual.</p>"
+          "documentation":"<p>The order of the field IDs that are configured as field options for a table visual.</p>"
+        },
+        "PinnedFieldOptions":{
+          "shape":"TablePinnedFieldOptions",
+          "documentation":"<p>The settings for the pinned columns of a table visual.</p>"
         }
       },
-      "documentation":"<p>The field options for a table visual.</p>"
+      "documentation":"<p>The field options of a table visual.</p>"
+    },
+    "TableFieldOrderList":{
+      "type":"list",
+      "member":{"shape":"FieldId"},
+      "documentation":"<p>A list of table field IDs.</p>",
+      "max":201
     },
     "TableFieldURLConfiguration":{
       "type":"structure",
@@ -23419,6 +25871,16 @@
       },
       "documentation":"<p>The paginated report options for a table visual.</p>"
     },
+    "TablePinnedFieldOptions":{
+      "type":"structure",
+      "members":{
+        "PinnedLeftFields":{
+          "shape":"TableFieldOrderList",
+          "documentation":"<p>A list of columns to be pinned to the left of a table visual.</p>"
+        }
+      },
+      "documentation":"<p>The settings for the pinned columns of a table visual.</p>"
+    },
     "TableRowConditionalFormatting":{
       "type":"structure",
       "members":{
@@ -23477,11 +25939,28 @@
       },
       "documentation":"<p>The sort configuration for a <code>TableVisual</code>.</p>"
     },
+    "TableStyleTarget":{
+      "type":"structure",
+      "required":["CellType"],
+      "members":{
+        "CellType":{
+          "shape":"StyledCellType",
+          "documentation":"<p>The cell type of the table style target.</p>"
+        }
+      },
+      "documentation":"<p>The table style target.</p>"
+    },
+    "TableStyleTargetList":{
+      "type":"list",
+      "member":{"shape":"TableStyleTarget"},
+      "max":3
+    },
     "TableTotalsPlacement":{
       "type":"string",
       "enum":[
         "START",
-        "END"
+        "END",
+        "AUTO"
       ]
     },
     "TableTotalsScrollStatus":{
@@ -23944,6 +26423,10 @@
         "PlaceholderOptions":{
           "shape":"TextControlPlaceholderOptions",
           "documentation":"<p>The configuration of the placeholder options in a text area control.</p>"
+        },
+        "InfoIconLabelOptions":{
+          "shape":"SheetControlInfoIconLabelOptions",
+          "documentation":"<p>The configuration of info icon label options.</p>"
         }
       },
       "documentation":"<p>The display options of a control.</p>"
@@ -23986,6 +26469,10 @@
         "PlaceholderOptions":{
           "shape":"TextControlPlaceholderOptions",
           "documentation":"<p>The configuration of the placeholder options in a text field control.</p>"
+        },
+        "InfoIconLabelOptions":{
+          "shape":"SheetControlInfoIconLabelOptions",
+          "documentation":"<p>The configuration of info icon label options.</p>"
         }
       },
       "documentation":"<p>The display options of a control.</p>"
@@ -24321,15 +26808,19 @@
         },
         "Value":{
           "shape":"Timestamp",
-          "documentation":"<p>The value of a <code>TimeEquality</code> filter.</p> <p>This field is mutually exclusive to <code>ParameterName</code>.</p>"
+          "documentation":"<p>The value of a <code>TimeEquality</code> filter.</p> <p>This field is mutually exclusive to <code>RollingDate</code> and <code>ParameterName</code>.</p>"
         },
         "ParameterName":{
           "shape":"ParameterName",
-          "documentation":"<p>The parameter whose value should be used for the filter value.</p> <p>This field is mutually exclusive to <code>Value</code>.</p>"
+          "documentation":"<p>The parameter whose value should be used for the filter value.</p> <p>This field is mutually exclusive to <code>Value</code> and <code>RollingDate</code>.</p>"
         },
         "TimeGranularity":{
           "shape":"TimeGranularity",
           "documentation":"<p>The level of time precision that is used to aggregate <code>DateTime</code> values.</p>"
+        },
+        "RollingDate":{
+          "shape":"RollingDateConfiguration",
+          "documentation":"<p>The rolling date input for the <code>TimeEquality</code> filter.</p> <p>This field is mutually exclusive to <code>Value</code> and <code>ParameterName</code>.</p>"
         }
       },
       "documentation":"<p>A <code>TimeEqualityFilter</code> filters values that are equal to a given value.</p>"
@@ -24535,8 +27026,6 @@
       "type":"structure",
       "required":[
         "ComputationId",
-        "Time",
-        "Category",
         "Type"
       ],
       "members":{
@@ -24584,7 +27073,6 @@
       "type":"structure",
       "required":[
         "ComputationId",
-        "Category",
         "Type"
       ],
       "members":{
@@ -24697,6 +27185,10 @@
         "CellValueSynonyms":{
           "shape":"CellValueSynonyms",
           "documentation":"<p>The other names or aliases for the calculated field cell value.</p>"
+        },
+        "NonAdditive":{
+          "shape":"NullableBoolean",
+          "documentation":"<p>The non additive for the table style target.</p>"
         }
       },
       "documentation":"<p>A structure that represents a calculated field.</p>"
@@ -24772,7 +27264,7 @@
         },
         "Aggregation":{
           "shape":"DefaultAggregation",
-          "documentation":"<p>The type of aggregation that is performed on the column data when it's queried. Valid values for this structure are <code>SUM</code>, <code>MAX</code>, <code>MIN</code>, <code>COUNT</code>, <code>DISTINCT_COUNT</code>, and <code>AVERAGE</code>.</p>"
+          "documentation":"<p>The type of aggregation that is performed on the column data when it's queried.</p>"
         },
         "IsIncludedInTopic":{
           "shape":"Boolean",
@@ -24813,6 +27305,10 @@
         "CellValueSynonyms":{
           "shape":"CellValueSynonyms",
           "documentation":"<p>The other names or aliases for the column cell value.</p>"
+        },
+        "NonAdditive":{
+          "shape":"NullableBoolean",
+          "documentation":"<p>The non additive value for the column.</p>"
         }
       },
       "documentation":"<p>Represents a column in a dataset.</p>"
@@ -25178,10 +27674,7 @@
     },
     "TotalAggregationComputation":{
       "type":"structure",
-      "required":[
-        "ComputationId",
-        "Value"
-      ],
+      "required":["ComputationId"],
       "members":{
         "ComputationId":{
           "shape":"ShortRestrictiveResourceId",
@@ -25197,6 +27690,39 @@
         }
       },
       "documentation":"<p>The total aggregation computation configuration.</p>"
+    },
+    "TotalAggregationFunction":{
+      "type":"structure",
+      "members":{
+        "SimpleTotalAggregationFunction":{
+          "shape":"SimpleTotalAggregationFunction",
+          "documentation":"<p>A built in aggregation function for total values.</p>"
+        }
+      },
+      "documentation":"<p>An aggregation function that aggregates the total values of a measure.</p>"
+    },
+    "TotalAggregationOption":{
+      "type":"structure",
+      "required":[
+        "FieldId",
+        "TotalAggregationFunction"
+      ],
+      "members":{
+        "FieldId":{
+          "shape":"FieldId",
+          "documentation":"<p>The field id that's associated with the total aggregation option.</p>"
+        },
+        "TotalAggregationFunction":{
+          "shape":"TotalAggregationFunction",
+          "documentation":"<p>The total aggregation function that you want to set for a specified field id.</p>"
+        }
+      },
+      "documentation":"<p>The total aggregation settings map of a field id.</p>"
+    },
+    "TotalAggregationOptionList":{
+      "type":"list",
+      "member":{"shape":"TotalAggregationOption"},
+      "max":200
     },
     "TotalOptions":{
       "type":"structure",
@@ -25220,6 +27746,10 @@
         "TotalCellStyle":{
           "shape":"TableCellStyle",
           "documentation":"<p>Cell styling options for the total cells.</p>"
+        },
+        "TotalAggregationOptions":{
+          "shape":"TotalAggregationOptionList",
+          "documentation":"<p>The total aggregation settings for each value field.</p>"
         }
       },
       "documentation":"<p>The total options for a table visual.</p>"
@@ -25397,6 +27927,29 @@
       },
       "documentation":"<p>The options that determine the presentation of trend arrows in a KPI visual.</p>"
     },
+    "TrinoParameters":{
+      "type":"structure",
+      "required":[
+        "Host",
+        "Port",
+        "Catalog"
+      ],
+      "members":{
+        "Host":{
+          "shape":"Host",
+          "documentation":"<p>The host name of the Trino data source.</p>"
+        },
+        "Port":{
+          "shape":"Port",
+          "documentation":"<p>The port for the Trino data source.</p>"
+        },
+        "Catalog":{
+          "shape":"Catalog",
+          "documentation":"<p>The catalog name for the Trino data source.</p>"
+        }
+      },
+      "documentation":"<p>The parameters that are required to connect to a Trino data source.</p>"
+    },
     "TwitterParameters":{
       "type":"structure",
       "required":[
@@ -25557,10 +28110,7 @@
     },
     "UniqueValuesComputation":{
       "type":"structure",
-      "required":[
-        "ComputationId",
-        "Category"
-      ],
+      "required":["ComputationId"],
       "members":{
         "ComputationId":{
           "shape":"ShortRestrictiveResourceId",
@@ -25850,6 +28400,10 @@
         "Definition":{
           "shape":"AnalysisDefinition",
           "documentation":"<p>The definition of an analysis.</p> <p>A definition is the data model of all features in a Dashboard, Template, or Analysis.</p>"
+        },
+        "ValidationStrategy":{
+          "shape":"ValidationStrategy",
+          "documentation":"<p>The option to relax the validation needed to update an analysis with definition objects. This skips the validation step for specific errors.</p>"
         }
       }
     },
@@ -26043,6 +28597,10 @@
         "Definition":{
           "shape":"DashboardVersionDefinition",
           "documentation":"<p>The definition of a dashboard.</p> <p>A definition is the data model of all features in a Dashboard, Template, or Analysis.</p>"
+        },
+        "ValidationStrategy":{
+          "shape":"ValidationStrategy",
+          "documentation":"<p>The option to relax the validation needed to update a dashboard with definition objects. This skips the validation step for specific errors.</p>"
         }
       }
     },
@@ -26832,6 +29390,10 @@
         "Definition":{
           "shape":"TemplateVersionDefinition",
           "documentation":"<p>The definition of a template.</p> <p>A definition is the data model of all features in a Dashboard, Template, or Analysis.</p>"
+        },
+        "ValidationStrategy":{
+          "shape":"ValidationStrategy",
+          "documentation":"<p>The option to relax the validation needed to update a template with definition objects. This skips the validation step for specific errors.</p>"
         }
       }
     },
@@ -27453,11 +30015,6 @@
         "RESTRICTED_READER"
       ]
     },
-    "Username":{
-      "type":"string",
-      "max":64,
-      "min":1
-    },
     "VPCConnection":{
       "type":"structure",
       "members":{
@@ -27603,6 +30160,24 @@
       "type":"list",
       "member":{"shape":"VPCConnectionSummary"}
     },
+    "ValidationStrategy":{
+      "type":"structure",
+      "required":["Mode"],
+      "members":{
+        "Mode":{
+          "shape":"ValidationStrategyMode",
+          "documentation":"<p>The mode of validation for the asset to be creaed or updated. When you set this value to <code>STRICT</code>, strict validation for every error is enforced. When you set this value to <code>LENIENT</code>, validation is skipped for specific UI errors.</p>"
+        }
+      },
+      "documentation":"<p>The option to relax the validation that is required to create and update analyses, dashboards, and templates with definition objects. When you set this value to <code>LENIENT</code>, validation is skipped for specific errors.</p>"
+    },
+    "ValidationStrategyMode":{
+      "type":"string",
+      "enum":[
+        "STRICT",
+        "LENIENT"
+      ]
+    },
     "ValueWhenUnsetOption":{
       "type":"string",
       "enum":[
@@ -27624,7 +30199,8 @@
       "enum":[
         "TOP",
         "MIDDLE",
-        "BOTTOM"
+        "BOTTOM",
+        "AUTO"
       ]
     },
     "Visibility":{

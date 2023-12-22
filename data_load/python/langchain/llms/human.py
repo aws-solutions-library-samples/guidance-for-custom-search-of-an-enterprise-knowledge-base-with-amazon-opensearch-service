@@ -1,10 +1,9 @@
 from typing import Any, Callable, List, Mapping, Optional
 
-from pydantic import Field
-
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.llms.utils import enforce_stop_tokens
+from langchain.pydantic_v1 import Field
 
 
 def _display_prompt(prompt: str) -> None:
@@ -34,7 +33,7 @@ def _collect_user_input(
 
 class HumanInputLLM(LLM):
     """
-    A LLM wrapper which returns user input as the response.
+    It returns user input as the response.
     """
 
     input_func: Callable = Field(default_factory=lambda: _collect_user_input)
@@ -60,6 +59,7 @@ class HumanInputLLM(LLM):
         prompt: str,
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> str:
         """
         Displays the prompt to the user and returns their input as a response.

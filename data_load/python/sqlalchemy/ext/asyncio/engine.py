@@ -39,6 +39,7 @@ from ...engine import create_pool_from_url as _create_pool_from_url
 from ...engine import Engine
 from ...engine.base import NestedTransaction
 from ...engine.base import Transaction
+from ...exc import ArgumentError
 from ...util.concurrency import greenlet_spawn
 
 if TYPE_CHECKING:
@@ -73,6 +74,20 @@ def create_async_engine(url: Union[str, URL], **kw: Any) -> AsyncEngine:
 
     .. versionadded:: 1.4
 
+    :param async_creator: an async callable which returns a driver-level
+        asyncio connection. If given, the function should take no arguments,
+        and return a new asyncio connection from the underlying asyncio
+        database driver; the connection will be wrapped in the appropriate
+        structures to be used with the :class:`.AsyncEngine`.   Note that the
+        parameters specified in the URL are not applied here, and the creator
+        function should use its own connection parameters.
+
+        This parameter is the asyncio equivalent of the
+        :paramref:`_sa.create_engine.creator` parameter of the
+        :func:`_sa.create_engine` function.
+
+        .. versionadded:: 2.0.16
+
     """
 
     if kw.get("server_side_cursors", False):
@@ -82,6 +97,23 @@ def create_async_engine(url: Union[str, URL], **kw: Any) -> AsyncEngine:
             "streaming result set"
         )
     kw["_is_async"] = True
+    async_creator = kw.pop("async_creator", None)
+    if async_creator:
+        if kw.get("creator", None):
+            raise ArgumentError(
+                "Can only specify one of 'async_creator' or 'creator', "
+                "not both."
+            )
+
+        def creator() -> Any:
+            # note that to send adapted arguments like
+            # prepared_statement_cache_size, user would use
+            # "creator" and emulate this form here
+            return sync_engine.dialect.dbapi.connect(  # type: ignore
+                async_creator_fn=async_creator
+            )
+
+        kw["creator"] = creator
     sync_engine = _create_engine(url, **kw)
     return AsyncEngine(sync_engine)
 
@@ -225,7 +257,9 @@ class AsyncConnection(
             AsyncEngine._retrieve_proxy_for_target(target.engine), target
         )
 
-    async def start(self, is_ctxmanager: bool = False) -> AsyncConnection:
+    async def start(
+        self, is_ctxmanager: bool = False  # noqa: U100
+    ) -> AsyncConnection:
         """Start this :class:`_asyncio.AsyncConnection` object's context
         outside of using a Python ``with:`` block.
 
@@ -233,7 +267,7 @@ class AsyncConnection(
         if self.sync_connection:
             raise exc.InvalidRequestError("connection is already started")
         self.sync_connection = self._assign_proxied(
-            await (greenlet_spawn(self.sync_engine.connect))
+            await greenlet_spawn(self.sync_engine.connect)
         )
         return self
 
@@ -301,7 +335,6 @@ class AsyncConnection(
     async def invalidate(
         self, exception: Optional[BaseException] = None
     ) -> None:
-
         """Invalidate the underlying DBAPI connection associated with
         this :class:`_engine.Connection`.
 
@@ -444,6 +477,18 @@ class AsyncConnection(
 
         """
         await greenlet_spawn(self._proxied.close)
+
+    async def aclose(self) -> None:
+        """A synonym for :meth:`_asyncio.AsyncConnection.close`.
+
+        The :meth:`_asyncio.AsyncConnection.aclose` name is specifically
+        to support the Python standard library ``@contextlib.aclosing``
+        context manager function.
+
+        .. versionadded:: 2.0.20
+
+        """
+        await self.close()
 
     async def exec_driver_sql(
         self,
@@ -774,8 +819,8 @@ class AsyncConnection(
             yield result.scalars()
 
     async def run_sync(
-        self, fn: Callable[..., Any], *arg: Any, **kw: Any
-    ) -> Any:
+        self, fn: Callable[..., _T], *arg: Any, **kw: Any
+    ) -> _T:
         """Invoke the given synchronous (i.e. not async) callable,
         passing a synchronous-style :class:`_engine.Connection` as the first
         argument.
@@ -1075,7 +1120,6 @@ class AsyncEngine(ProxyComparable[Engine], AsyncConnectable):
         return AsyncEngine(self.sync_engine.execution_options(**opt))
 
     async def dispose(self, close: bool = True) -> None:
-
         """Dispose of the connection pool used by this
         :class:`_asyncio.AsyncEngine`.
 
@@ -1400,7 +1444,9 @@ def _get_sync_engine_or_connection(
 
 
 @inspection._inspects(AsyncConnection)
-def _no_insp_for_async_conn_yet(subject: AsyncConnection) -> NoReturn:
+def _no_insp_for_async_conn_yet(
+    subject: AsyncConnection,  # noqa: U100
+) -> NoReturn:
     raise exc.NoInspectionAvailable(
         "Inspection on an AsyncConnection is currently not supported. "
         "Please use ``run_sync`` to pass a callable where it's possible "
@@ -1410,7 +1456,9 @@ def _no_insp_for_async_conn_yet(subject: AsyncConnection) -> NoReturn:
 
 
 @inspection._inspects(AsyncEngine)
-def _no_insp_for_async_engine_xyet(subject: AsyncEngine) -> NoReturn:
+def _no_insp_for_async_engine_xyet(
+    subject: AsyncEngine,  # noqa: U100
+) -> NoReturn:
     raise exc.NoInspectionAvailable(
         "Inspection on an AsyncEngine is currently not supported. "
         "Please obtain a connection then use ``conn.run_sync`` to pass a "

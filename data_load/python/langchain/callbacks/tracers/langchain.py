@@ -3,197 +3,104 @@ from __future__ import annotations
 
 import logging
 import os
+import weakref
+from concurrent.futures import Future, ThreadPoolExecutor, wait
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
-from uuid import UUID, uuid4
+from typing import Any, Callable, Dict, List, Optional, Union
+from uuid import UUID
 
-import requests
+from langsmith import Client
+from langsmith.utils import LangSmithError
+from tenacity import (
+    Retrying,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential_jitter,
+)
 
 from langchain.callbacks.tracers.base import BaseTracer
-from langchain.callbacks.tracers.schemas import (
-    ChainRun,
-    LLMRun,
-    RunCreate,
-    ToolRun,
-    TracerSession,
-    TracerSessionBase,
-    TracerSessionV2,
-    TracerSessionV2Create,
-)
-from langchain.schema import BaseMessage, messages_to_dict
-from langchain.utils import raise_for_status_with_text
+from langchain.callbacks.tracers.schemas import Run
+from langchain.env import get_runtime_environment
+from langchain.load.dump import dumpd
+from langchain.schema.messages import BaseMessage
+
+logger = logging.getLogger(__name__)
+_LOGGED = set()
+_TRACERS: weakref.WeakSet[LangChainTracer] = weakref.WeakSet()
+_CLIENT: Optional[Client] = None
+_EXECUTOR: Optional[ThreadPoolExecutor] = None
 
 
-def _get_headers() -> Dict[str, Any]:
-    """Get the headers for the LangChain API."""
-    headers: Dict[str, Any] = {"Content-Type": "application/json"}
-    if os.getenv("LANGCHAIN_API_KEY"):
-        headers["x-api-key"] = os.getenv("LANGCHAIN_API_KEY")
-    return headers
+def log_error_once(method: str, exception: Exception) -> None:
+    """Log an error once."""
+    global _LOGGED
+    if (method, type(exception)) in _LOGGED:
+        return
+    _LOGGED.add((method, type(exception)))
+    logger.error(exception)
 
 
-def _get_endpoint() -> str:
-    return os.getenv("LANGCHAIN_ENDPOINT", "http://localhost:8000")
+def wait_for_all_tracers() -> None:
+    """Wait for all tracers to finish."""
+    global _TRACERS
+    for tracer in list(_TRACERS):
+        if tracer is not None:
+            tracer.wait_for_futures()
+
+
+def get_client() -> Client:
+    """Get the client."""
+    global _CLIENT
+    if _CLIENT is None:
+        _CLIENT = Client()
+    return _CLIENT
+
+
+def _get_executor() -> ThreadPoolExecutor:
+    """Get the executor."""
+    global _EXECUTOR
+    if _EXECUTOR is None:
+        _EXECUTOR = ThreadPoolExecutor()
+    return _EXECUTOR
+
+
+def _copy(run: Run) -> Run:
+    """Copy a run."""
+    try:
+        return run.copy(deep=True)
+    except TypeError:
+        # Fallback in case the object contains a lock or other
+        # non-pickleable object
+        return run.copy()
 
 
 class LangChainTracer(BaseTracer):
     """An implementation of the SharedTracer that POSTS to the langchain endpoint."""
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        example_id: Optional[Union[UUID, str]] = None,
+        project_name: Optional[str] = None,
+        client: Optional[Client] = None,
+        tags: Optional[List[str]] = None,
+        use_threading: bool = True,
+        **kwargs: Any,
+    ) -> None:
         """Initialize the LangChain tracer."""
         super().__init__(**kwargs)
-        self._endpoint = _get_endpoint()
-        self._headers = _get_headers()
-
-    def _persist_run(self, run: Union[LLMRun, ChainRun, ToolRun]) -> None:
-        """Persist a run."""
-        if isinstance(run, LLMRun):
-            endpoint = f"{self._endpoint}/llm-runs"
-        elif isinstance(run, ChainRun):
-            endpoint = f"{self._endpoint}/chain-runs"
-        else:
-            endpoint = f"{self._endpoint}/tool-runs"
-
-        try:
-            response = requests.post(
-                endpoint,
-                data=run.json(),
-                headers=self._headers,
-            )
-            raise_for_status_with_text(response)
-        except Exception as e:
-            logging.warning(f"Failed to persist run: {e}")
-
-    def _persist_session(
-        self, session_create: TracerSessionBase
-    ) -> Union[TracerSession, TracerSessionV2]:
-        """Persist a session."""
-        try:
-            r = requests.post(
-                f"{self._endpoint}/sessions",
-                data=session_create.json(),
-                headers=self._headers,
-            )
-            session = TracerSession(id=r.json()["id"], **session_create.dict())
-        except Exception as e:
-            logging.warning(f"Failed to create session, using default session: {e}")
-            session = TracerSession(id=1, **session_create.dict())
-        return session
-
-    def _load_session(self, session_name: Optional[str] = None) -> TracerSession:
-        """Load a session from the tracer."""
-        try:
-            url = f"{self._endpoint}/sessions"
-            if session_name:
-                url += f"?name={session_name}"
-            r = requests.get(url, headers=self._headers)
-
-            tracer_session = TracerSession(**r.json()[0])
-        except Exception as e:
-            session_type = "default" if not session_name else session_name
-            logging.warning(
-                f"Failed to load {session_type} session, using empty session: {e}"
-            )
-            tracer_session = TracerSession(id=1)
-
-        self.session = tracer_session
-        return tracer_session
-
-    def load_session(self, session_name: str) -> Union[TracerSession, TracerSessionV2]:
-        """Load a session with the given name from the tracer."""
-        return self._load_session(session_name)
-
-    def load_default_session(self) -> Union[TracerSession, TracerSessionV2]:
-        """Load the default tracing session and set it as the Tracer's session."""
-        return self._load_session("default")
-
-
-def _get_tenant_id() -> Optional[str]:
-    """Get the tenant ID for the LangChain API."""
-    tenant_id: Optional[str] = os.getenv("LANGCHAIN_TENANT_ID")
-    if tenant_id:
-        return tenant_id
-    endpoint = _get_endpoint()
-    headers = _get_headers()
-    response = requests.get(endpoint + "/tenants", headers=headers)
-    raise_for_status_with_text(response)
-    tenants: List[Dict[str, Any]] = response.json()
-    if not tenants:
-        raise ValueError(f"No tenants found for URL {endpoint}")
-    return tenants[0]["id"]
-
-
-class LangChainTracerV2(LangChainTracer):
-    """An implementation of the SharedTracer that POSTS to the langchain endpoint."""
-
-    def __init__(self, example_id: Optional[UUID] = None, **kwargs: Any) -> None:
-        """Initialize the LangChain tracer."""
-        super().__init__(**kwargs)
-        self._endpoint = _get_endpoint()
-        self._headers = _get_headers()
-        self.tenant_id = _get_tenant_id()
-        self.example_id = example_id
-
-    def _get_session_create(
-        self, name: Optional[str] = None, **kwargs: Any
-    ) -> TracerSessionBase:
-        return TracerSessionV2Create(name=name, extra=kwargs, tenant_id=self.tenant_id)
-
-    def _persist_session(self, session_create: TracerSessionBase) -> TracerSessionV2:
-        """Persist a session."""
-        session: Optional[TracerSessionV2] = None
-        try:
-            r = requests.post(
-                f"{self._endpoint}/sessions",
-                data=session_create.json(),
-                headers=self._headers,
-            )
-            raise_for_status_with_text(r)
-            creation_args = session_create.dict()
-            if "id" in creation_args:
-                del creation_args["id"]
-            return TracerSessionV2(id=r.json()["id"], **creation_args)
-        except Exception as e:
-            if session_create.name is not None:
-                try:
-                    return self.load_session(session_create.name)
-                except Exception:
-                    pass
-            logging.warning(
-                f"Failed to create session {session_create.name},"
-                f" using empty session: {e}"
-            )
-            session = TracerSessionV2(id=uuid4(), **session_create.dict())
-
-        return session
-
-    def _get_default_query_params(self) -> Dict[str, Any]:
-        """Get the query params for the LangChain API."""
-        return {"tenant_id": self.tenant_id}
-
-    def load_session(self, session_name: str) -> TracerSessionV2:
-        """Load a session with the given name from the tracer."""
-        try:
-            url = f"{self._endpoint}/sessions"
-            params = {"tenant_id": self.tenant_id}
-            if session_name:
-                params["name"] = session_name
-            r = requests.get(url, headers=self._headers, params=params)
-            raise_for_status_with_text(r)
-            tracer_session = TracerSessionV2(**r.json()[0])
-        except Exception as e:
-            session_type = "default" if not session_name else session_name
-            logging.warning(
-                f"Failed to load {session_type} session, using empty session: {e}"
-            )
-            tracer_session = TracerSessionV2(id=uuid4(), tenant_id=self.tenant_id)
-
-        self.session = tracer_session
-        return tracer_session
-
-    def load_default_session(self) -> TracerSessionV2:
-        """Load the default tracing session and set it as the Tracer's session."""
-        return self.load_session("default")
+        self.example_id = (
+            UUID(example_id) if isinstance(example_id, str) else example_id
+        )
+        self.project_name = project_name or os.getenv(
+            "LANGCHAIN_PROJECT", os.getenv("LANGCHAIN_SESSION", "default")
+        )
+        self.client = client or get_client()
+        self._futures: weakref.WeakSet[Future] = weakref.WeakSet()
+        self.tags = tags or []
+        self.executor = _get_executor() if use_threading else None
+        self.latest_run: Optional[Run] = None
+        global _TRACERS
+        _TRACERS.add(self)
 
     def on_chat_model_start(
         self,
@@ -201,91 +108,158 @@ class LangChainTracerV2(LangChainTracer):
         messages: List[List[BaseMessage]],
         *,
         run_id: UUID,
+        tags: Optional[List[str]] = None,
         parent_run_id: Optional[UUID] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        name: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
         """Start a trace for an LLM run."""
-        if self.session is None:
-            self.session = self.load_default_session()
-
-        run_id_ = str(run_id)
         parent_run_id_ = str(parent_run_id) if parent_run_id else None
-
         execution_order = self._get_execution_order(parent_run_id_)
-        llm_run = LLMRun(
-            uuid=run_id_,
-            parent_uuid=parent_run_id_,
+        start_time = datetime.utcnow()
+        if metadata:
+            kwargs.update({"metadata": metadata})
+        chat_model_run = Run(
+            id=run_id,
+            parent_run_id=parent_run_id,
             serialized=serialized,
-            prompts=[],
-            extra={**kwargs, "messages": messages},
-            start_time=datetime.utcnow(),
+            inputs={"messages": [[dumpd(msg) for msg in batch] for batch in messages]},
+            extra=kwargs,
+            events=[{"name": "start", "time": start_time}],
+            start_time=start_time,
             execution_order=execution_order,
             child_execution_order=execution_order,
-            session_id=self.session.id,
+            run_type="llm",
+            tags=tags,
+            name=name,
         )
-        self._start_trace(llm_run)
+        self._start_trace(chat_model_run)
+        self._on_chat_model_start(chat_model_run)
 
-    def _convert_run(self, run: Union[LLMRun, ChainRun, ToolRun]) -> RunCreate:
-        """Convert a run to a Run."""
-        session = self.session or self.load_default_session()
-        inputs: Dict[str, Any] = {}
-        outputs: Optional[Dict[str, Any]] = None
-        child_runs: List[Union[LLMRun, ChainRun, ToolRun]] = []
-        if isinstance(run, LLMRun):
-            run_type = "llm"
-            if run.extra is not None and "messages" in run.extra:
-                messages: List[List[BaseMessage]] = run.extra.pop("messages")
-                converted_messages = [messages_to_dict(batch) for batch in messages]
-                inputs = {"messages": converted_messages}
-            else:
-                inputs = {"prompts": run.prompts}
-            outputs = run.response.dict() if run.response else {}
-            child_runs = []
-        elif isinstance(run, ChainRun):
-            run_type = "chain"
-            inputs = run.inputs
-            outputs = run.outputs
-            child_runs = [
-                *run.child_llm_runs,
-                *run.child_chain_runs,
-                *run.child_tool_runs,
-            ]
-        else:
-            run_type = "tool"
-            inputs = {"input": run.tool_input}
-            outputs = {"output": run.output} if run.output else {}
-            child_runs = [
-                *run.child_llm_runs,
-                *run.child_chain_runs,
-                *run.child_tool_runs,
-            ]
+    def _persist_run(self, run: Run) -> None:
+        run_ = run.copy()
+        run_.reference_example_id = self.example_id
+        self.latest_run = run_
 
-        return RunCreate(
-            id=run.uuid,
-            name=run.serialized.get("name"),
-            start_time=run.start_time,
-            end_time=run.end_time,
-            extra=run.extra or {},
-            error=run.error,
-            execution_order=run.execution_order,
-            serialized=run.serialized,
-            inputs=inputs,
-            outputs=outputs,
-            session_id=session.id,
-            run_type=run_type,
-            child_runs=[self._convert_run(child) for child in child_runs],
-        )
+    def get_run_url(self) -> str:
+        """Get the LangSmith root run URL"""
+        if not self.latest_run:
+            raise ValueError("No traced run found.")
+        # If this is the first run in a project, the project may not yet be created.
+        # This method is only really useful for debugging flows, so we will assume
+        # there is some tolerace for latency.
+        for attempt in Retrying(
+            stop=stop_after_attempt(5),
+            wait=wait_exponential_jitter(),
+            retry=retry_if_exception_type(LangSmithError),
+        ):
+            with attempt:
+                return self.client.get_run_url(
+                    run=self.latest_run, project_name=self.project_name
+                )
+        raise ValueError("Failed to get run URL.")
 
-    def _persist_run(self, run: Union[LLMRun, ChainRun, ToolRun]) -> None:
+    def _get_tags(self, run: Run) -> List[str]:
+        """Get combined tags for a run."""
+        tags = set(run.tags or [])
+        tags.update(self.tags or [])
+        return list(tags)
+
+    def _persist_run_single(self, run: Run) -> None:
         """Persist a run."""
-        run_create = self._convert_run(run)
-        run_create.reference_example_id = self.example_id
+        run_dict = run.dict(exclude={"child_runs"})
+        run_dict["tags"] = self._get_tags(run)
+        extra = run_dict.get("extra", {})
+        extra["runtime"] = get_runtime_environment()
+        run_dict["extra"] = extra
         try:
-            response = requests.post(
-                f"{self._endpoint}/runs",
-                data=run_create.json(),
-                headers=self._headers,
-            )
-            raise_for_status_with_text(response)
+            self.client.create_run(**run_dict, project_name=self.project_name)
         except Exception as e:
-            logging.warning(f"Failed to persist run: {e}")
+            # Errors are swallowed by the thread executor so we need to log them here
+            log_error_once("post", e)
+            raise
+
+    def _update_run_single(self, run: Run) -> None:
+        """Update a run."""
+        try:
+            run_dict = run.dict()
+            run_dict["tags"] = self._get_tags(run)
+            self.client.update_run(run.id, **run_dict)
+        except Exception as e:
+            # Errors are swallowed by the thread executor so we need to log them here
+            log_error_once("patch", e)
+            raise
+
+    def _submit(self, function: Callable[[Run], None], run: Run) -> None:
+        """Submit a function to the executor."""
+        if self.executor is None:
+            function(run)
+        else:
+            self._futures.add(self.executor.submit(function, run))
+
+    def _on_llm_start(self, run: Run) -> None:
+        """Persist an LLM run."""
+        if run.parent_run_id is None:
+            run.reference_example_id = self.example_id
+        self._submit(self._persist_run_single, _copy(run))
+
+    def _on_chat_model_start(self, run: Run) -> None:
+        """Persist an LLM run."""
+        if run.parent_run_id is None:
+            run.reference_example_id = self.example_id
+        self._submit(self._persist_run_single, _copy(run))
+
+    def _on_llm_end(self, run: Run) -> None:
+        """Process the LLM Run."""
+        self._submit(self._update_run_single, _copy(run))
+
+    def _on_llm_error(self, run: Run) -> None:
+        """Process the LLM Run upon error."""
+        self._submit(self._update_run_single, _copy(run))
+
+    def _on_chain_start(self, run: Run) -> None:
+        """Process the Chain Run upon start."""
+        if run.parent_run_id is None:
+            run.reference_example_id = self.example_id
+        self._submit(self._persist_run_single, _copy(run))
+
+    def _on_chain_end(self, run: Run) -> None:
+        """Process the Chain Run."""
+        self._submit(self._update_run_single, _copy(run))
+
+    def _on_chain_error(self, run: Run) -> None:
+        """Process the Chain Run upon error."""
+        self._submit(self._update_run_single, _copy(run))
+
+    def _on_tool_start(self, run: Run) -> None:
+        """Process the Tool Run upon start."""
+        if run.parent_run_id is None:
+            run.reference_example_id = self.example_id
+        self._submit(self._persist_run_single, _copy(run))
+
+    def _on_tool_end(self, run: Run) -> None:
+        """Process the Tool Run."""
+        self._submit(self._update_run_single, _copy(run))
+
+    def _on_tool_error(self, run: Run) -> None:
+        """Process the Tool Run upon error."""
+        self._submit(self._update_run_single, _copy(run))
+
+    def _on_retriever_start(self, run: Run) -> None:
+        """Process the Retriever Run upon start."""
+        if run.parent_run_id is None:
+            run.reference_example_id = self.example_id
+        self._submit(self._persist_run_single, _copy(run))
+
+    def _on_retriever_end(self, run: Run) -> None:
+        """Process the Retriever Run."""
+        self._submit(self._update_run_single, _copy(run))
+
+    def _on_retriever_error(self, run: Run) -> None:
+        """Process the Retriever Run upon error."""
+        self._submit(self._update_run_single, _copy(run))
+
+    def wait_for_futures(self) -> None:
+        """Wait for the given futures to complete."""
+        wait(self._futures)

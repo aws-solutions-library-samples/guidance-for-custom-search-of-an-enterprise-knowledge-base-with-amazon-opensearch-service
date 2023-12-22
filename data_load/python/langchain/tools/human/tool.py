@@ -2,12 +2,8 @@
 
 from typing import Callable, Optional
 
-from pydantic import Field
-
-from langchain.callbacks.manager import (
-    AsyncCallbackManagerForToolRun,
-    CallbackManagerForToolRun,
-)
+from langchain.callbacks.manager import CallbackManagerForToolRun
+from langchain.pydantic_v1 import Field
 from langchain.tools.base import BaseTool
 
 
@@ -17,10 +13,10 @@ def _print_func(text: str) -> None:
 
 
 class HumanInputRun(BaseTool):
-    """Tool that adds the capability to ask user for input."""
+    """Tool that asks user for input."""
 
-    name = "Human"
-    description = (
+    name: str = "human"
+    description: str = (
         "You can ask a human for guidance when you think you "
         "got stuck or you are not sure what to do next. "
         "The input should be a question for the human."
@@ -36,11 +32,3 @@ class HumanInputRun(BaseTool):
         """Use the Human input tool."""
         self.prompt_func(query)
         return self.input_func()
-
-    async def _arun(
-        self,
-        query: str,
-        run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
-    ) -> str:
-        """Use the Human tool asynchronously."""
-        raise NotImplementedError("Human tool does not support async")

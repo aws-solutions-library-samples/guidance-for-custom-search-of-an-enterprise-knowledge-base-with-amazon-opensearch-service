@@ -10,7 +10,7 @@ from langchain.schema import Document
 
 
 class MimeTypeBasedParser(BaseBlobParser):
-    """A parser that uses mime-types to determine how to parse a blob.
+    """Parser that uses `mime`-types to parse a blob.
 
     This parser is useful for simple pipelines where the mime-type is sufficient
     to determine how to parse a blob.
@@ -34,6 +34,7 @@ class MimeTypeBasedParser(BaseBlobParser):
     def __init__(
         self,
         handlers: Mapping[str, BaseBlobParser],
+        *,
         fallback_parser: Optional[BaseBlobParser] = None,
     ) -> None:
         """Define a parser that uses mime-types to determine how to parse a blob.

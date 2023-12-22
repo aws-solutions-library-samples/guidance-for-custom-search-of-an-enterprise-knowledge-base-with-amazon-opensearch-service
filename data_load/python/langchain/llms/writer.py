@@ -1,17 +1,16 @@
-"""Wrapper around Writer APIs."""
 from typing import Any, Dict, List, Mapping, Optional
 
 import requests
-from pydantic import Extra, root_validator
 
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.llms.utils import enforce_stop_tokens
+from langchain.pydantic_v1 import Extra, root_validator
 from langchain.utils import get_from_dict_or_env
 
 
 class Writer(LLM):
-    """Wrapper around Writer large language models.
+    """Writer large language models.
 
     To use, you should have the environment variable ``WRITER_API_KEY`` and
     ``WRITER_ORG_ID`` set with your API key and organization ID respectively.
@@ -19,7 +18,7 @@ class Writer(LLM):
     Example:
         .. code-block:: python
 
-            from langchain import Writer
+            from langchain.llms import Writer
             writer = Writer(model_id="palmyra-base")
     """
 
@@ -118,6 +117,7 @@ class Writer(LLM):
         prompt: str,
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> str:
         """Call out to Writer's completions endpoint.
 
@@ -141,7 +141,7 @@ class Writer(LLM):
                 f"/organization/{self.writer_org_id}"
                 f"/model/{self.model_id}/completions"
             )
-
+        params = {**self._default_params, **kwargs}
         response = requests.post(
             url=base_url,
             headers={
@@ -149,7 +149,7 @@ class Writer(LLM):
                 "Content-Type": "application/json",
                 "Accept": "application/json",
             },
-            json={"prompt": prompt, **self._default_params},
+            json={"prompt": prompt, **params},
         )
         text = response.text
         if stop is not None:

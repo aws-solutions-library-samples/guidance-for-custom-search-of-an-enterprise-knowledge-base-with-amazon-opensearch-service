@@ -162,7 +162,7 @@ class EnumDropper(NamedTypeDropper):
             self.connection.execute(DropEnumType(enum))
 
 
-class ENUM(NamedType, sqltypes.NativeForEmulated, sqltypes.Enum):
+class ENUM(NamedType, type_api.NativeForEmulated, sqltypes.Enum):
 
     """PostgreSQL ENUM type.
 
@@ -312,6 +312,9 @@ class ENUM(NamedType, sqltypes.NativeForEmulated, sqltypes.Enum):
         kw.setdefault("values_callable", impl.values_callable)
         kw.setdefault("omit_aliases", impl._omit_aliases)
         kw.setdefault("_adapted_from", impl)
+        if type_api._is_native_for_emulated(impl.__class__):
+            kw.setdefault("create_type", impl.create_type)
+
         return cls(**kw)
 
     def create(self, bind=None, checkfirst=True):

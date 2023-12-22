@@ -2,51 +2,53 @@
 from __future__ import annotations
 
 import datetime
-from enum import Enum
-from typing import Any, Dict, List, Optional
+import warnings
+from typing import Any, Dict, List, Optional, Type
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from langsmith.schemas import RunBase as BaseRunV2
+from langsmith.schemas import RunTypeEnum as RunTypeEnumDep
 
+from langchain.pydantic_v1 import BaseModel, Field, root_validator
 from langchain.schema import LLMResult
 
 
-class TracerSessionBase(BaseModel):
-    """Base class for TracerSession."""
+def RunTypeEnum() -> Type[RunTypeEnumDep]:
+    """RunTypeEnum."""
+    warnings.warn(
+        "RunTypeEnum is deprecated. Please directly use a string instead"
+        " (e.g. 'llm', 'chain', 'tool').",
+        DeprecationWarning,
+    )
+    return RunTypeEnumDep
+
+
+class TracerSessionV1Base(BaseModel):
+    """Base class for TracerSessionV1."""
 
     start_time: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
     name: Optional[str] = None
     extra: Optional[Dict[str, Any]] = None
 
 
-class TracerSessionCreate(TracerSessionBase):
-    """Create class for TracerSession."""
-
-    pass
+class TracerSessionV1Create(TracerSessionV1Base):
+    """Create class for TracerSessionV1."""
 
 
-class TracerSession(TracerSessionBase):
-    """TracerSession schema."""
+class TracerSessionV1(TracerSessionV1Base):
+    """TracerSessionV1 schema."""
 
     id: int
 
 
-class TracerSessionV2Base(TracerSessionBase):
-    """A creation class for TracerSessionV2."""
+class TracerSessionBase(TracerSessionV1Base):
+    """Base class for TracerSession."""
 
     tenant_id: UUID
 
 
-class TracerSessionV2Create(TracerSessionV2Base):
-    """A creation class for TracerSessionV2."""
-
-    id: Optional[UUID]
-
-    pass
-
-
-class TracerSessionV2(TracerSessionV2Base):
-    """TracerSession schema for the V2 API."""
+class TracerSession(TracerSessionBase):
+    """TracerSessionV1 schema for the V2 API."""
 
     id: UUID
 
@@ -94,44 +96,45 @@ class ToolRun(BaseRun):
     child_tool_runs: List[ToolRun] = Field(default_factory=list)
 
 
-class RunTypeEnum(str, Enum):
-    """Enum for run types."""
-
-    tool = "tool"
-    chain = "chain"
-    llm = "llm"
+# Begin V2 API Schemas
 
 
-class RunBase(BaseModel):
-    """Base Run schema."""
+class Run(BaseRunV2):
+    """Run schema for the V2 API in the Tracer."""
 
-    id: Optional[UUID]
-    start_time: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
-    end_time: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
-    extra: dict
-    error: Optional[str]
     execution_order: int
-    serialized: dict
-    inputs: dict
-    outputs: Optional[dict]
-    session_id: UUID
-    reference_example_id: Optional[UUID]
-    run_type: RunTypeEnum
-    parent_run_id: Optional[UUID]
+    child_execution_order: int
+    child_runs: List[Run] = Field(default_factory=list)
+    tags: Optional[List[str]] = Field(default_factory=list)
+    events: List[Dict[str, Any]] = Field(default_factory=list)
 
-
-class RunCreate(RunBase):
-    """Schema to create a run in the DB."""
-
-    name: Optional[str]
-    child_runs: List[RunCreate] = Field(default_factory=list)
-
-
-class Run(RunBase):
-    """Run schema when loading from the DB."""
-
-    name: str
+    @root_validator(pre=True)
+    def assign_name(cls, values: dict) -> dict:
+        """Assign name to the run."""
+        if values.get("name") is None:
+            if "name" in values["serialized"]:
+                values["name"] = values["serialized"]["name"]
+            elif "id" in values["serialized"]:
+                values["name"] = values["serialized"]["id"][-1]
+        if values.get("events") is None:
+            values["events"] = []
+        return values
 
 
 ChainRun.update_forward_refs()
 ToolRun.update_forward_refs()
+Run.update_forward_refs()
+
+__all__ = [
+    "BaseRun",
+    "ChainRun",
+    "LLMRun",
+    "Run",
+    "RunTypeEnum",
+    "ToolRun",
+    "TracerSession",
+    "TracerSessionBase",
+    "TracerSessionV1",
+    "TracerSessionV1Base",
+    "TracerSessionV1Create",
+]

@@ -34,6 +34,8 @@ black_listed_elements: Set[str] = {
 
 
 class ElementInViewPort(TypedDict):
+    """A typed dictionary containing information about elements in the viewport."""
+
     node_index: str
     backend_node_id: int
     node_name: Optional[str]
@@ -47,11 +49,28 @@ class ElementInViewPort(TypedDict):
 
 
 class Crawler:
+    """A crawler for web pages.
+
+    **Security Note**: This is an implementation of a crawler that uses a browser via
+        Playwright.
+
+        This crawler can be used to load arbitrary webpages INCLUDING content
+        from the local file system.
+
+        Control access to who can submit crawling requests and what network access
+        the crawler has.
+
+        Make sure to scope permissions to the minimal permissions necessary for
+        the application.
+
+        See https://python.langchain.com/docs/security for more information.
+    """
+
     def __init__(self) -> None:
         try:
             from playwright.sync_api import sync_playwright
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import playwright python package. "
                 "Please install it with `pip install playwright`."
             )
@@ -348,7 +367,7 @@ class Crawler:
                 if node_input_text_index >= 0 and text_index >= 0:
                     element_node_value = strings[text_index]
 
-            # remove redudant elements
+            # remove redundant elements
             if ancestor_exception and (node_name != "a" and node_name != "button"):
                 continue
 

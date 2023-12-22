@@ -1,5 +1,3 @@
-"""Loader that uses bs4 to load HTML files, enriching metadata with page title."""
-
 import logging
 from typing import Dict, List, Union
 
@@ -10,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class BSHTMLLoader(BaseLoader):
-    """Loader that uses beautiful soup to parse HTML files."""
+    """Load `HTML` files and parse them with `beautiful soup`."""
 
     def __init__(
         self,
@@ -20,11 +18,18 @@ class BSHTMLLoader(BaseLoader):
         get_text_separator: str = "",
     ) -> None:
         """Initialise with path, and optionally, file encoding to use, and any kwargs
-        to pass to the BeautifulSoup object."""
+        to pass to the BeautifulSoup object.
+
+        Args:
+            file_path: The path to the file to load.
+            open_encoding: The encoding to use when opening the file.
+            bs_kwargs: Any kwargs to pass to the BeautifulSoup object.
+            get_text_separator: The separator to use when calling get_text on the soup.
+        """
         try:
             import bs4  # noqa:F401
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "beautifulsoup4 package not found, please install it with "
                 "`pip install beautifulsoup4`"
             )
@@ -37,9 +42,9 @@ class BSHTMLLoader(BaseLoader):
         self.get_text_separator = get_text_separator
 
     def load(self) -> List[Document]:
+        """Load HTML document into document objects."""
         from bs4 import BeautifulSoup
 
-        """Load HTML document into document objects."""
         with open(self.file_path, "r", encoding=self.open_encoding) as f:
             soup = BeautifulSoup(f, **self.bs_kwargs)
 

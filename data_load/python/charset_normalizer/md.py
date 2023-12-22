@@ -9,7 +9,6 @@ from .constant import (
 )
 from .utils import (
     is_accentuated,
-    is_ascii,
     is_case_variable,
     is_cjk,
     is_emoticon,
@@ -234,15 +233,12 @@ class SuspiciousRange(MessDetectorPlugin):
 
     @property
     def ratio(self) -> float:
-        if self._character_count == 0:
+        if self._character_count <= 24:
             return 0.0
 
         ratio_of_suspicious_range_usage: float = (
             self._suspicious_successive_range_count * 2
         ) / self._character_count
-
-        if ratio_of_suspicious_range_usage < 0.1:
-            return 0.0
 
         return ratio_of_suspicious_range_usage
 
@@ -294,14 +290,29 @@ class SuperWeirdWordPlugin(MessDetectorPlugin):
             if buffer_length >= 4:
                 if self._buffer_accent_count / buffer_length > 0.34:
                     self._is_current_word_bad = True
-                # Word/Buffer ending with a upper case accentuated letter are so rare,
+                # Word/Buffer ending with an upper case accentuated letter are so rare,
                 # that we will consider them all as suspicious. Same weight as foreign_long suspicious.
-                if is_accentuated(self._buffer[-1]) and self._buffer[-1].isupper():
+                if (
+                    is_accentuated(self._buffer[-1])
+                    and self._buffer[-1].isupper()
+                    and all(_.isupper() for _ in self._buffer) is False
+                ):
                     self._foreign_long_count += 1
                     self._is_current_word_bad = True
             if buffer_length >= 24 and self._foreign_long_watch:
-                self._foreign_long_count += 1
-                self._is_current_word_bad = True
+                camel_case_dst = [
+                    i
+                    for c, i in zip(self._buffer, range(0, buffer_length))
+                    if c.isupper()
+                ]
+                probable_camel_cased: bool = False
+
+                if camel_case_dst and (len(camel_case_dst) / buffer_length <= 0.3):
+                    probable_camel_cased = True
+
+                if not probable_camel_cased:
+                    self._foreign_long_count += 1
+                    self._is_current_word_bad = True
 
             if self._is_current_word_bad:
                 self._bad_word_count += 1
@@ -408,7 +419,7 @@ class ArchaicUpperLowerPlugin(MessDetectorPlugin):
 
             return
 
-        if self._current_ascii_only is True and is_ascii(character) is False:
+        if self._current_ascii_only is True and character.isascii() is False:
             self._current_ascii_only = False
 
         if self._last_alpha_seen is not None:
@@ -510,6 +521,8 @@ def is_suspiciously_successive_range(
         if "Punctuation" in unicode_range_a or "Punctuation" in unicode_range_b:
             return False
         if "Forms" in unicode_range_a or "Forms" in unicode_range_b:
+            return False
+        if unicode_range_a == "Basic Latin" or unicode_range_b == "Basic Latin":
             return False
 
     return True

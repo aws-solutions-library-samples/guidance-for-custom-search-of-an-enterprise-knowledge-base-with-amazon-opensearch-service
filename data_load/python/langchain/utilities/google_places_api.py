@@ -4,8 +4,7 @@
 import logging
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, Extra, root_validator
-
+from langchain.pydantic_v1 import BaseModel, Extra, root_validator
 from langchain.utils import get_from_dict_or_env
 
 
@@ -14,7 +13,7 @@ class GooglePlacesAPIWrapper(BaseModel):
 
     To use, you should have the ``googlemaps`` python package installed,
      **an API key for the google maps platform**,
-     and the enviroment variable ''GPLACES_API_KEY''
+     and the environment variable ''GPLACES_API_KEY''
      set with your API key , or pass 'gplaces_api_key'
      as a named parameter to the constructor.
 
@@ -25,7 +24,7 @@ class GooglePlacesAPIWrapper(BaseModel):
         .. code-block:: python
 
 
-            from langchain import GooglePlacesAPIWrapper
+            from langchain.utilities import GooglePlacesAPIWrapper
             gplaceapi = GooglePlacesAPIWrapper()
     """
 
@@ -51,8 +50,8 @@ class GooglePlacesAPIWrapper(BaseModel):
 
             values["google_map_client"] = googlemaps.Client(gplaces_api_key)
         except ImportError:
-            raise ValueError(
-                "Could not import googlemaps python packge. "
+            raise ImportError(
+                "Could not import googlemaps python package. "
                 "Please install it with `pip install googlemaps`."
             )
         return values
@@ -85,6 +84,7 @@ class GooglePlacesAPIWrapper(BaseModel):
     def fetch_place_details(self, place_id: str) -> Optional[str]:
         try:
             place_details = self.google_map_client.place(place_id)
+            place_details["place_id"] = place_id
             formatted_details = self.format_place_details(place_details)
             return formatted_details
         except Exception as e:
@@ -93,7 +93,7 @@ class GooglePlacesAPIWrapper(BaseModel):
 
     def format_place_details(self, place_details: Dict[str, Any]) -> Optional[str]:
         try:
-            name = place_details.get("result", {}).get("name", "Unkown")
+            name = place_details.get("result", {}).get("name", "Unknown")
             address = place_details.get("result", {}).get(
                 "formatted_address", "Unknown"
             )
@@ -101,9 +101,11 @@ class GooglePlacesAPIWrapper(BaseModel):
                 "formatted_phone_number", "Unknown"
             )
             website = place_details.get("result", {}).get("website", "Unknown")
+            place_id = place_details.get("result", {}).get("place_id", "Unknown")
 
             formatted_details = (
                 f"{name}\nAddress: {address}\n"
+                f"Google place ID: {place_id}\n"
                 f"Phone: {phone_number}\nWebsite: {website}\n\n"
             )
             return formatted_details

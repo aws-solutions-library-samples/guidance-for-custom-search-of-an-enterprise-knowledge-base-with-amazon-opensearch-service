@@ -17,8 +17,6 @@ __all__ = [
     "PyCapsule",
 ]
 
-import sys
-
 from typing import (
     Any,
     Literal,
@@ -65,11 +63,8 @@ Dtype = dtype[Union[
     float64,
 ]]
 
-if sys.version_info >= (3, 12):
-    from collections.abc import Buffer as SupportsBufferProtocol
-else:
-    SupportsBufferProtocol = Any
 
+SupportsBufferProtocol = Any
 PyCapsule = Any
 
 class SupportsDLPack(Protocol):

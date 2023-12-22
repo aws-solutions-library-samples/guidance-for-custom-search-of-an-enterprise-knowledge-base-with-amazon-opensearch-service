@@ -31,8 +31,7 @@ is_cpu_amd_intel = False # DEPRECATION WARNING: WILL BE REMOVED IN FUTURE RELEAS
 import os, os.path
 import platform
 from numexpr.expressions import E
-from numexpr.necompiler import (NumExpr, disassemble, evaluate, re_evaluate, 
-    validate)
+from numexpr.necompiler import NumExpr, disassemble, evaluate, re_evaluate
 
 from numexpr.utils import (_init_num_threads,
     get_vml_version, set_vml_accuracy_mode, set_vml_num_threads,

@@ -8,6 +8,8 @@ from typing import Any
 from typing import TYPE_CHECKING
 
 from ._typing import ColumnExpressionArgument as ColumnExpressionArgument
+from ._typing import NotNullable as NotNullable
+from ._typing import Nullable as Nullable
 from .base import Executable as Executable
 from .compiler import COLLECT_CARTESIAN_PRODUCTS as COLLECT_CARTESIAN_PRODUCTS
 from .compiler import FROM_LINTING as FROM_LINTING
@@ -93,6 +95,7 @@ from .expression import tablesample as tablesample
 from .expression import text as text
 from .expression import true as true
 from .expression import True_ as True_
+from .expression import try_cast as try_cast
 from .expression import tuple_ as tuple_
 from .expression import type_coerce as type_coerce
 from .expression import union as union

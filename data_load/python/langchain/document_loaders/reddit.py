@@ -1,4 +1,3 @@
-"""Reddit document loader."""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Iterable, List, Optional, Sequence
@@ -14,16 +13,17 @@ def _dependable_praw_import() -> praw:
     try:
         import praw
     except ImportError:
-        raise ValueError(
+        raise ImportError(
             "praw package not found, please install it with `pip install praw`"
         )
     return praw
 
 
 class RedditPostsLoader(BaseLoader):
-    """Reddit posts loader.
+    """Load `Reddit` posts.
+
     Read posts on a subreddit.
-    First you need to go to
+    First, you need to go to
     https://www.reddit.com/prefs/apps/
     and create your application
     """
@@ -38,6 +38,20 @@ class RedditPostsLoader(BaseLoader):
         categories: Sequence[str] = ["new"],
         number_posts: Optional[int] = 10,
     ):
+        """
+        Initialize with client_id, client_secret, user_agent, search_queries, mode,
+            categories, number_posts.
+        Example: https://www.reddit.com/r/learnpython/
+
+        Args:
+            client_id: Reddit client id.
+            client_secret: Reddit client secret.
+            user_agent: Reddit user agent.
+            search_queries: The search queries.
+            mode: The mode.
+            categories: The categories. Default: ["new"]
+            number_posts: The number of posts. Default: 10
+        """
         self.client_id = client_id
         self.client_secret = client_secret
         self.user_agent = user_agent

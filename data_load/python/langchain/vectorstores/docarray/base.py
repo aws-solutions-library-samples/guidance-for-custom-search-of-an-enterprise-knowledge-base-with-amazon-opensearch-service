@@ -2,11 +2,11 @@ from abc import ABC
 from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Tuple, Type
 
 import numpy as np
-from pydantic import Field
 
-from langchain.embeddings.base import Embeddings
+from langchain.pydantic_v1 import Field
 from langchain.schema import Document
-from langchain.vectorstores import VectorStore
+from langchain.schema.embeddings import Embeddings
+from langchain.schema.vectorstore import VectorStore
 from langchain.vectorstores.utils import maximal_marginal_relevance
 
 if TYPE_CHECKING:
@@ -19,10 +19,10 @@ def _check_docarray_import() -> None:
         import docarray
 
         da_version = docarray.__version__.split(".")
-        if int(da_version[0]) == 0 and int(da_version[1]) <= 30:
-            raise ValueError(
+        if int(da_version[0]) == 0 and int(da_version[1]) <= 31:
+            raise ImportError(
                 f"To use the DocArrayHnswSearch VectorStore the docarray "
-                f"version >=0.31.0 is expected, received: {docarray.__version__}."
+                f"version >=0.32.0 is expected, received: {docarray.__version__}."
                 f"To upgrade, please run: `pip install -U docarray`."
             )
     except ImportError:
@@ -33,6 +33,8 @@ def _check_docarray_import() -> None:
 
 
 class DocArrayIndex(VectorStore, ABC):
+    """Base class for `DocArray` based vector stores."""
+
     def __init__(
         self,
         doc_index: "BaseDocIndex",
@@ -67,7 +69,7 @@ class DocArrayIndex(VectorStore, ABC):
         metadatas: Optional[List[dict]] = None,
         **kwargs: Any,
     ) -> List[str]:
-        """Run more texts through the embeddings and add to the vectorstore.
+        """Embed texts and add to the vector store.
 
         Args:
             texts: Iterable of strings to add to the vectorstore.
@@ -96,7 +98,9 @@ class DocArrayIndex(VectorStore, ABC):
             k: Number of Documents to return. Defaults to 4.
 
         Returns:
-            List of Documents most similar to the query and score for each.
+            List of documents most similar to the query text and
+            cosine distance in float for each.
+            Lower score represents more similarity.
         """
         query_embedding = self.embedding.embed_query(query)
         query_doc = self.doc_cls(embedding=query_embedding)  # type: ignore
@@ -133,7 +137,7 @@ class DocArrayIndex(VectorStore, ABC):
 
         0 is dissimilar, 1 is most similar.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def similarity_search_by_vector(
         self, embedding: List[float], k: int = 4, **kwargs: Any

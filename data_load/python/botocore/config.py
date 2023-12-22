@@ -38,6 +38,12 @@ class Config:
     :param user_agent_extra: The value to append to the current User-Agent
         header value.
 
+    :type user_agent_appid: str
+    :param user_agent_appid: A value that gets included in the User-Agent
+        string in the format "app/<user_agent_appid>". Allowed characters are
+        ASCII alphanumerics and ``!$%&'*+-.^_`|~``. All other characters will
+        be replaced by a ``-``.
+
     :type connect_timeout: float or int
     :param connect_timeout: The time in seconds till a timeout exception is
         thrown when attempting to make a connection. The default is 60
@@ -188,11 +194,41 @@ class Config:
 
         Defaults to None.
 
+    :type ignore_configured_endpoint_urls: bool
+    :param ignore_configured_endpoint_urls: Setting to True disables use
+        of endpoint URLs provided via environment variables and
+        the shared configuration file.
+
+        Defaults to None.
+
     :type tcp_keepalive: bool
     :param tcp_keepalive: Enables the TCP Keep-Alive socket option used when
         creating new connections if set to True.
 
         Defaults to False.
+
+    :type request_min_compression_size_bytes: int
+    :param request_min_compression_size_bytes: The minimum size in bytes that a
+        request body should be to trigger compression. All requests with
+        streaming input that don't contain the ``requiresLength`` trait will be
+        compressed regardless of this setting.
+
+        Defaults to None.
+
+    :type disable_request_compression: bool
+    :param disable_request_compression: Disables request body compression if
+        set to True.
+
+        Defaults to None.
+
+    :type client_context_params: dict
+    :param client_context_params: A dictionary of parameters specific to
+        individual services. If available, valid parameters can be found in
+        the ``Client Context Parameters`` section of the service client's
+        documentation. Invalid parameters or ones that are not used by the
+        specified service will be ignored.
+
+        Defaults to None.
     """
 
     OPTION_DEFAULTS = OrderedDict(
@@ -201,6 +237,7 @@ class Config:
             ('signature_version', None),
             ('user_agent', None),
             ('user_agent_extra', None),
+            ('user_agent_appid', None),
             ('connect_timeout', DEFAULT_TIMEOUT),
             ('read_timeout', DEFAULT_TIMEOUT),
             ('parameter_validation', True),
@@ -214,8 +251,12 @@ class Config:
             ('endpoint_discovery_enabled', None),
             ('use_dualstack_endpoint', None),
             ('use_fips_endpoint', None),
+            ('ignore_configured_endpoint_urls', None),
             ('defaults_mode', None),
             ('tcp_keepalive', None),
+            ('request_min_compression_size_bytes', None),
+            ('disable_request_compression', None),
+            ('client_context_params', None),
         ]
     )
 

@@ -578,7 +578,7 @@ class InstanceState(interfaces.InspectionAttrInfo, Generic[_O]):
         return self._pending_mutations[key]
 
     def __getstate__(self) -> Dict[str, Any]:
-        state_dict = {
+        state_dict: Dict[str, Any] = {
             "instance": self.obj(),
             "class_": self.class_,
             "committed_state": self.committed_state,
@@ -617,8 +617,8 @@ class InstanceState(interfaces.InspectionAttrInfo, Generic[_O]):
             self.class_ = state_dict["class_"]
 
         self.committed_state = state_dict.get("committed_state", {})
-        self._pending_mutations = state_dict.get("_pending_mutations", {})  # type: ignore  # noqa E501
-        self.parents = state_dict.get("parents", {})  # type: ignore
+        self._pending_mutations = state_dict.get("_pending_mutations", {})
+        self.parents = state_dict.get("parents", {})
         self.modified = state_dict.get("modified", False)
         self.expired = state_dict.get("expired", False)
         if "info" in state_dict:
@@ -824,8 +824,8 @@ class InstanceState(interfaces.InspectionAttrInfo, Generic[_O]):
     def unloaded(self) -> Set[str]:
         """Return the set of keys which do not have a loaded value.
 
-        This includes expired attributes and any other attribute that
-        was never populated or modified.
+        This includes expired attributes and any other attribute that was never
+        populated or modified.
 
         """
         return (
@@ -835,11 +835,16 @@ class InstanceState(interfaces.InspectionAttrInfo, Generic[_O]):
         )
 
     @property
+    @util.deprecated(
+        "2.0",
+        "The :attr:`.InstanceState.unloaded_expirable` attribute is "
+        "deprecated.  Please use :attr:`.InstanceState.unloaded`.",
+    )
     def unloaded_expirable(self) -> Set[str]:
-        """Return the set of keys which do not have a loaded value.
+        """Synonymous with :attr:`.InstanceState.unloaded`.
 
-        This includes expired attributes and any other attribute that
-        was never populated or modified.
+        This attribute was added as an implementation-specific detail at some
+        point and should be considered to be private.
 
         """
         return self.unloaded
@@ -1116,6 +1121,9 @@ class PendingCollection:
     def __init__(self) -> None:
         self.deleted_items = util.IdentitySet()
         self.added_items = util.OrderedIdentitySet()
+
+    def merge_with_history(self, history: History) -> History:
+        return history._merge(self.added_items, self.deleted_items)
 
     def append(self, value: Any) -> None:
         if value in self.deleted_items:

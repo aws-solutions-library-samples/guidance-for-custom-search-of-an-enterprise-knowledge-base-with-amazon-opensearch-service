@@ -1,4 +1,3 @@
-"""Wrapper around MyScale vector database."""
 from __future__ import annotations
 
 import json
@@ -7,16 +6,24 @@ from hashlib import sha1
 from threading import Thread
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from pydantic import BaseSettings
-
 from langchain.docstore.document import Document
-from langchain.embeddings.base import Embeddings
-from langchain.vectorstores.base import VectorStore
+from langchain.pydantic_v1 import BaseSettings
+from langchain.schema.embeddings import Embeddings
+from langchain.schema.vectorstore import VectorStore
 
 logger = logging.getLogger()
 
 
 def has_mul_sub_str(s: str, *args: Any) -> bool:
+    """
+    Check if a string contains multiple substrings.
+    Args:
+        s: string to check.
+        *args: substrings to check.
+
+    Returns:
+        True if all substrings are in the string, False otherwise.
+    """
     for a in args:
         if a not in s:
             return False
@@ -24,13 +31,13 @@ def has_mul_sub_str(s: str, *args: Any) -> bool:
 
 
 class MyScaleSettings(BaseSettings):
-    """MyScale Client Configuration
+    """MyScale client configuration.
 
     Attribute:
         myscale_host (str) : An URL to connect to MyScale backend.
                              Defaults to 'localhost'.
         myscale_port (int) : URL port to connect with HTTP. Defaults to 8443.
-        username (str) : Usernamed to login. Defaults to None.
+        username (str) : Username to login. Defaults to None.
         password (str) : Password to login. Defaults to None.
         index_type (str): index type string.
         index_param (dict): index build parameter.
@@ -38,19 +45,21 @@ class MyScaleSettings(BaseSettings):
         table (str) : Table name to operate on.
                       Defaults to 'vector_table'.
         metric (str) : Metric to compute distance,
-                       supported are ('l2', 'cosine', 'ip'). Defaults to 'cosine'.
+                       supported are ('L2', 'Cosine', 'IP'). Defaults to 'Cosine'.
         column_map (Dict) : Column type map to project column name onto langchain
                             semantics. Must have keys: `text`, `id`, `vector`,
                             must be same size to number of columns. For example:
                             .. code-block:: python
-                            {
-                                'id': 'text_id',
-                                'vector': 'text_embedding',
-                                'text': 'text_plain',
-                                'metadata': 'metadata_dictionary_in_json',
-                            }
+
+                                {
+                                    'id': 'text_id',
+                                    'vector': 'text_embedding',
+                                    'text': 'text_plain',
+                                    'metadata': 'metadata_dictionary_in_json',
+                                }
 
                             Defaults to identity map.
+
     """
 
     host: str = "localhost"
@@ -59,7 +68,7 @@ class MyScaleSettings(BaseSettings):
     username: Optional[str] = None
     password: Optional[str] = None
 
-    index_type: str = "IVFFLAT"
+    index_type: str = "MSTG"
     index_param: Optional[Dict[str, str]] = None
 
     column_map: Dict[str, str] = {
@@ -71,7 +80,7 @@ class MyScaleSettings(BaseSettings):
 
     database: str = "default"
     table: str = "langchain"
-    metric: str = "cosine"
+    metric: str = "Cosine"
 
     def __getitem__(self, item: str) -> Any:
         return getattr(self, item)
@@ -83,13 +92,13 @@ class MyScaleSettings(BaseSettings):
 
 
 class MyScale(VectorStore):
-    """Wrapper around MyScale vector database
+    """`MyScale` vector store.
 
     You need a `clickhouse-connect` python package, and a valid account
     to connect to MyScale.
 
-    MyScale can not only search with simple vector indexes,
-    it also supports complex query with multiple conditions,
+    MyScale can not only search with simple vector indexes.
+    It also supports a complex query with multiple conditions,
     constraints and even sub-queries.
 
     For more information, please visit
@@ -104,7 +113,7 @@ class MyScale(VectorStore):
     ) -> None:
         """MyScale Wrapper to LangChain
 
-        embedding_function (Embeddings):
+        embedding (Embeddings):
         config (MyScaleSettings): Configuration to MyScale Client
         Other keyword arguments will pass into
             [clickhouse-connect](https://docs.myscale.com/)
@@ -112,7 +121,7 @@ class MyScale(VectorStore):
         try:
             from clickhouse_connect import get_client
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import clickhouse connect python package. "
                 "Please install it with `pip install clickhouse-connect`."
             )
@@ -138,7 +147,12 @@ class MyScale(VectorStore):
         )
         for k in ["id", "vector", "text", "metadata"]:
             assert k in self.config.column_map
-        assert self.config.metric in ["ip", "cosine", "l2"]
+        assert self.config.metric.upper() in ["IP", "COSINE", "L2"]
+        if self.config.metric in ["ip", "cosine", "l2"]:
+            logger.warning(
+                "Lower case metric types will be deprecated "
+                "the future. Please use one of ('IP', 'Cosine', 'L2')"
+            )
 
         # initialize the schema
         dim = len(embedding.embed_query("try this out"))
@@ -164,8 +178,10 @@ class MyScale(VectorStore):
         self.dim = dim
         self.BS = "\\"
         self.must_escape = ("\\", "'")
-        self.embedding_function = embedding.embed_query
-        self.dist_order = "ASC" if self.config.metric in ["cosine", "l2"] else "DESC"
+        self._embeddings = embedding
+        self.dist_order = (
+            "ASC" if self.config.metric.upper() in ["COSINE", "L2"] else "DESC"
+        )
 
         # Create a connection to myscale
         self.client = get_client(
@@ -177,6 +193,10 @@ class MyScale(VectorStore):
         )
         self.client.command("SET allow_experimental_object_type=1")
         self.client.command(schema_)
+
+    @property
+    def embeddings(self) -> Embeddings:
+        return self._embeddings
 
     def escape_str(self, value: str) -> str:
         return "".join(f"{self.BS}{c}" if c in self.must_escape else c for c in value)
@@ -227,7 +247,7 @@ class MyScale(VectorStore):
         column_names = {
             colmap_["id"]: ids,
             colmap_["text"]: texts,
-            colmap_["vector"]: map(self.embedding_function, texts),
+            colmap_["vector"]: map(self._embeddings.embed_query, texts),
         }
         metadatas = metadatas or [{} for _ in texts]
         column_names[colmap_["metadata"]] = map(json.dumps, metadatas)
@@ -258,7 +278,7 @@ class MyScale(VectorStore):
     @classmethod
     def from_texts(
         cls,
-        texts: List[str],
+        texts: Iterable[str],
         embedding: Embeddings,
         metadatas: Optional[List[Dict[Any, Any]]] = None,
         config: Optional[MyScaleSettings] = None,
@@ -269,8 +289,8 @@ class MyScale(VectorStore):
         """Create Myscale wrapper with existing texts
 
         Args:
-            embedding_function (Embeddings): Function to extract text embedding
             texts (Iterable[str]): List or tuple of strings to be added
+            embedding (Embeddings): Function to extract text embedding
             config (MyScaleSettings, Optional): Myscale configuration
             text_ids (Optional[Iterable], optional): IDs for the texts.
                                                      Defaults to None.
@@ -346,7 +366,7 @@ class MyScale(VectorStore):
             List[Document]: List of Documents
         """
         return self.similarity_search_by_vector(
-            self.embedding_function(query), k, where_str, **kwargs
+            self._embeddings.embed_query(query), k, where_str, **kwargs
         )
 
     def similarity_search_by_vector(
@@ -402,9 +422,11 @@ class MyScale(VectorStore):
                   alone. The default name for it is `metadata`.
 
         Returns:
-            List[Document]: List of documents
+            List[Document]: List of documents most similar to the query text
+            and cosine distance in float for each.
+            Lower score represents more similarity.
         """
-        q_str = self._build_qstr(self.embedding_function(query), k, where_str)
+        q_str = self._build_qstr(self._embeddings.embed_query(query), k, where_str)
         try:
             return [
                 (
@@ -427,6 +449,43 @@ class MyScale(VectorStore):
         self.client.command(
             f"DROP TABLE IF EXISTS {self.config.database}.{self.config.table}"
         )
+
+    def delete(
+        self,
+        ids: Optional[List[str]] = None,
+        where_str: Optional[str] = None,
+        **kwargs: Any,
+    ) -> Optional[bool]:
+        """Delete by vector ID or other criteria.
+
+        Args:
+            ids: List of ids to delete.
+            **kwargs: Other keyword arguments that subclasses might use.
+
+        Returns:
+            Optional[bool]: True if deletion is successful,
+            False otherwise, None if not implemented.
+        """
+        assert not (
+            ids is None and where_str is None
+        ), "You need to specify where to be deleted! Either with `ids` or `where_str`"
+        conds = []
+        if ids:
+            conds.extend([f"{self.config.column_map['id']} = '{id}'" for id in ids])
+        if where_str:
+            conds.append(where_str)
+        assert len(conds) > 0
+        where_str_final = " AND ".join(conds)
+        qstr = (
+            f"DELETE FROM {self.config.database}.{self.config.table} "
+            f"WHERE {where_str_final}"
+        )
+        try:
+            self.client.command(qstr)
+            return True
+        except Exception as e:
+            logger.error(str(e))
+            return False
 
     @property
     def metadata_column(self) -> str:

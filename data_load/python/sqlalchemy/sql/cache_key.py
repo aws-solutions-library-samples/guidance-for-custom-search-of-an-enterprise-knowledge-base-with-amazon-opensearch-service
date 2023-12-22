@@ -465,6 +465,9 @@ class CacheKey(NamedTuple):
     def __eq__(self, other: Any) -> bool:
         return bool(self.key == other.key)
 
+    def __ne__(self, other: Any) -> bool:
+        return not (self.key == other.key)
+
     @classmethod
     def _diff_tuples(cls, left: CacheKey, right: CacheKey) -> str:
         ck1 = CacheKey(left, [])
@@ -472,7 +475,6 @@ class CacheKey(NamedTuple):
         return ck1._diff(ck2)
 
     def _whats_different(self, other: CacheKey) -> Iterator[str]:
-
         k1 = self.key
         k2 = other.key
 

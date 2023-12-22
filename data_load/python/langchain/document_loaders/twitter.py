@@ -1,4 +1,3 @@
-"""Twitter document loader."""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Sequence, Union
@@ -15,15 +14,16 @@ def _dependable_tweepy_import() -> tweepy:
     try:
         import tweepy
     except ImportError:
-        raise ValueError(
+        raise ImportError(
             "tweepy package not found, please install it with `pip install tweepy`"
         )
     return tweepy
 
 
 class TwitterTweetLoader(BaseLoader):
-    """Twitter tweets loader.
-    Read tweets of user twitter handle.
+    """Load `Twitter` tweets.
+
+    Read tweets of the user's Twitter handle.
 
     First you need to go to
     `https://developer.twitter.com/en/docs/twitter-api

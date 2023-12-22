@@ -1,4 +1,3 @@
-"""Loader that loads .txt web files."""
 from typing import List
 
 from langchain.docstore.document import Document
@@ -6,10 +5,10 @@ from langchain.document_loaders.base import BaseLoader
 
 
 class GutenbergLoader(BaseLoader):
-    """Loader that uses urllib to load .txt web files."""
+    """Load from `Gutenberg.org`."""
 
     def __init__(self, file_path: str):
-        """Initialize with file path."""
+        """Initialize with a file path."""
         if not file_path.startswith("https://www.gutenberg.org"):
             raise ValueError("file path must start with 'https://www.gutenberg.org'")
 

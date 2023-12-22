@@ -1077,7 +1077,20 @@
         "ConfigurationConflict",
         "InternalFailure",
         "ResourceLimitExceeded",
-        "ResourceNotFound"
+        "ResourceNotFound",
+        "IamRoleNotFound",
+        "VpcNotFound",
+        "InsufficientFreeAddresses",
+        "Ec2ServiceNotSubscribed",
+        "Ec2SubnetNotFound",
+        "Ec2SecurityGroupNotFound",
+        "KmsGrantRevoked",
+        "KmsKeyNotFound",
+        "KmsKeyMarkedForDeletion",
+        "KmsKeyDisabled",
+        "StsRegionalEndpointDisabled",
+        "UnsupportedVersion",
+        "Other"
       ]
     },
     "ClusterIssueList":{
@@ -2669,6 +2682,7 @@
         "Ec2SubnetNotFound",
         "Ec2SubnetInvalidConfiguration",
         "IamInstanceProfileNotFound",
+        "Ec2SubnetMissingIpv6Assignment",
         "IamLimitExceeded",
         "IamNodeRoleNotFound",
         "NodeCreationFailure",
@@ -2678,7 +2692,20 @@
         "AccessDenied",
         "InternalFailure",
         "ClusterUnreachable",
-        "Ec2SubnetMissingIpv6Assignment"
+        "AmiIdNotFound",
+        "AutoScalingGroupOptInRequired",
+        "AutoScalingGroupRateLimitExceeded",
+        "Ec2LaunchTemplateDeletionFailure",
+        "Ec2LaunchTemplateInvalidConfiguration",
+        "Ec2LaunchTemplateMaxLimitExceeded",
+        "Ec2SubnetListTooLong",
+        "IamThrottling",
+        "NodeTerminationFailure",
+        "PodEvictionFailure",
+        "SourceEc2LaunchTemplateNotFound",
+        "LimitExceeded",
+        "Unknown",
+        "AutoScalingGroupInstanceRefreshActive"
       ]
     },
     "NodegroupResources":{
@@ -3487,7 +3514,10 @@
         "ServiceAccountRoleArn",
         "ResolveConflicts",
         "MaxUnavailable",
-        "MaxUnavailablePercentage"
+        "MaxUnavailablePercentage",
+        "ConfigurationValues",
+        "SecurityGroups",
+        "Subnets"
       ]
     },
     "UpdateParams":{
@@ -3527,7 +3557,8 @@
         "AssociateIdentityProviderConfig",
         "DisassociateIdentityProviderConfig",
         "AssociateEncryptionConfig",
-        "AddonUpdate"
+        "AddonUpdate",
+        "VpcConfigUpdate"
       ]
     },
     "VpcConfigRequest":{

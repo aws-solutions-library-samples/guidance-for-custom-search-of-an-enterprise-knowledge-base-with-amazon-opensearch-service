@@ -1,4 +1,3 @@
-"""Wrapper around Tair Vector."""
 from __future__ import annotations
 
 import json
@@ -7,9 +6,9 @@ import uuid
 from typing import Any, Iterable, List, Optional, Type
 
 from langchain.docstore.document import Document
-from langchain.embeddings.base import Embeddings
+from langchain.schema.embeddings import Embeddings
+from langchain.schema.vectorstore import VectorStore
 from langchain.utils import get_from_dict_or_env
-from langchain.vectorstores.base import VectorStore
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +18,8 @@ def _uuid_key() -> str:
 
 
 class Tair(VectorStore):
+    """`Tair` vector store."""
+
     def __init__(
         self,
         embedding_function: Embeddings,
@@ -34,7 +35,7 @@ class Tair(VectorStore):
         try:
             from tair import Tair as TairClient
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import tair python package. "
                 "Please install it with `pip install tair`."
             )
@@ -48,6 +49,10 @@ class Tair(VectorStore):
         self.content_key = content_key
         self.metadata_key = metadata_key
         self.search_params = search_params
+
+    @property
+    def embeddings(self) -> Embeddings:
+        return self.embedding_function
 
     def create_index_if_not_exist(
         self,
@@ -80,6 +85,10 @@ class Tair(VectorStore):
         """Add texts data to an existing index."""
         ids = []
         keys = kwargs.get("keys", None)
+        use_hybrid_search = False
+        index = self.client.tvs_get_index(self.index_name)
+        if index is not None and index.get("lexical_algorithm") == "bm25":
+            use_hybrid_search = True
         # Write data to tair
         pipeline = self.client.pipeline(transaction=False)
         embeddings = self.embedding_function.embed_documents(list(texts))
@@ -87,16 +96,30 @@ class Tair(VectorStore):
             # Use provided key otherwise use default key
             key = keys[i] if keys else _uuid_key()
             metadata = metadatas[i] if metadatas else {}
-            pipeline.tvs_hset(
-                self.index_name,
-                key,
-                embeddings[i],
-                False,
-                **{
-                    self.content_key: text,
-                    self.metadata_key: json.dumps(metadata),
-                },
-            )
+            if use_hybrid_search:
+                # tair use TEXT attr hybrid search
+                pipeline.tvs_hset(
+                    self.index_name,
+                    key,
+                    embeddings[i],
+                    False,
+                    **{
+                        "TEXT": text,
+                        self.content_key: text,
+                        self.metadata_key: json.dumps(metadata),
+                    },
+                )
+            else:
+                pipeline.tvs_hset(
+                    self.index_name,
+                    key,
+                    embeddings[i],
+                    False,
+                    **{
+                        self.content_key: text,
+                        self.metadata_key: json.dumps(metadata),
+                    },
+                )
             ids.append(key)
         pipeline.execute()
         return ids
@@ -160,7 +183,7 @@ class Tair(VectorStore):
 
         distance_type = tairvector.DistanceMetric.InnerProduct
         if "distance_type" in kwargs:
-            distance_type = kwargs.pop("distance_typ")
+            distance_type = kwargs.pop("distance_type")
         index_type = tairvector.IndexType.HNSW
         if "index_type" in kwargs:
             index_type = kwargs.pop("index_type")

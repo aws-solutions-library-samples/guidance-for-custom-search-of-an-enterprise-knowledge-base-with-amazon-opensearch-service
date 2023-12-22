@@ -608,14 +608,21 @@ class Numeric(HasExpressionLookup, TypeEngine[_N]):
 
 
 class Float(Numeric[_N]):
-
     """Type representing floating point types, such as ``FLOAT`` or ``REAL``.
 
     This type returns Python ``float`` objects by default, unless the
-    :paramref:`.Float.asdecimal` flag is set to True, in which case they
+    :paramref:`.Float.asdecimal` flag is set to ``True``, in which case they
     are coerced to ``decimal.Decimal`` objects.
 
-
+    When a :paramref:`.Float.precision` is not provided in a
+    :class:`_types.Float` type some backend may compile this type as
+    an 8 bytes / 64 bit float datatype. To use a 4 bytes / 32 bit float
+    datatype a precision <= 24 can usually be provided or the
+    :class:`_types.REAL` type can be used.
+    This is known to be the case in the PostgreSQL and MSSQL dialects
+    that render the type as ``FLOAT`` that's in both an alias of
+    ``DOUBLE PRECISION``. Other third party dialects may have similar
+    behavior.
     """
 
     __visit_name__ = "float"
@@ -804,7 +811,6 @@ class DateTime(
 
     @util.memoized_property
     def _expression_adaptations(self):
-
         # Based on
         # https://www.postgresql.org/docs/current/static/functions-datetime.html.
 
@@ -1396,7 +1402,10 @@ class Enum(String, SchemaType, Emulated, TypeEngine[Union[str, enum.Enum]]):
            compliant enumerated type, which should then return a list of string
            values to be persisted. This allows for alternate usages such as
            using the string value of an enum to be persisted to the database
-           instead of its name.
+           instead of its name. The callable must return the values to be
+           persisted in the same order as iterating through the Enum's
+           ``__member__`` attribute. For example
+           ``lambda x: [i.value for i in x]``.
 
            .. versionadded:: 1.2.3
 
@@ -1452,7 +1461,11 @@ class Enum(String, SchemaType, Emulated, TypeEngine[Union[str, enum.Enum]]):
             self._default_length = length = 0
 
         if length_arg is not NO_ARG:
-            if not _disable_warnings and length_arg < length:
+            if (
+                not _disable_warnings
+                and length_arg is not None
+                and length_arg < length
+            ):
                 raise ValueError(
                     "When provided, length must be larger or equal"
                     " than the length of the longest enum value. %s < %s"
@@ -1464,7 +1477,11 @@ class Enum(String, SchemaType, Emulated, TypeEngine[Union[str, enum.Enum]]):
 
         super().__init__(length=length)
 
-        if self.enum_class:
+        # assign name to the given enum class if no other name, and this
+        # enum is not an "empty" enum.  if the enum is "empty" we assume
+        # this is a template enum that will be used to generate
+        # new Enum classes.
+        if self.enum_class and values:
             kw.setdefault("name", self.enum_class.__name__.lower())
         SchemaType.__init__(
             self,
@@ -1515,7 +1532,6 @@ class Enum(String, SchemaType, Emulated, TypeEngine[Union[str, enum.Enum]]):
         matched_on: _MatchedOnType,
         matched_on_flattened: Type[Any],
     ) -> Optional[Enum]:
-
         # "generic form" indicates we were placed in a type map
         # as ``sqlalchemy.Enum(enum.Enum)`` which indicates we need to
         # get enumerated values from the datatype
@@ -1551,11 +1567,9 @@ class Enum(String, SchemaType, Emulated, TypeEngine[Union[str, enum.Enum]]):
             enum_args = self._enums_argument
 
         # make a new Enum that looks like this one.
-        # pop the "name" so that it gets generated based on the enum
         # arguments or other rules
         kw = self._make_enum_kw({})
 
-        kw.pop("name", None)
         if native_enum is False:
             kw["native_enum"] = False
 
@@ -1658,14 +1672,14 @@ class Enum(String, SchemaType, Emulated, TypeEngine[Union[str, enum.Enum]]):
         )
 
     def as_generic(self, allow_nulltype=False):
-        if hasattr(self, "enums"):
+        try:
             args = self.enums
-        else:
+        except AttributeError:
             raise NotImplementedError(
                 "TypeEngine.as_generic() heuristic "
                 "is undefined for types that inherit Enum but do not have "
                 "an `enums` attribute."
-            )
+            ) from None
 
         return util.constructor_copy(
             self, self._generic_type_affinity, *args, _disable_warnings=True
@@ -1673,7 +1687,8 @@ class Enum(String, SchemaType, Emulated, TypeEngine[Union[str, enum.Enum]]):
 
     def _make_enum_kw(self, kw):
         kw.setdefault("validate_strings", self.validate_strings)
-        kw.setdefault("name", self.name)
+        if self.name:
+            kw.setdefault("name", self.name)
         kw.setdefault("schema", self.schema)
         kw.setdefault("inherit_schema", self.inherit_schema)
         kw.setdefault("metadata", self.metadata)
@@ -2051,7 +2066,7 @@ class Interval(Emulated, _AbstractInterval, TypeDecorator[dt.timedelta]):
     """
 
     impl = DateTime
-    epoch = dt.datetime.utcfromtimestamp(0)
+    epoch = dt.datetime.fromtimestamp(0, dt.timezone.utc).replace(tzinfo=None)
     cache_ok = True
 
     def __init__(
@@ -2868,7 +2883,6 @@ class ARRAY(
         type: ARRAY
 
         def _setup_getitem(self, index):
-
             arr_type = self.type
 
             return_type: TypeEngine[Any]
@@ -3159,7 +3173,6 @@ class TupleType(TypeEngine[Tuple[Any, ...]]):
     def coerce_compared_value(
         self, op: Optional[OperatorType], value: Any
     ) -> TypeEngine[Any]:
-
         if value is type_api._NO_VALUE_IN_LIST:
             return super().coerce_compared_value(op, value)
         else:
@@ -3519,7 +3532,7 @@ class MatchType(Boolean):
 _UUID_RETURN = TypeVar("_UUID_RETURN", str, _python_UUID)
 
 
-class Uuid(TypeEngine[_UUID_RETURN]):
+class Uuid(Emulated, TypeEngine[_UUID_RETURN]):
 
     """Represent a database agnostic UUID datatype.
 
@@ -3614,6 +3627,10 @@ class Uuid(TypeEngine[_UUID_RETURN]):
     def python_type(self):
         return _python_UUID if self.as_uuid else str
 
+    @property
+    def native(self):
+        return self.native_uuid
+
     def coerce_compared_value(self, op, value):
         """See :meth:`.TypeEngine.coerce_compared_value` for a description."""
 
@@ -3670,7 +3687,6 @@ class Uuid(TypeEngine[_UUID_RETURN]):
 
                 return process
         else:
-
             if not self.as_uuid:
 
                 def process(value):
@@ -3716,7 +3732,7 @@ class Uuid(TypeEngine[_UUID_RETURN]):
                 return process
 
 
-class UUID(Uuid[_UUID_RETURN]):
+class UUID(Uuid[_UUID_RETURN], type_api.NativeForEmulated):
 
     """Represent the SQL UUID type.
 
@@ -3761,6 +3777,11 @@ class UUID(Uuid[_UUID_RETURN]):
         """
         self.as_uuid = as_uuid
         self.native_uuid = True
+
+    @classmethod
+    def adapt_emulated_to_native(cls, impl, **kw):
+        kw.setdefault("as_uuid", impl.as_uuid)
+        return cls(**kw)
 
 
 NULLTYPE = NullType()

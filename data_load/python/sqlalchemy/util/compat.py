@@ -12,12 +12,15 @@ from __future__ import annotations
 
 import base64
 import dataclasses
+import hashlib
 import inspect
 import operator
 import platform
 import sys
 import typing
 from typing import Any
+from typing import AsyncGenerator
+from typing import Awaitable
 from typing import Callable
 from typing import Dict
 from typing import Iterable
@@ -28,6 +31,7 @@ from typing import Sequence
 from typing import Set
 from typing import Tuple
 from typing import Type
+from typing import TypeVar
 
 
 py312 = sys.version_info >= (3, 12)
@@ -46,6 +50,8 @@ is64bit = sys.maxsize > 2**32
 has_refcount_gc = bool(cpython)
 
 dottedgetter = operator.attrgetter
+
+_T_co = TypeVar("_T_co", covariant=True)
 
 
 class FullArgSpec(typing.NamedTuple):
@@ -96,6 +102,36 @@ def inspect_getfullargspec(func: Callable[..., Any]) -> FullArgSpec:
     )
 
 
+if py312:
+    # we are 95% certain this form of athrow works in former Python
+    # versions, however we are unable to get confirmation;
+    # see https://github.com/python/cpython/issues/105269 where have
+    # been unable to get a straight answer so far
+    def athrow(  # noqa
+        gen: AsyncGenerator[_T_co, Any], typ: Any, value: Any, traceback: Any
+    ) -> Awaitable[_T_co]:
+        return gen.athrow(value)
+
+else:
+
+    def athrow(  # noqa
+        gen: AsyncGenerator[_T_co, Any], typ: Any, value: Any, traceback: Any
+    ) -> Awaitable[_T_co]:
+        return gen.athrow(typ, value, traceback)
+
+
+if py39:
+    # python stubs don't have a public type for this. not worth
+    # making a protocol
+    def md5_not_for_security() -> Any:
+        return hashlib.md5(usedforsecurity=False)
+
+else:
+
+    def md5_not_for_security() -> Any:
+        return hashlib.md5()
+
+
 if typing.TYPE_CHECKING or py38:
     from importlib import metadata as importlib_metadata
 else:
@@ -116,7 +152,6 @@ else:
 if py310:
     anext_ = anext
 else:
-
     _NOT_PROVIDED = object()
     from collections.abc import AsyncIterator
 

@@ -6,10 +6,11 @@ from langchain.document_loaders.base import BaseLoader
 
 
 class GitLoader(BaseLoader):
-    """Loads files from a Git repository into a list of documents.
-    Repository can be local on disk available at `repo_path`,
+    """Load `Git` repository files.
+
+    The Repository can be local on disk available at `repo_path`,
     or remote at `clone_url` that will be cloned to `repo_path`.
-    Currently supports only text files.
+    Currently, supports only text files.
 
     Each document represents one file in the repository. The `path` points to
     the local Git repository, and the `branch` specifies the branch to load
@@ -23,6 +24,15 @@ class GitLoader(BaseLoader):
         branch: Optional[str] = "main",
         file_filter: Optional[Callable[[str], bool]] = None,
     ):
+        """
+
+        Args:
+            repo_path: The path to the Git repository.
+            clone_url: Optional. The URL to clone the repository from.
+            branch: Optional. The branch to load files from. Defaults to `main`.
+            file_filter: Optional. A function that takes a file path and returns
+              a boolean indicating whether to load the file. Defaults to None.
+        """
         self.repo_path = repo_path
         self.clone_url = clone_url
         self.branch = branch
@@ -40,7 +50,18 @@ class GitLoader(BaseLoader):
         if not os.path.exists(self.repo_path) and self.clone_url is None:
             raise ValueError(f"Path {self.repo_path} does not exist")
         elif self.clone_url:
-            repo = Repo.clone_from(self.clone_url, self.repo_path)
+            # If the repo_path already contains a git repository, verify that it's the
+            # same repository as the one we're trying to clone.
+            if os.path.isdir(os.path.join(self.repo_path, ".git")):
+                repo = Repo(self.repo_path)
+                # If the existing repository is not the same as the one we're trying to
+                # clone, raise an error.
+                if repo.remotes.origin.url != self.clone_url:
+                    raise ValueError(
+                        "A different repository is already cloned at this path."
+                    )
+            else:
+                repo = Repo.clone_from(self.clone_url, self.repo_path)
             repo.git.checkout(self.branch)
         else:
             repo = Repo(self.repo_path)
@@ -75,6 +96,7 @@ class GitLoader(BaseLoader):
                         continue
 
                     metadata = {
+                        "source": rel_file_path,
                         "file_path": rel_file_path,
                         "file_name": item.name,
                         "file_type": file_type,

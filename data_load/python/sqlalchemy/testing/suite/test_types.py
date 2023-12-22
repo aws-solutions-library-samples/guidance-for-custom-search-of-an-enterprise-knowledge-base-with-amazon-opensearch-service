@@ -27,7 +27,6 @@ from ... import cast
 from ... import Date
 from ... import DateTime
 from ... import Float
-from ... import Identity
 from ... import Integer
 from ... import JSON
 from ... import literal
@@ -47,7 +46,6 @@ from ... import Unicode
 from ... import UnicodeText
 from ... import UUID
 from ... import Uuid
-from ...dialects.postgresql import BYTEA
 from ...orm import declarative_base
 from ...orm import Session
 from ...sql import sqltypes
@@ -316,68 +314,6 @@ class BinaryTest(_LiteralRoundTripFixture, fixtures.TablesTest):
         )
         row = connection.execute(select(binary_table.c.pickle_data)).first()
         eq_(row, ({"foo": [1, 2, 3], "bar": "bat"},))
-
-    @testing.combinations(
-        (
-            LargeBinary(),
-            b"this is binary",
-        ),
-        (LargeBinary(), b"7\xe7\x9f"),
-        (BYTEA(), b"7\xe7\x9f", testing.only_on("postgresql")),
-        argnames="type_,value",
-    )
-    @testing.variation("sort_by_parameter_order", [True, False])
-    @testing.variation("multiple_rows", [True, False])
-    @testing.requires.insert_returning
-    def test_imv_returning(
-        self,
-        connection,
-        metadata,
-        sort_by_parameter_order,
-        type_,
-        value,
-        multiple_rows,
-    ):
-        """test #9739 (similar to #9701).
-
-        this tests insertmanyvalues as well as binary
-        RETURNING types
-
-        """
-        t = Table(
-            "t",
-            metadata,
-            Column("id", Integer, Identity(), primary_key=True),
-            Column("value", type_),
-        )
-
-        t.create(connection)
-
-        result = connection.execute(
-            t.insert().returning(
-                t.c.id,
-                t.c.value,
-                sort_by_parameter_order=bool(sort_by_parameter_order),
-            ),
-            [{"value": value} for i in range(10)]
-            if multiple_rows
-            else {"value": value},
-        )
-
-        if multiple_rows:
-            i_range = range(1, 11)
-        else:
-            i_range = range(1, 2)
-
-        eq_(
-            set(result),
-            {(id_, value) for id_ in i_range},
-        )
-
-        eq_(
-            set(connection.scalars(select(t.c.value))),
-            {value},
-        )
 
 
 class TextTest(_LiteralRoundTripFixture, fixtures.TablesTest):
@@ -747,7 +683,6 @@ class IntegerTest(_LiteralRoundTripFixture, fixtures.TestBase):
         literal_round_trip(Integer, [5], [5])
 
     def _huge_ints():
-
         return testing.combinations(
             2147483649,  # 32 bits
             2147483648,  # 32 bits
@@ -1280,7 +1215,6 @@ class JSONTest(_LiteralRoundTripFixture, fixtures.TablesTest):
     )
     @testing.combinations(100, 1999, 3000, 4000, 5000, 9000, argnames="length")
     def test_round_trip_pretty_large_data(self, connection, unicode_, length):
-
         if unicode_:
             data = "réve🐍illé" * ((length // 9) + 1)
             data = data[0 : (length // 2)]
@@ -1303,7 +1237,6 @@ class JSONTest(_LiteralRoundTripFixture, fixtures.TablesTest):
         eq_(row, (data_element,))
 
     def _index_fixtures(include_comparison):
-
         if include_comparison:
             # basically SQL Server and MariaDB can kind of do json
             # comparison, MySQL, PG and SQLite can't.  not worth it.
@@ -1366,7 +1299,6 @@ class JSONTest(_LiteralRoundTripFixture, fixtures.TablesTest):
     def _json_value_insert(self, connection, datatype, value, data_element):
         data_table = self.tables.data_table
         if datatype == "_decimal":
-
             # Python's builtin json serializer basically doesn't support
             # Decimal objects without implicit float conversion period.
             # users can otherwise use simplejson which supports
@@ -1444,7 +1376,6 @@ class JSONTest(_LiteralRoundTripFixture, fixtures.TablesTest):
         data_element = {"key1": value}
 
         with config.db.begin() as conn:
-
             datatype, compare_value, p_s = self._json_value_insert(
                 conn, datatype, value, data_element
             )
@@ -1489,7 +1420,6 @@ class JSONTest(_LiteralRoundTripFixture, fixtures.TablesTest):
         data_table = self.tables.data_table
         data_element = {"key1": {"subkey1": value}}
         with config.db.begin() as conn:
-
             datatype, compare_value, p_s = self._json_value_insert(
                 conn, datatype, value, data_element
             )
@@ -1703,7 +1633,6 @@ class JSONTest(_LiteralRoundTripFixture, fixtures.TablesTest):
             )
 
     def test_eval_none_flag_orm(self, connection):
-
         Base = declarative_base()
 
         class Data(Base):

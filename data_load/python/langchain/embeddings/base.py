@@ -1,15 +1,4 @@
-"""Interface for embedding models."""
-from abc import ABC, abstractmethod
-from typing import List
+from langchain.schema.embeddings import Embeddings
 
-
-class Embeddings(ABC):
-    """Interface for embedding models."""
-
-    @abstractmethod
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        """Embed search docs."""
-
-    @abstractmethod
-    def embed_query(self, text: str) -> List[float]:
-        """Embed query text."""
+# This is for backwards compatibility
+__all__ = ["Embeddings"]

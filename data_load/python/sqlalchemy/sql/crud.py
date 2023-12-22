@@ -491,10 +491,10 @@ def _key_getters_for_crud_column(
             key: Union[ColumnClause[Any], str]
         ) -> Union[str, Tuple[str, str]]:
             str_key = c_key_role(key)
-            if hasattr(key, "table") and key.table in _et:  # type: ignore
+            if hasattr(key, "table") and key.table in _et:
                 return (key.table.name, str_key)  # type: ignore
             else:
-                return str_key  # type: ignore
+                return str_key
 
         def _getattr_col_key(
             col: ColumnClause[Any],
@@ -513,7 +513,7 @@ def _key_getters_for_crud_column(
                 return col.key
 
     else:
-        _column_as_key = functools.partial(  # type: ignore
+        _column_as_key = functools.partial(
             coercions.expect_as_key, roles.DMLColumnRole
         )
         _getattr_col_key = _col_bind_name = operator.attrgetter("key")  # type: ignore  # noqa: E501
@@ -534,7 +534,6 @@ def _scan_insert_from_select_cols(
     toplevel,
     kw,
 ):
-
     cols = [stmt.table.c[_column_as_key(name)] for name in stmt._select_names]
 
     assert compiler.stack[-1]["selectable"] is stmt
@@ -648,6 +647,9 @@ def _scan_cols(
 
     compiler_implicit_returning = compiler.implicit_returning
 
+    # TODO - see TODO(return_defaults_columns) below
+    # cols_in_params = set()
+
     for c in cols:
         # scan through every column in the target table
 
@@ -672,6 +674,9 @@ def _scan_cols(
                 insert_null_pk_still_autoincrements,
                 kw,
             )
+
+            # TODO - see TODO(return_defaults_columns) below
+            # cols_in_params.add(c)
 
         elif isinsert:
             # no parameter is present and it's an insert.
@@ -765,6 +770,19 @@ def _scan_cols(
             if c in remaining_supplemental
         )
 
+    # TODO(return_defaults_columns): there can still be more columns in
+    # _return_defaults_columns in the case that they are from something like an
+    # aliased of the table. we can add them here, however this breaks other ORM
+    # things. so this is for another day. see
+    # test/orm/dml/test_update_delete_where.py -> test_update_from_alias
+
+    # if stmt._return_defaults_columns:
+    #     compiler_implicit_returning.extend(
+    #         set(stmt._return_defaults_columns)
+    #         .difference(compiler_implicit_returning)
+    #         .difference(cols_in_params)
+    #     )
+
     return (use_insertmanyvalues, use_sentinel_columns)
 
 
@@ -823,7 +841,6 @@ def _append_param_parameter(
     accumulated_bind_names: Set[str] = set()
 
     if coercions._is_literal(value):
-
         if (
             insert_null_pk_still_autoincrements
             and c.primary_key
@@ -890,7 +907,6 @@ def _append_param_parameter(
                 compiler.postfetch.append(c)
         else:
             if c.primary_key:
-
                 if implicit_returning:
                     compiler.implicit_returning.append(c)
                 elif compiler.dialect.postfetch_lastrowid:
@@ -1111,7 +1127,6 @@ def _append_param_insert_select_hasdefault(
     values: List[_CrudParamElementSQLExpr],
     kw: Dict[str, Any],
 ) -> None:
-
     if default_is_sequence(c.default):
         if compiler.dialect.supports_sequences and (
             not c.default.optional or not compiler.dialect.sequences_optional
@@ -1149,7 +1164,6 @@ def _append_param_insert_select_hasdefault(
 def _append_param_update(
     compiler, compile_state, stmt, c, implicit_return_defaults, values, kw
 ):
-
     include_table = compile_state.include_table_with_column_exprs
     if c.onupdate is not None and not c.onupdate.is_sequence:
         if c.onupdate.is_clause_element:
@@ -1220,7 +1234,6 @@ def _create_insert_prefetch_bind_param(
     name: Optional[str] = None,
     **kw: Any,
 ) -> Union[elements.BindParameter[Any], str]:
-
     param = _create_bind_param(
         compiler, c, None, process=process, name=name, **kw
     )
@@ -1431,7 +1444,7 @@ def _extend_values_for_multiparams(
 
         row = {_column_as_key(key): v for key, v in row.items()}
 
-        for (col, col_expr, param, accumulated_names) in values_0:
+        for col, col_expr, param, accumulated_names in values_0:
             if col.key in row:
                 key = col.key
 
@@ -1466,7 +1479,6 @@ def _get_stmt_parameter_tuples_params(
     values,
     kw,
 ):
-
     for k, v in stmt_parameter_tuples:
         colkey = _column_as_key(k)
         if colkey is not None:
@@ -1566,7 +1578,11 @@ def _get_returning_modifiers(compiler, stmt, compile_state, toplevel):
         should_implicit_return_defaults = (
             implicit_returning and stmt._return_defaults
         )
-        explicit_returning = should_implicit_return_defaults or stmt._returning
+        explicit_returning = (
+            should_implicit_return_defaults
+            or stmt._returning
+            or stmt._supplemental_returning
+        )
         use_insertmanyvalues = (
             toplevel
             and compiler.for_executemany

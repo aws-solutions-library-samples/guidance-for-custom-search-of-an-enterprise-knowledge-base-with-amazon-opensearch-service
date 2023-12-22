@@ -229,9 +229,8 @@ class Inspector(inspection.Inspectable["Inspector"]):
     def _construct(
         cls, init: Callable[..., Any], bind: Union[Engine, Connection]
     ) -> Inspector:
-
         if hasattr(bind.dialect, "inspector"):
-            cls = bind.dialect.inspector  # type: ignore[attr-defined]
+            cls = bind.dialect.inspector
 
         self = cls.__new__(cls)
         init(self, bind)
@@ -241,7 +240,7 @@ class Inspector(inspection.Inspectable["Inspector"]):
         if hasattr(bind, "exec_driver_sql"):
             self._init_connection(bind)  # type: ignore[arg-type]
         else:
-            self._init_engine(bind)  # type: ignore[arg-type]
+            self._init_engine(bind)
 
     def _init_engine(self, engine: Engine) -> None:
         self.bind = self.engine = engine
@@ -1625,13 +1624,10 @@ class Inspector(inspection.Inspectable["Inspector"]):
         exclude_columns: Collection[str],
         cols_by_orig_name: Dict[str, sa_schema.Column[Any]],
     ) -> None:
-
         orig_name = col_d["name"]
 
         table.metadata.dispatch.column_reflect(self, table, col_d)
-        table.dispatch.column_reflect(  # type: ignore[attr-defined]
-            self, table, col_d
-        )
+        table.dispatch.column_reflect(self, table, col_d)
 
         # fetch name again as column_reflect is allowed to
         # change it
@@ -1895,6 +1891,7 @@ class Inspector(inspection.Inspectable["Inspector"]):
             columns = const_d["column_names"]
             comment = const_d.get("comment")
             duplicates = const_d.get("duplicates_index")
+            dialect_options = const_d.get("dialect_options", {})
             if include_columns and not set(columns).issubset(include_columns):
                 continue
             if duplicates:
@@ -1918,7 +1915,10 @@ class Inspector(inspection.Inspectable["Inspector"]):
                     constrained_cols.append(constrained_col)
             table.append_constraint(
                 sa_schema.UniqueConstraint(
-                    *constrained_cols, name=conname, comment=comment
+                    *constrained_cols,
+                    name=conname,
+                    comment=comment,
+                    **dialect_options,
                 )
             )
 
@@ -2036,7 +2036,7 @@ class ReflectionDefaults:
 
     @classmethod
     def pk_constraint(cls) -> ReflectedPrimaryKeyConstraint:
-        return {  # type: ignore  # pep-655 not supported
+        return {
             "name": None,
             "constrained_columns": [],
         }

@@ -1,19 +1,17 @@
-"""Wrapper around Pipeline Cloud API."""
 import logging
 from typing import Any, Dict, List, Mapping, Optional
-
-from pydantic import BaseModel, Extra, Field, root_validator
 
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.llms.utils import enforce_stop_tokens
+from langchain.pydantic_v1 import BaseModel, Extra, Field, root_validator
 from langchain.utils import get_from_dict_or_env
 
 logger = logging.getLogger(__name__)
 
 
 class PipelineAI(LLM, BaseModel):
-    """Wrapper around PipelineAI large language models.
+    """PipelineAI large language models.
 
     To use, you should have the ``pipeline-ai`` python package installed,
     and the environment variable ``PIPELINE_API_KEY`` set with your API key.
@@ -23,7 +21,8 @@ class PipelineAI(LLM, BaseModel):
 
     Example:
         .. code-block:: python
-            from langchain import PipelineAI
+
+            from langchain.llms import PipelineAI
             pipeline = PipelineAI(pipeline_key="")
     """
 
@@ -52,7 +51,7 @@ class PipelineAI(LLM, BaseModel):
                 if field_name in extra:
                     raise ValueError(f"Found {field_name} supplied twice.")
                 logger.warning(
-                    f"""{field_name} was transfered to pipeline_kwargs.
+                    f"""{field_name} was transferred to pipeline_kwargs.
                     Please confirm that {field_name} is what you intended."""
                 )
                 extra[field_name] = values.pop(field_name)
@@ -86,17 +85,19 @@ class PipelineAI(LLM, BaseModel):
         prompt: str,
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> str:
         """Call to Pipeline Cloud endpoint."""
         try:
             from pipeline import PipelineCloud
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import pipeline-ai python package. "
                 "Please install it with `pip install pipeline-ai`."
             )
         client = PipelineCloud(token=self.pipeline_api_key)
         params = self.pipeline_kwargs or {}
+        params = {**params, **kwargs}
 
         run = client.run_pipeline(self.pipeline_key, [prompt, params])
         try:

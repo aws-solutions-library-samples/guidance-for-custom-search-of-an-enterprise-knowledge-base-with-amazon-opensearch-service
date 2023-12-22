@@ -71,6 +71,7 @@ if typing.TYPE_CHECKING:
     from types import ModuleType
 
     from .base import Engine
+    from .cursor import ResultFetchStrategy
     from .interfaces import _CoreMultiExecuteParams
     from .interfaces import _CoreSingleExecuteParams
     from .interfaces import _DBAPICursorDescription
@@ -135,7 +136,7 @@ class DefaultDialect(Dialect):
 
     # most DBAPIs happy with this for execute().
     # not cx_oracle.
-    execute_sequence_format = tuple  # type: ignore
+    execute_sequence_format = tuple
 
     supports_schemas = True
     supports_views = True
@@ -431,7 +432,6 @@ class DefaultDialect(Dialect):
         return self.bind_typing is interfaces.BindTyping.RENDER_CASTS
 
     def _ensure_has_table_connection(self, arg):
-
         if not isinstance(arg, Connection):
             raise exc.ArgumentError(
                 "The argument passed to Dialect.has_table() should be a "
@@ -619,7 +619,7 @@ class DefaultDialect(Dialect):
         # inherits the docstring from interfaces.Dialect.create_connect_args
         opts = url.translate_connect_args()
         opts.update(url.query)
-        return [[], opts]
+        return ([], opts)
 
     def set_engine_execution_options(
         self, engine: Engine, opts: Mapping[str, Any]
@@ -651,7 +651,6 @@ class DefaultDialect(Dialect):
             self._set_connection_characteristics(connection, characteristics)
 
     def _set_connection_characteristics(self, connection, characteristics):
-
         characteristic_values = [
             (name, self.connection_characteristics[name], value)
             for name, value in characteristics.items()
@@ -904,8 +903,11 @@ class DefaultDialect(Dialect):
                             "found. "
                             "There may be a mismatch between the datatype "
                             "passed to the DBAPI driver vs. that which it "
-                            "returns in a result row.  Try using a different "
-                            "datatype, such as integer"
+                            "returns in a result row.  Ensure the given "
+                            "Python value matches the expected result type "
+                            "*exactly*, taking care to not rely upon implicit "
+                            "conversions which may occur such as when using "
+                            "strings in place of UUID or integer values, etc. "
                         ) from ke
 
                     result.extend(ordered_rows)
@@ -927,7 +929,6 @@ class DefaultDialect(Dialect):
 
     @util.memoized_instancemethod
     def _gen_allowed_isolation_levels(self, dbapi_conn):
-
         try:
             raw_levels = list(self.get_isolation_level_values(dbapi_conn))
         except NotImplementedError:
@@ -964,12 +965,21 @@ class DefaultDialect(Dialect):
         self.set_isolation_level(dbapi_conn, level)
 
     def reset_isolation_level(self, dbapi_conn):
-        # default_isolation_level is read from the first connection
-        # after the initial set of 'isolation_level', if any, so is
-        # the configured default of this dialect.
-        self._assert_and_set_isolation_level(
-            dbapi_conn, self.default_isolation_level
-        )
+        if self._on_connect_isolation_level is not None:
+            assert (
+                self._on_connect_isolation_level == "AUTOCOMMIT"
+                or self._on_connect_isolation_level
+                == self.default_isolation_level
+            )
+            self._assert_and_set_isolation_level(
+                dbapi_conn, self._on_connect_isolation_level
+            )
+        else:
+            assert self.default_isolation_level is not None
+            self._assert_and_set_isolation_level(
+                dbapi_conn,
+                self.default_isolation_level,
+            )
 
     def normalize_name(self, name):
         if name is None:
@@ -1033,7 +1043,6 @@ class DefaultDialect(Dialect):
         scope,
         **kw,
     ):
-
         names_fns = []
         temp_names_fns = []
         if ObjectKind.TABLE in kind:
@@ -1135,7 +1144,6 @@ class DefaultDialect(Dialect):
 
 
 class StrCompileDialect(DefaultDialect):
-
     statement_compiler = compiler.StrSQLCompiler
     ddl_compiler = compiler.DDLCompiler
     type_compiler_cls = compiler.StrSQLTypeCompiler
@@ -1831,7 +1839,6 @@ class DefaultExecutionContext(ExecutionContext):
                 [name for param, name in out_bindparams]
             ),
         ):
-
             type_ = bindparam.type
             impl_type = type_.dialect_impl(self.dialect)
             dbapi_type = impl_type.get_dbapi_type(self.dialect.loaded_dbapi)
@@ -1847,7 +1854,7 @@ class DefaultExecutionContext(ExecutionContext):
     def _setup_dml_or_text_result(self):
         compiled = cast(SQLCompiler, self.compiled)
 
-        strategy = self.cursor_fetch_strategy
+        strategy: ResultFetchStrategy = self.cursor_fetch_strategy
 
         if self.isinsert:
             if (
@@ -1876,9 +1883,15 @@ class DefaultExecutionContext(ExecutionContext):
             strategy = _cursor.BufferedRowCursorFetchStrategy(
                 self.cursor, self.execution_options
             )
-        cursor_description = (
-            strategy.alternate_cursor_description or self.cursor.description
-        )
+
+        if strategy is _cursor._NO_CURSOR_DML:
+            cursor_description = None
+        else:
+            cursor_description = (
+                strategy.alternate_cursor_description
+                or self.cursor.description
+            )
+
         if cursor_description is None:
             strategy = _cursor._NO_CURSOR_DML
         elif self._num_sentinel_cols:
@@ -1974,7 +1987,6 @@ class DefaultExecutionContext(ExecutionContext):
         return [getter(None, param) for param in self.compiled_parameters]
 
     def _setup_ins_pk_from_implicit_returning(self, result, rows):
-
         if not rows:
             return []
 
@@ -2227,7 +2239,7 @@ class DefaultExecutionContext(ExecutionContext):
             and compile_state._has_multi_parameters
         ):
             if column._is_multiparam_column:
-                index = column.index + 1  # type: ignore
+                index = column.index + 1
                 d = {column.original.key: parameters[column.key]}
             else:
                 d = {column.key: parameters[column.key]}
@@ -2299,7 +2311,7 @@ class DefaultExecutionContext(ExecutionContext):
                     param[param_key] = arg
                 elif is_callable:
                     self.current_column = c
-                    param[param_key] = arg(self)  # type: ignore
+                    param[param_key] = arg(self)
                 else:
                     val = fallback(c)
                     if val is not None:

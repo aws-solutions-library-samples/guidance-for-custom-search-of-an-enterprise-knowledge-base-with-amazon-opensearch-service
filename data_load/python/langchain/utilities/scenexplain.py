@@ -8,8 +8,8 @@ You can obtain a key by following the steps below.
 from typing import Dict
 
 import requests
-from pydantic import BaseModel, BaseSettings, Field, root_validator
 
+from langchain.pydantic_v1 import BaseModel, BaseSettings, Field, root_validator
 from langchain.utils import get_from_dict_or_env
 
 
@@ -24,9 +24,7 @@ class SceneXplainAPIWrapper(BaseSettings, BaseModel):
     """
 
     scenex_api_key: str = Field(..., env="SCENEX_API_KEY")
-    scenex_api_url: str = (
-        "https://us-central1-causal-diffusion.cloudfunctions.net/describe"
-    )
+    scenex_api_url: str = "https://api.scenex.jina.ai/v1/describe"
 
     def _describe_image(self, image: str) -> str:
         headers = {

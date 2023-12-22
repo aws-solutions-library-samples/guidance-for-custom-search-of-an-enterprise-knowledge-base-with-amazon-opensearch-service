@@ -14,6 +14,9 @@ from typing import Any
 from typing import Optional
 from typing import TypeVar
 
+from .operators import CONTAINED_BY
+from .operators import CONTAINS
+from .operators import OVERLAP
 from ... import types as sqltypes
 from ... import util
 from ...sql import expression
@@ -99,7 +102,6 @@ class array(expression.ExpressionClauseList[_T]):
     inherit_cache = True
 
     def __init__(self, clauses, **kw):
-
         type_arg = kw.pop("type_", None)
         super().__init__(operators.comma_op, *clauses, **kw)
 
@@ -153,13 +155,6 @@ class array(expression.ExpressionClauseList[_T]):
             return expression.Grouping(self)
         else:
             return self
-
-
-CONTAINS = operators.custom_op("@>", precedence=5, is_comparison=True)
-
-CONTAINED_BY = operators.custom_op("<@", precedence=5, is_comparison=True)
-
-OVERLAP = operators.custom_op("&&", precedence=5, is_comparison=True)
 
 
 class ARRAY(sqltypes.ARRAY):
@@ -408,7 +403,6 @@ class ARRAY(sqltypes.ARRAY):
 
 
 def _split_enum_values(array_string):
-
     if '"' not in array_string:
         # no escape char is present so it can just split on the comma
         return array_string.split(",") if array_string else []

@@ -24,12 +24,13 @@ GET /user to get information about the current user
 GET /products/search search across products
 POST /users/{{id}}/cart to add products to a user's cart
 PATCH /users/{{id}}/cart to update a user's cart
+PUT /users/{{id}}/coupon to apply idempotent coupon to a user's cart
 DELETE /users/{{id}}/cart to delete a user's cart
 
 User query: tell me a joke
 Plan: Sorry, this API's domain is shopping, not comedy.
 
-Usery query: I want to buy a couch
+User query: I want to buy a couch
 Plan: 1. GET /products with a query param to search for couches
 2. GET /user to find the user's id
 3. POST /users/{{id}}/cart to add a couch to the user's cart
@@ -38,6 +39,10 @@ User query: I want to add a lamp to my cart
 Plan: 1. GET /products with a query param to search for lamps
 2. GET /user to find the user's id
 3. PATCH /users/{{id}}/cart to add a lamp to the user's cart
+
+User query: I want to add a coupon to my cart
+Plan: 1. GET /user to find the user's id
+2. PUT /users/{{id}}/coupon to apply the coupon
 
 User query: I want to delete my cart
 Plan: 1. GET /user to find the user's id
@@ -63,7 +68,7 @@ API_PLANNER_TOOL_DESCRIPTION = f"Can be used to generate the right API calls to 
 
 # Execution.
 API_CONTROLLER_PROMPT = """You are an agent that gets a sequence of API calls and given their documentation, should execute them and return the final response.
-If you cannot complete them and run into issues, you should explain the issue. If you're able to resolve an API call, you can retry the API call. When interacting with API objects, you should extract ids for inputs to other API calls but ids and names for outputs returned to the User.
+If you cannot complete them and run into issues, you should explain the issue. If you're unable to resolve an API call, you can retry the API call. When interacting with API objects, you should extract ids for inputs to other API calls but ids and names for outputs returned to the User.
 
 
 Here is documentation on the API:
@@ -100,7 +105,7 @@ API_CONTROLLER_TOOL_DESCRIPTION = f"Can be used to execute a plan of API calls, 
 # The goal is to have an agent at the top-level (e.g. so it can recover from errors and re-plan) while
 # keeping planning (and specifically the planning prompt) simple.
 API_ORCHESTRATOR_PROMPT = """You are an agent that assists with user queries against API, things like querying information or creating resources.
-Some user queries can be resolved in a single API call, particularly if you can find appropriate params from the OpenAPI spec; though some require several API call.
+Some user queries can be resolved in a single API call, particularly if you can find appropriate params from the OpenAPI spec; though some require several API calls.
 You should always plan your API calls first, and then execute the plan second.
 If the plan includes a DELETE call, be sure to ask the User for authorization first unless the User has specifically asked to delete something.
 You should never return information without executing the api_controller tool.
@@ -117,7 +122,7 @@ Action: the action to take, should be one of the tools [{tool_names}]
 Action Input: the input to the action
 Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can repeat N times)
-Thought: I am finished executing a plan and have the information the user asked for or the data the used asked to create
+Thought: I am finished executing a plan and have the information the user asked for or the data the user asked to create
 Final Answer: the final output from executing the plan
 
 
@@ -186,6 +191,23 @@ The value of "output_instructions" should be instructions on what information to
 Always use double quotes for strings in the json string."""
 
 PARSING_PATCH_PROMPT = PromptTemplate(
+    template="""Here is an API response:\n\n{response}\n\n====
+Your task is to extract some information according to these instructions: {instructions}
+When working with API objects, you should usually use ids over names. Do not return any ids or names that are not in the response.
+If the response indicates an error, you should instead output a summary of the error.
+
+Output:""",
+    input_variables=["response", "instructions"],
+)
+
+REQUESTS_PUT_TOOL_DESCRIPTION = """Use this when you want to PUT to a website.
+Input to the tool should be a json string with 3 keys: "url", "data", and "output_instructions".
+The value of "url" should be a string.
+The value of "data" should be a dictionary of key-value pairs you want to PUT to the url.
+The value of "output_instructions" should be instructions on what information to extract from the response, for example the id(s) for a resource(s) that the PUT request creates.
+Always use double quotes for strings in the json string."""
+
+PARSING_PUT_PROMPT = PromptTemplate(
     template="""Here is an API response:\n\n{response}\n\n====
 Your task is to extract some information according to these instructions: {instructions}
 When working with API objects, you should usually use ids over names. Do not return any ids or names that are not in the response.

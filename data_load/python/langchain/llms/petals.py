@@ -1,19 +1,17 @@
-"""Wrapper around Petals API."""
 import logging
 from typing import Any, Dict, List, Mapping, Optional
-
-from pydantic import Extra, Field, root_validator
 
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.llms.utils import enforce_stop_tokens
+from langchain.pydantic_v1 import Extra, Field, root_validator
 from langchain.utils import get_from_dict_or_env
 
 logger = logging.getLogger(__name__)
 
 
 class Petals(LLM):
-    """Wrapper around Petals Bloom models.
+    """Petals Bloom models.
 
     To use, you should have the ``petals`` python package installed, and the
     environment variable ``HUGGINGFACE_API_KEY`` set with your API key.
@@ -23,6 +21,7 @@ class Petals(LLM):
 
     Example:
         .. code-block:: python
+
             from langchain.llms import petals
             petals = Petals()
 
@@ -79,7 +78,7 @@ class Petals(LLM):
                     raise ValueError(f"Found {field_name} supplied twice.")
                 logger.warning(
                     f"""WARNING! {field_name} is not default parameter.
-                    {field_name} was transfered to model_kwargs.
+                    {field_name} was transferred to model_kwargs.
                     Please confirm that {field_name} is what you intended."""
                 )
                 extra[field_name] = values.pop(field_name)
@@ -93,16 +92,18 @@ class Petals(LLM):
             values, "huggingface_api_key", "HUGGINGFACE_API_KEY"
         )
         try:
-            from petals import DistributedBloomForCausalLM
-            from transformers import BloomTokenizerFast
+            from petals import AutoDistributedModelForCausalLM
+            from transformers import AutoTokenizer
 
             model_name = values["model_name"]
-            values["tokenizer"] = BloomTokenizerFast.from_pretrained(model_name)
-            values["client"] = DistributedBloomForCausalLM.from_pretrained(model_name)
+            values["tokenizer"] = AutoTokenizer.from_pretrained(model_name)
+            values["client"] = AutoDistributedModelForCausalLM.from_pretrained(
+                model_name
+            )
             values["huggingface_api_key"] = huggingface_api_key
 
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import transformers or petals python package."
                 "Please install with `pip install -U transformers petals`."
             )
@@ -136,9 +137,11 @@ class Petals(LLM):
         prompt: str,
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> str:
         """Call the Petals API."""
         params = self._default_params
+        params = {**params, **kwargs}
         inputs = self.tokenizer(prompt, return_tensors="pt")["input_ids"]
         outputs = self.client.generate(inputs, **params)
         text = self.tokenizer.decode(outputs[0])

@@ -1,4 +1,3 @@
-"""Loader that loads local airbyte json files."""
 import json
 from typing import List
 
@@ -8,14 +7,14 @@ from langchain.utils import stringify_dict
 
 
 class AirbyteJSONLoader(BaseLoader):
-    """Loader that loads local airbyte json files."""
+    """Load local `Airbyte` json files."""
 
     def __init__(self, file_path: str):
-        """Initialize with file path. This should start with '/tmp/airbyte_local/'."""
+        """Initialize with a file path. This should start with '/tmp/airbyte_local/'."""
         self.file_path = file_path
+        """Path to the directory containing the json files."""
 
     def load(self) -> List[Document]:
-        """Load file."""
         text = ""
         for line in open(self.file_path, "r"):
             data = json.loads(line)["_airbyte_data"]

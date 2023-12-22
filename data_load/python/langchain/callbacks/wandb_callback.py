@@ -17,6 +17,7 @@ from langchain.schema import AgentAction, AgentFinish, LLMResult
 
 
 def import_wandb() -> Any:
+    """Import the wandb python package and raise an error if it is not installed."""
     try:
         import wandb  # noqa: F401
     except ImportError:
@@ -200,9 +201,9 @@ class WandbCallbackHandler(BaseMetadataCallbackHandler, BaseCallbackHandler):
             notes=self.notes,
         )
         warning = (
-            "The wandb callback is currently in beta and is subject to change "
-            "based on updates to `langchain`. Please report any issues to "
-            "https://github.com/wandb/wandb/issues with the tag `langchain`."
+            "DEPRECATION: The `WandbCallbackHandler` will soon be deprecated in favor "
+            "of the `WandbTracer`. Please update your code to use the `WandbTracer` "
+            "instead."
         )
         wandb.termwarn(
             warning,
@@ -281,9 +282,7 @@ class WandbCallbackHandler(BaseMetadataCallbackHandler, BaseCallbackHandler):
                 if self.stream_logs:
                     self.run.log(generation_resp)
 
-    def on_llm_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> None:
+    def on_llm_error(self, error: BaseException, **kwargs: Any) -> None:
         """Run when LLM errors."""
         self.step += 1
         self.errors += 1
@@ -336,9 +335,7 @@ class WandbCallbackHandler(BaseMetadataCallbackHandler, BaseCallbackHandler):
         if self.stream_logs:
             self.run.log(resp)
 
-    def on_chain_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> None:
+    def on_chain_error(self, error: BaseException, **kwargs: Any) -> None:
         """Run when chain errors."""
         self.step += 1
         self.errors += 1
@@ -376,9 +373,7 @@ class WandbCallbackHandler(BaseMetadataCallbackHandler, BaseCallbackHandler):
         if self.stream_logs:
             self.run.log(resp)
 
-    def on_tool_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> None:
+    def on_tool_error(self, error: BaseException, **kwargs: Any) -> None:
         """Run when tool errors."""
         self.step += 1
         self.errors += 1

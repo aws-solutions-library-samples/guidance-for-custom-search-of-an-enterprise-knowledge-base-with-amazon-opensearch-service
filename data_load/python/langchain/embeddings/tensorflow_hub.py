@@ -1,15 +1,13 @@
-"""Wrapper around TensorflowHub embedding models."""
 from typing import Any, List
 
-from pydantic import BaseModel, Extra
-
-from langchain.embeddings.base import Embeddings
+from langchain.pydantic_v1 import BaseModel, Extra
+from langchain.schema.embeddings import Embeddings
 
 DEFAULT_MODEL_URL = "https://tfhub.dev/google/universal-sentence-encoder-multilingual/3"
 
 
 class TensorflowHubEmbeddings(BaseModel, Embeddings):
-    """Wrapper around tensorflow_hub embedding models.
+    """TensorflowHub embedding models.
 
     To use, you should have the ``tensorflow_text`` python package installed.
 
@@ -30,13 +28,20 @@ class TensorflowHubEmbeddings(BaseModel, Embeddings):
         super().__init__(**kwargs)
         try:
             import tensorflow_hub
+        except ImportError:
+            raise ImportError(
+                "Could not import tensorflow-hub python package. "
+                "Please install it with `pip install tensorflow-hub``."
+            )
+        try:
             import tensorflow_text  # noqa
+        except ImportError:
+            raise ImportError(
+                "Could not import tensorflow_text python package. "
+                "Please install it with `pip install tensorflow_text``."
+            )
 
-            self.embed = tensorflow_hub.load(self.model_url)
-        except ImportError as e:
-            raise ValueError(
-                "Could not import some python packages." "Please install them."
-            ) from e
+        self.embed = tensorflow_hub.load(self.model_url)
 
     class Config:
         """Configuration for this pydantic object."""

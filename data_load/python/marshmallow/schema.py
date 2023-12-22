@@ -1,5 +1,6 @@
 """The :class:`Schema` class, including its metaclass and options (class Meta)."""
 from __future__ import annotations
+from abc import ABCMeta
 
 from collections import defaultdict, OrderedDict
 from collections.abc import Mapping
@@ -41,25 +42,21 @@ from marshmallow.warnings import RemovedInMarshmallow4Warning
 _T = typing.TypeVar("_T")
 
 
-def _get_fields(attrs, ordered=False):
-    """Get fields from a class. If ordered=True, fields will sorted by creation index.
+def _get_fields(attrs):
+    """Get fields from a class
 
     :param attrs: Mapping of class attributes
-    :param bool ordered: Sort fields by creation index
     """
-    fields = [
+    return [
         (field_name, field_value)
         for field_name, field_value in attrs.items()
         if is_instance_or_subclass(field_value, base.FieldABC)
     ]
-    if ordered:
-        fields.sort(key=lambda pair: pair[1]._creation_index)
-    return fields
 
 
 # This function allows Schemas to inherit from non-Schema classes and ensures
 #   inheritance according to the MRO
-def _get_fields_by_mro(klass, ordered=False):
+def _get_fields_by_mro(klass):
     """Collect fields from a class, following its method resolution order. The
     class itself is excluded from the search; only its parents are checked. Get
     fields from ``_declared_fields`` if available, else use ``__dict__``.
@@ -72,7 +69,6 @@ def _get_fields_by_mro(klass, ordered=False):
         (
             _get_fields(
                 getattr(base, "_declared_fields", base.__dict__),
-                ordered=ordered,
             )
             for base in mro[:0:-1]
         ),
@@ -80,7 +76,7 @@ def _get_fields_by_mro(klass, ordered=False):
     )
 
 
-class SchemaMeta(type):
+class SchemaMeta(ABCMeta):
     """Metaclass for the Schema class. Binds the declared fields to
     a ``_declared_fields`` attribute, which is a dictionary mapping attribute
     names to field objects. Also sets the ``opts`` class attribute, which is
@@ -101,13 +97,13 @@ class SchemaMeta(type):
                     break
             else:
                 ordered = False
-        cls_fields = _get_fields(attrs, ordered=ordered)
+        cls_fields = _get_fields(attrs)
         # Remove fields from list of class attributes to avoid shadowing
         # Schema attributes/methods in case of name conflict
         for field_name, _ in cls_fields:
             del attrs[field_name]
         klass = super().__new__(mcs, name, bases, attrs)
-        inherited_fields = _get_fields_by_mro(klass, ordered=ordered)
+        inherited_fields = _get_fields_by_mro(klass)
 
         meta = klass.Meta
         # Set klass.opts in __new__ rather than __init__ so that it is accessible in
@@ -116,13 +112,12 @@ class SchemaMeta(type):
         # Add fields specified in the `include` class Meta option
         cls_fields += list(klass.opts.include.items())
 
-        dict_cls = OrderedDict if ordered else dict
         # Assign _declared_fields on class
         klass._declared_fields = mcs.get_declared_fields(
             klass=klass,
             cls_fields=cls_fields,
             inherited_fields=inherited_fields,
-            dict_cls=dict_cls,
+            dict_cls=dict,
         )
         return klass
 
@@ -132,7 +127,7 @@ class SchemaMeta(type):
         klass: type,
         cls_fields: list,
         inherited_fields: list,
-        dict_cls: type,
+        dict_cls: type = dict,
     ):
         """Returns a dictionary of field_name => `Field` pairs declared on the class.
         This is exposed mainly so that plugins can add additional fields, e.g. fields
@@ -142,8 +137,7 @@ class SchemaMeta(type):
         :param cls_fields: The fields declared on the class, including those added
             by the ``include`` class Meta option.
         :param inherited_fields: Inherited fields.
-        :param dict_cls: Either `dict` or `OrderedDict`, depending on whether
-            the user specified `ordered=True`.
+        :param dict_cls: dict-like class to use for dict output Default to ``dict``.
         """
         return dict_cls(inherited_fields + cls_fields)
 
@@ -318,6 +312,8 @@ class Schema(base.SchemaABC, metaclass=SchemaMeta):
 
     OPTIONS_CLASS = SchemaOpts  # type: type
 
+    set_class = OrderedSet
+
     # These get set by SchemaMeta
     opts = None  # type: SchemaOpts
     _declared_fields = {}  # type: typing.Dict[str, ma_fields.Field]
@@ -349,9 +345,7 @@ class Schema(base.SchemaABC, metaclass=SchemaMeta):
         - ``timeformat``: Default format for `Time <fields.Time>` fields.
         - ``render_module``: Module to use for `loads <Schema.loads>` and `dumps <Schema.dumps>`.
             Defaults to `json` from the standard library.
-        - ``ordered``: If `True`, order serialization output according to the
-            order in which fields were declared. Output of `Schema.dump` will be a
-            `collections.OrderedDict`.
+        - ``ordered``: If `True`, output of `Schema.dump` will be a `collections.OrderedDict`.
         - ``index_errors``: If `True`, errors dictionaries will include the index
             of invalid items in a collection.
         - ``load_only``: Tuple or list of fields to exclude from serialized results.
@@ -373,7 +367,7 @@ class Schema(base.SchemaABC, metaclass=SchemaMeta):
         context: dict | None = None,
         load_only: types.StrSequenceOrSet = (),
         dump_only: types.StrSequenceOrSet = (),
-        partial: bool | types.StrSequenceOrSet = False,
+        partial: bool | types.StrSequenceOrSet | None = None,
         unknown: str | None = None,
     ):
         # Raise error if only or exclude is passed as string, not list of strings
@@ -385,7 +379,9 @@ class Schema(base.SchemaABC, metaclass=SchemaMeta):
         self.declared_fields = copy.deepcopy(self._declared_fields)
         self.many = many
         self.only = only
-        self.exclude = set(self.opts.exclude) | set(exclude)
+        self.exclude: set[typing.Any] | typing.MutableSet[typing.Any] = set(
+            self.opts.exclude
+        ) | set(exclude)
         self.ordered = self.opts.ordered
         self.load_only = set(load_only) or set(self.opts.load_only)
         self.dump_only = set(dump_only) or set(self.opts.dump_only)
@@ -417,10 +413,6 @@ class Schema(base.SchemaABC, metaclass=SchemaMeta):
     @property
     def dict_class(self) -> type:
         return OrderedDict if self.ordered else dict
-
-    @property
-    def set_class(self) -> type:
-        return OrderedSet if self.ordered else set
 
     @classmethod
     def from_dict(
@@ -589,7 +581,7 @@ class Schema(base.SchemaABC, metaclass=SchemaMeta):
         *,
         error_store: ErrorStore,
         many: bool = False,
-        partial=False,
+        partial=None,
         unknown=RAISE,
         index=None,
     ) -> _T | list[_T]:
@@ -656,11 +648,19 @@ class Schema(base.SchemaABC, metaclass=SchemaMeta):
                         f[len_prefix:] for f in partial if f.startswith(prefix)
                     ]
                     d_kwargs["partial"] = sub_partial
-                else:
+                elif partial is not None:
                     d_kwargs["partial"] = partial
-                getter = lambda val: field_obj.deserialize(
-                    val, field_name, data, **d_kwargs
-                )
+
+                def getter(
+                    val, field_obj=field_obj, field_name=field_name, d_kwargs=d_kwargs
+                ):
+                    return field_obj.deserialize(
+                        val,
+                        field_name,
+                        data,
+                        **d_kwargs,
+                    )
+
                 value = self._call_and_store(
                     getter_func=getter,
                     data=raw_value,
@@ -961,7 +961,7 @@ class Schema(base.SchemaABC, metaclass=SchemaMeta):
 
         if self.only is not None:
             # Return only fields specified in only option
-            field_names = self.set_class(self.only)
+            field_names: typing.AbstractSet[typing.Any] = self.set_class(self.only)
 
             invalid_fields |= field_names - available_field_names
         else:
@@ -1047,15 +1047,15 @@ class Schema(base.SchemaABC, metaclass=SchemaMeta):
             # the type checker's perspective.
             if isinstance(field_obj, type) and issubclass(field_obj, base.FieldABC):
                 msg = (
-                    'Field for "{}" must be declared as a '
+                    'Field for "{field_name}" must be declared as a '
                     "Field instance, not a class. "
-                    'Did you mean "fields.{}()"?'.format(field_name, field_obj.__name__)
+                    'Did you mean "fields.{field_obj.__name__}()"?'
                 )
                 raise TypeError(msg) from error
             raise error
         self.on_bind_field(field_name, field_obj)
 
-    @lru_cache(maxsize=8)
+    @lru_cache(maxsize=8)  # noqa (https://github.com/PyCQA/flake8-bugbear/issues/310)
     def _has_processors(self, tag) -> bool:
         return bool(self._hooks[(tag, True)] or self._hooks[(tag, False)])
 
@@ -1080,7 +1080,7 @@ class Schema(base.SchemaABC, metaclass=SchemaMeta):
         *,
         many: bool,
         original_data,
-        partial: bool | types.StrSequenceOrSet,
+        partial: bool | types.StrSequenceOrSet | None,
     ):
         # This has to invert the order of the dump processors, so run the pass_many
         # processors first.
@@ -1157,7 +1157,7 @@ class Schema(base.SchemaABC, metaclass=SchemaMeta):
         data,
         original_data,
         many: bool,
-        partial: bool | types.StrSequenceOrSet,
+        partial: bool | types.StrSequenceOrSet | None,
         field_errors: bool = False,
     ):
         for attr_name in self._hooks[(VALIDATES_SCHEMA, pass_many)]:

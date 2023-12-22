@@ -205,6 +205,25 @@
       ],
       "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>Associates a security key to the instance.</p>"
     },
+    "AssociateTrafficDistributionGroupUser":{
+      "name":"AssociateTrafficDistributionGroupUser",
+      "http":{
+        "method":"PUT",
+        "requestUri":"/traffic-distribution-group/{TrafficDistributionGroupId}/user"
+      },
+      "input":{"shape":"AssociateTrafficDistributionGroupUserRequest"},
+      "output":{"shape":"AssociateTrafficDistributionGroupUserResponse"},
+      "errors":[
+        {"shape":"InvalidRequestException"},
+        {"shape":"AccessDeniedException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ResourceConflictException"},
+        {"shape":"InternalServiceException"}
+      ],
+      "documentation":"<p>Associates an agent with a traffic distribution group.</p>",
+      "idempotent":true
+    },
     "ClaimPhoneNumber":{
       "name":"ClaimPhoneNumber",
       "http":{
@@ -221,7 +240,7 @@
         {"shape":"IdempotencyException"},
         {"shape":"AccessDeniedException"}
       ],
-      "documentation":"<p>Claims an available phone number to your Amazon Connect instance or traffic distribution group. You can call this API only in the same Amazon Web Services Region where the Amazon Connect instance or traffic distribution group was created.</p> <p>For more information about how to use this operation, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/claim-phone-number.html\">Claim a phone number in your country</a> and <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/claim-phone-numbers-traffic-distribution-groups.html\">Claim phone numbers to traffic distribution groups</a> in the <i>Amazon Connect Administrator Guide</i>. </p> <important> <p>You can call the <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_SearchAvailablePhoneNumbers.html\">SearchAvailablePhoneNumbers</a> API for available phone numbers that you can claim. Call the <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_DescribePhoneNumber.html\">DescribePhoneNumber</a> API to verify the status of a previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ClaimPhoneNumber.html\">ClaimPhoneNumber</a> operation.</p> </important>"
+      "documentation":"<p>Claims an available phone number to your Amazon Connect instance or traffic distribution group. You can call this API only in the same Amazon Web Services Region where the Amazon Connect instance or traffic distribution group was created.</p> <p>For more information about how to use this operation, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/claim-phone-number.html\">Claim a phone number in your country</a> and <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/claim-phone-numbers-traffic-distribution-groups.html\">Claim phone numbers to traffic distribution groups</a> in the <i>Amazon Connect Administrator Guide</i>. </p> <important> <p>You can call the <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_SearchAvailablePhoneNumbers.html\">SearchAvailablePhoneNumbers</a> API for available phone numbers that you can claim. Call the <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_DescribePhoneNumber.html\">DescribePhoneNumber</a> API to verify the status of a previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ClaimPhoneNumber.html\">ClaimPhoneNumber</a> operation.</p> </important> <p>If you plan to claim and release numbers frequently during a 30 day period, contact us for a service quota exception. Otherwise, it is possible you will be blocked from claiming and releasing any more numbers until 30 days past the oldest number released has expired.</p> <p>By default you can claim and release up to 200% of your maximum number of active phone numbers during any 30 day period. If you claim and release phone numbers using the UI or API during a rolling 30 day cycle that exceeds 200% of your phone number service level quota, you will be blocked from claiming any more numbers until 30 days past the oldest number released has expired. </p> <p>For example, if you already have 99 claimed numbers and a service level quota of 99 phone numbers, and in any 30 day period you release 99, claim 99, and then release 99, you will have exceeded the 200% limit. At that point you are blocked from claiming any more numbers until you open an Amazon Web Services support ticket.</p>"
     },
     "CreateAgentStatus":{
       "name":"CreateAgentStatus",
@@ -373,6 +392,24 @@
       ],
       "documentation":"<p>Adds a new participant into an on-going chat contact. For more information, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/chat-customize-flow.html\">Customize chat flow experiences by integrating custom participants</a>.</p>"
     },
+    "CreatePrompt":{
+      "name":"CreatePrompt",
+      "http":{
+        "method":"PUT",
+        "requestUri":"/prompts/{InstanceId}"
+      },
+      "input":{"shape":"CreatePromptRequest"},
+      "output":{"shape":"CreatePromptResponse"},
+      "errors":[
+        {"shape":"DuplicateResourceException"},
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"LimitExceededException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"InternalServiceException"}
+      ],
+      "documentation":"<p>Creates a prompt. For more information about prompts, such as supported file types and maximum length, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/prompts.html\">Create prompts</a> in the <i>Amazon Connect Administrator's Guide</i>.</p>"
+    },
     "CreateQueue":{
       "name":"CreateQueue",
       "http":{
@@ -390,7 +427,7 @@
         {"shape":"ThrottlingException"},
         {"shape":"InternalServiceException"}
       ],
-      "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>Creates a new queue for the specified Amazon Connect instance.</p> <important> <p>If the number being used in the input is claimed to a traffic distribution group, and you are calling this API using an instance in the Amazon Web Services Region where the traffic distribution group was created, you can use either a full phone number ARN or UUID value for the <code>OutboundCallerIdNumberId</code> value of the <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_OutboundCallerConfig\">OutboundCallerConfig</a> request body parameter. However, if the number is claimed to a traffic distribution group and you are calling this API using an instance in the alternate Amazon Web Services Region associated with the traffic distribution group, you must provide a full phone number ARN. If a UUID is provided in this scenario, you will receive a <code>ResourceNotFoundException</code>.</p> </important>"
+      "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>Creates a new queue for the specified Amazon Connect instance.</p> <important> <ul> <li> <p>If the phone number is claimed to a traffic distribution group that was created in the same Region as the Amazon Connect instance where you are calling this API, then you can use a full phone number ARN or a UUID for <code>OutboundCallerIdNumberId</code>. However, if the phone number is claimed to a traffic distribution group that is in one Region, and you are calling this API from an instance in another Amazon Web Services Region that is associated with the traffic distribution group, you must provide a full phone number ARN. If a UUID is provided in this scenario, you will receive a <code>ResourceNotFoundException</code>.</p> </li> <li> <p>Only use the phone number ARN format that doesn't contain <code>instance</code> in the path, for example, <code>arn:aws:connect:us-east-1:1234567890:phone-number/uuid</code>. This is the same ARN format that is returned when you call the <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ListPhoneNumbersV2.html\">ListPhoneNumbersV2</a> API.</p> </li> <li> <p>If you plan to use IAM policies to allow/deny access to this API for phone number resources claimed to a traffic distribution group, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/security_iam_resource-level-policy-examples.html#allow-deny-queue-actions-replica-region\">Allow or Deny queue API actions for phone numbers in a replica Region</a>.</p> </li> </ul> </important>"
     },
     "CreateQuickConnect":{
       "name":"CreateQuickConnect",
@@ -466,7 +503,7 @@
         {"shape":"ThrottlingException"},
         {"shape":"InternalServiceException"}
       ],
-      "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>Creates a security profile.</p>"
+      "documentation":"<p>Creates a security profile.</p>"
     },
     "CreateTaskTemplate":{
       "name":"CreateTaskTemplate",
@@ -504,7 +541,7 @@
         {"shape":"ResourceConflictException"},
         {"shape":"ResourceNotReadyException"}
       ],
-      "documentation":"<p>Creates a traffic distribution group given an Amazon Connect instance that has been replicated. </p> <p>For more information about creating traffic distribution groups, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/setup-traffic-distribution-groups.html\">Set up traffic distribution groups</a> in the <i>Amazon Connect Administrator Guide</i>. </p>"
+      "documentation":"<p>Creates a traffic distribution group given an Amazon Connect instance that has been replicated. </p> <note> <p>The <code>SignInConfig</code> distribution is available only on a default <code>TrafficDistributionGroup</code> (see the <code>IsDefault</code> parameter in the <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_TrafficDistributionGroup.html\">TrafficDistributionGroup</a> data type). If you call <code>UpdateTrafficDistribution</code> with a modified <code>SignInConfig</code> and a non-default <code>TrafficDistributionGroup</code>, an <code>InvalidRequestException</code> is returned.</p> </note> <p>For more information about creating traffic distribution groups, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/setup-traffic-distribution-groups.html\">Set up traffic distribution groups</a> in the <i>Amazon Connect Administrator Guide</i>. </p>"
     },
     "CreateUseCase":{
       "name":"CreateUseCase",
@@ -540,7 +577,7 @@
         {"shape":"ThrottlingException"},
         {"shape":"InternalServiceException"}
       ],
-      "documentation":"<p>Creates a user account for the specified Amazon Connect instance.</p> <p>For information about how to create user accounts using the Amazon Connect console, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/user-management.html\">Add Users</a> in the <i>Amazon Connect Administrator Guide</i>.</p>"
+      "documentation":"<p>Creates a user account for the specified Amazon Connect instance.</p> <important> <p>Certain <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UserIdentityInfo.html\">UserIdentityInfo</a> parameters are required in some situations. For example, <code>Email</code> is required if you are using SAML for identity management. <code>FirstName</code> and <code>LastName</code> are required if you are using Amazon Connect or SAML for identity management.</p> </important> <p>For information about how to create user accounts using the Amazon Connect console, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/user-management.html\">Add Users</a> in the <i>Amazon Connect Administrator Guide</i>.</p>"
     },
     "CreateUserHierarchyGroup":{
       "name":"CreateUserHierarchyGroup",
@@ -560,6 +597,49 @@
         {"shape":"InternalServiceException"}
       ],
       "documentation":"<p>Creates a new user hierarchy group.</p>"
+    },
+    "CreateView":{
+      "name":"CreateView",
+      "http":{
+        "method":"PUT",
+        "requestUri":"/views/{InstanceId}"
+      },
+      "input":{"shape":"CreateViewRequest"},
+      "output":{"shape":"CreateViewResponse"},
+      "errors":[
+        {"shape":"AccessDeniedException"},
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"DuplicateResourceException"},
+        {"shape":"ServiceQuotaExceededException"},
+        {"shape":"TooManyRequestsException"},
+        {"shape":"ResourceInUseException"}
+      ],
+      "documentation":"<p>Creates a new view with the possible status of <code>SAVED</code> or <code>PUBLISHED</code>.</p> <p>The views will have a unique name for each connect instance.</p> <p>It performs basic content validation if the status is <code>SAVED</code> or full content validation if the status is set to <code>PUBLISHED</code>. An error is returned if validation fails. It associates either the <code>$SAVED</code> qualifier or both of the <code>$SAVED</code> and <code>$LATEST</code> qualifiers with the provided view content based on the status. The view is idempotent if ClientToken is provided.</p>",
+      "idempotent":true
+    },
+    "CreateViewVersion":{
+      "name":"CreateViewVersion",
+      "http":{
+        "method":"PUT",
+        "requestUri":"/views/{InstanceId}/{ViewId}/versions"
+      },
+      "input":{"shape":"CreateViewVersionRequest"},
+      "output":{"shape":"CreateViewVersionResponse"},
+      "errors":[
+        {"shape":"AccessDeniedException"},
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"TooManyRequestsException"},
+        {"shape":"ServiceQuotaExceededException"},
+        {"shape":"ResourceInUseException"}
+      ],
+      "documentation":"<p>Publishes a new version of the view identifier.</p> <p>Versions are immutable and monotonically increasing.</p> <p>It returns the highest version if there is no change in content compared to that version. An error is displayed if the supplied ViewContentSha256 is different from the ViewContentSha256 of the <code>$LATEST</code> alias.</p>",
+      "idempotent":true
     },
     "CreateVocabulary":{
       "name":"CreateVocabulary",
@@ -611,7 +691,8 @@
         {"shape":"InternalServiceException"},
         {"shape":"ResourceConflictException"}
       ],
-      "documentation":"<p>Deletes a contact evaluation in the specified Amazon Connect instance.</p>"
+      "documentation":"<p>Deletes a contact evaluation in the specified Amazon Connect instance.</p>",
+      "idempotent":true
     },
     "DeleteContactFlow":{
       "name":"DeleteContactFlow",
@@ -663,7 +744,8 @@
         {"shape":"InternalServiceException"},
         {"shape":"ResourceConflictException"}
       ],
-      "documentation":"<p>Deletes an evaluation form in the specified Amazon Connect instance. </p> <ul> <li> <p>If the version property is provided, only the specified version of the evaluation form is deleted.</p> </li> <li> <p>If no version is provided, then the full form (all versions) is deleted.</p> </li> </ul>"
+      "documentation":"<p>Deletes an evaluation form in the specified Amazon Connect instance. </p> <ul> <li> <p>If the version property is provided, only the specified version of the evaluation form is deleted.</p> </li> <li> <p>If no version is provided, then the full form (all versions) is deleted.</p> </li> </ul>",
+      "idempotent":true
     },
     "DeleteHoursOfOperation":{
       "name":"DeleteHoursOfOperation",
@@ -710,6 +792,39 @@
       ],
       "documentation":"<p>Deletes an Amazon Web Services resource association from an Amazon Connect instance. The association must not have any use cases associated with it.</p>"
     },
+    "DeletePrompt":{
+      "name":"DeletePrompt",
+      "http":{
+        "method":"DELETE",
+        "requestUri":"/prompts/{InstanceId}/{PromptId}"
+      },
+      "input":{"shape":"DeletePromptRequest"},
+      "errors":[
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"InternalServiceException"}
+      ],
+      "documentation":"<p>Deletes a prompt.</p>"
+    },
+    "DeleteQueue":{
+      "name":"DeleteQueue",
+      "http":{
+        "method":"DELETE",
+        "requestUri":"/queues/{InstanceId}/{QueueId}"
+      },
+      "input":{"shape":"DeleteQueueRequest"},
+      "errors":[
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ResourceInUseException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"InternalServiceException"}
+      ],
+      "documentation":"<p>Deletes a queue.</p>"
+    },
     "DeleteQuickConnect":{
       "name":"DeleteQuickConnect",
       "http":{
@@ -725,6 +840,23 @@
         {"shape":"InternalServiceException"}
       ],
       "documentation":"<p>Deletes a quick connect.</p>"
+    },
+    "DeleteRoutingProfile":{
+      "name":"DeleteRoutingProfile",
+      "http":{
+        "method":"DELETE",
+        "requestUri":"/routing-profiles/{InstanceId}/{RoutingProfileId}"
+      },
+      "input":{"shape":"DeleteRoutingProfileRequest"},
+      "errors":[
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ResourceInUseException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"InternalServiceException"}
+      ],
+      "documentation":"<p>Deletes a routing profile.</p>"
     },
     "DeleteRule":{
       "name":"DeleteRule",
@@ -758,7 +890,7 @@
         {"shape":"AccessDeniedException"},
         {"shape":"ResourceInUseException"}
       ],
-      "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>Deletes a security profile.</p>"
+      "documentation":"<p>Deletes a security profile.</p>"
     },
     "DeleteTaskTemplate":{
       "name":"DeleteTaskTemplate",
@@ -841,6 +973,44 @@
         {"shape":"InternalServiceException"}
       ],
       "documentation":"<p>Deletes an existing user hierarchy group. It must not be associated with any agents or have any active child groups.</p>"
+    },
+    "DeleteView":{
+      "name":"DeleteView",
+      "http":{
+        "method":"DELETE",
+        "requestUri":"/views/{InstanceId}/{ViewId}"
+      },
+      "input":{"shape":"DeleteViewRequest"},
+      "output":{"shape":"DeleteViewResponse"},
+      "errors":[
+        {"shape":"AccessDeniedException"},
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"TooManyRequestsException"},
+        {"shape":"ResourceInUseException"}
+      ],
+      "documentation":"<p>Deletes the view entirely. It deletes the view and all associated qualifiers (versions and aliases).</p>"
+    },
+    "DeleteViewVersion":{
+      "name":"DeleteViewVersion",
+      "http":{
+        "method":"DELETE",
+        "requestUri":"/views/{InstanceId}/{ViewId}/versions/{ViewVersion}"
+      },
+      "input":{"shape":"DeleteViewVersionRequest"},
+      "output":{"shape":"DeleteViewVersionResponse"},
+      "errors":[
+        {"shape":"AccessDeniedException"},
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"TooManyRequestsException"},
+        {"shape":"ResourceInUseException"}
+      ],
+      "documentation":"<p>Deletes the particular version specified in <code>ViewVersion</code> identifier.</p>"
     },
     "DeleteVocabulary":{
       "name":"DeleteVocabulary",
@@ -1045,6 +1215,23 @@
       ],
       "documentation":"<p>Gets details and status of a phone number that’s claimed to your Amazon Connect instance or traffic distribution group.</p> <important> <p>If the number is claimed to a traffic distribution group, and you are calling in the Amazon Web Services Region where the traffic distribution group was created, you can use either a phone number ARN or UUID value for the <code>PhoneNumberId</code> URI request parameter. However, if the number is claimed to a traffic distribution group and you are calling this API in the alternate Amazon Web Services Region associated with the traffic distribution group, you must provide a full phone number ARN. If a UUID is provided in this scenario, you will receive a <code>ResourceNotFoundException</code>.</p> </important>"
     },
+    "DescribePrompt":{
+      "name":"DescribePrompt",
+      "http":{
+        "method":"GET",
+        "requestUri":"/prompts/{InstanceId}/{PromptId}"
+      },
+      "input":{"shape":"DescribePromptRequest"},
+      "output":{"shape":"DescribePromptResponse"},
+      "errors":[
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"InternalServiceException"}
+      ],
+      "documentation":"<p>Describes the prompt.</p>"
+    },
     "DescribeQueue":{
       "name":"DescribeQueue",
       "http":{
@@ -1128,7 +1315,7 @@
         {"shape":"ThrottlingException"},
         {"shape":"InternalServiceException"}
       ],
-      "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>Gets basic information about the security profle.</p>"
+      "documentation":"<p>Gets basic information about the security profle.</p>"
     },
     "DescribeTrafficDistributionGroup":{
       "name":"DescribeTrafficDistributionGroup",
@@ -1197,6 +1384,24 @@
         {"shape":"InternalServiceException"}
       ],
       "documentation":"<p>Describes the hierarchy structure of the specified Amazon Connect instance.</p>"
+    },
+    "DescribeView":{
+      "name":"DescribeView",
+      "http":{
+        "method":"GET",
+        "requestUri":"/views/{InstanceId}/{ViewId}"
+      },
+      "input":{"shape":"DescribeViewRequest"},
+      "output":{"shape":"DescribeViewResponse"},
+      "errors":[
+        {"shape":"AccessDeniedException"},
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"TooManyRequestsException"}
+      ],
+      "documentation":"<p>Retrieves the view for the specified Amazon Connect instance and view identifier.</p> <p>The view identifier can be supplied as a ViewId or ARN.</p> <p> <code>$SAVED</code> needs to be supplied if a view is unpublished.</p> <p>The view identifier can contain an optional qualifier, for example, <code>&lt;view-id&gt;:$SAVED</code>, which is either an actual version number or an Amazon Connect managed qualifier <code>$SAVED | $LATEST</code>. If it is not supplied, then <code>$LATEST</code> is assumed for customer managed views and an error is returned if there is no published content available. Version 1 is assumed for Amazon Web Services managed views.</p>"
     },
     "DescribeVocabulary":{
       "name":"DescribeVocabulary",
@@ -1358,6 +1563,25 @@
       ],
       "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>Deletes the specified security key.</p>"
     },
+    "DisassociateTrafficDistributionGroupUser":{
+      "name":"DisassociateTrafficDistributionGroupUser",
+      "http":{
+        "method":"DELETE",
+        "requestUri":"/traffic-distribution-group/{TrafficDistributionGroupId}/user"
+      },
+      "input":{"shape":"DisassociateTrafficDistributionGroupUserRequest"},
+      "output":{"shape":"DisassociateTrafficDistributionGroupUserResponse"},
+      "errors":[
+        {"shape":"InvalidRequestException"},
+        {"shape":"AccessDeniedException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ResourceConflictException"},
+        {"shape":"InternalServiceException"}
+      ],
+      "documentation":"<p>Disassociates an agent from a traffic distribution group.</p>",
+      "idempotent":true
+    },
     "DismissUserContact":{
       "name":"DismissUserContact",
       "http":{
@@ -1441,7 +1665,7 @@
         {"shape":"InternalServiceException"},
         {"shape":"DuplicateResourceException"}
       ],
-      "documentation":"<p>Retrieves a token for federation.</p> <note> <p>This API doesn't support root users. If you try to invoke GetFederationToken with root credentials, an error message similar to the following one appears: </p> <p> <code>Provided identity: Principal: .... User: .... cannot be used for federation with Amazon Connect</code> </p> </note>"
+      "documentation":"<p>Supports SAML sign-in for Amazon Connect. Retrieves a token for federation. The token is for the Amazon Connect user which corresponds to the IAM credentials that were used to invoke this action. </p> <p>For more information about how SAML sign-in works in Amazon Connect, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/configure-saml.html \">Configure SAML with IAM for Amazon Connect in the <i>Amazon Connect Administrator Guide</i>.</a> </p> <note> <p>This API doesn't support root users. If you try to invoke GetFederationToken with root credentials, an error message similar to the following one appears: </p> <p> <code>Provided identity: Principal: .... User: .... cannot be used for federation with Amazon Connect</code> </p> </note>"
     },
     "GetMetricData":{
       "name":"GetMetricData",
@@ -1458,7 +1682,7 @@
         {"shape":"ThrottlingException"},
         {"shape":"ResourceNotFoundException"}
       ],
-      "documentation":"<p>Gets historical metric data from the specified Amazon Connect instance.</p> <p>For a description of each historical metric, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/historical-metrics-definitions.html\">Historical Metrics Definitions</a> in the <i>Amazon Connect Administrator Guide</i>.</p>"
+      "documentation":"<p>Gets historical metric data from the specified Amazon Connect instance.</p> <p>For a description of each historical metric, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/historical-metrics-definitions.html\">Historical Metrics Definitions</a> in the <i>Amazon Connect Administrator Guide</i>.</p> <note> <p>We recommend using the <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_GetMetricDataV2.html\">GetMetricDataV2</a> API. It provides more flexibility, features, and the ability to query longer time ranges than <code>GetMetricData</code>. Use it to retrieve historical agent and contact metrics for the last 3 months, at varying intervals. You can also use it to build custom dashboards to measure historical queue and agent performance. For example, you can track the number of incoming contacts for the last 7 days, with data split by day, to see how contact volume changed per day of the week.</p> </note>"
     },
     "GetMetricDataV2":{
       "name":"GetMetricDataV2",
@@ -1475,7 +1699,24 @@
         {"shape":"ThrottlingException"},
         {"shape":"ResourceNotFoundException"}
       ],
-      "documentation":"<p>Gets metric data from the specified Amazon Connect instance. </p> <p> <code>GetMetricDataV2</code> offers more features than <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_GetMetricData.html\">GetMetricData</a>, the previous version of this API. It has new metrics, offers filtering at a metric level, and offers the ability to filter and group data by channels, queues, routing profiles, agents, and agent hierarchy levels. It can retrieve historical data for the last 35 days, in 24-hour intervals.</p> <p>For a description of the historical metrics that are supported by <code>GetMetricDataV2</code> and <code>GetMetricData</code>, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/historical-metrics-definitions.html\">Historical metrics definitions</a> in the <i>Amazon Connect Administrator's Guide</i>. </p> <p>This API is not available in the Amazon Web Services GovCloud (US) Regions.</p>"
+      "documentation":"<p>Gets metric data from the specified Amazon Connect instance. </p> <p> <code>GetMetricDataV2</code> offers more features than <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_GetMetricData.html\">GetMetricData</a>, the previous version of this API. It has new metrics, offers filtering at a metric level, and offers the ability to filter and group data by channels, queues, routing profiles, agents, and agent hierarchy levels. It can retrieve historical data for the last 3 months, at varying intervals. </p> <p>For a description of the historical metrics that are supported by <code>GetMetricDataV2</code> and <code>GetMetricData</code>, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/historical-metrics-definitions.html\">Historical metrics definitions</a> in the <i>Amazon Connect Administrator's Guide</i>.</p>"
+    },
+    "GetPromptFile":{
+      "name":"GetPromptFile",
+      "http":{
+        "method":"GET",
+        "requestUri":"/prompts/{InstanceId}/{PromptId}/file"
+      },
+      "input":{"shape":"GetPromptFileRequest"},
+      "output":{"shape":"GetPromptFileResponse"},
+      "errors":[
+        {"shape":"InvalidParameterException"},
+        {"shape":"InvalidRequestException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"InternalServiceException"}
+      ],
+      "documentation":"<p>Gets the prompt file.</p>"
     },
     "GetTaskTemplate":{
       "name":"GetTaskTemplate",
@@ -1807,7 +2048,7 @@
         {"shape":"ThrottlingException"},
         {"shape":"InternalServiceException"}
       ],
-      "documentation":"<p>Provides information about the phone numbers for the specified Amazon Connect instance. </p> <p>For more information about phone numbers, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/contact-center-phone-number.html\">Set Up Phone Numbers for Your Contact Center</a> in the <i>Amazon Connect Administrator Guide</i>.</p> <important> <p>The phone number <code>Arn</code> value that is returned from each of the items in the <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ListPhoneNumbers.html#connect-ListPhoneNumbers-response-PhoneNumberSummaryList\">PhoneNumberSummaryList</a> cannot be used to tag phone number resources. It will fail with a <code>ResourceNotFoundException</code>. Instead, use the <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ListPhoneNumbersV2.html\">ListPhoneNumbersV2</a> API. It returns the new phone number ARN that can be used to tag phone number resources.</p> </important>"
+      "documentation":"<p>Provides information about the phone numbers for the specified Amazon Connect instance. </p> <p>For more information about phone numbers, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/contact-center-phone-number.html\">Set Up Phone Numbers for Your Contact Center</a> in the <i>Amazon Connect Administrator Guide</i>.</p> <important> <ul> <li> <p>We recommend using <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ListPhoneNumbersV2.html\">ListPhoneNumbersV2</a> to return phone number types. ListPhoneNumbers doesn't support number types <code>UIFN</code>, <code>SHARED</code>, <code>THIRD_PARTY_TF</code>, and <code>THIRD_PARTY_DID</code>. While it returns numbers of those types, it incorrectly lists them as <code>TOLL_FREE</code> or <code>DID</code>. </p> </li> <li> <p>The phone number <code>Arn</code> value that is returned from each of the items in the <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ListPhoneNumbers.html#connect-ListPhoneNumbers-response-PhoneNumberSummaryList\">PhoneNumberSummaryList</a> cannot be used to tag phone number resources. It will fail with a <code>ResourceNotFoundException</code>. Instead, use the <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ListPhoneNumbersV2.html\">ListPhoneNumbersV2</a> API. It returns the new phone number ARN that can be used to tag phone number resources.</p> </li> </ul> </important>"
     },
     "ListPhoneNumbersV2":{
       "name":"ListPhoneNumbersV2",
@@ -1824,7 +2065,7 @@
         {"shape":"InternalServiceException"},
         {"shape":"AccessDeniedException"}
       ],
-      "documentation":"<p>Lists phone numbers claimed to your Amazon Connect instance or traffic distribution group. If the provided <code>TargetArn</code> is a traffic distribution group, you can call this API in both Amazon Web Services Regions associated with traffic distribution group.</p> <p>For more information about phone numbers, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/contact-center-phone-number.html\">Set Up Phone Numbers for Your Contact Center</a> in the <i>Amazon Connect Administrator Guide</i>.</p>"
+      "documentation":"<p>Lists phone numbers claimed to your Amazon Connect instance or traffic distribution group. If the provided <code>TargetArn</code> is a traffic distribution group, you can call this API in both Amazon Web Services Regions associated with traffic distribution group.</p> <p>For more information about phone numbers, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/contact-center-phone-number.html\">Set Up Phone Numbers for Your Contact Center</a> in the <i>Amazon Connect Administrator Guide</i>.</p> <note> <ul> <li> <p>When given an instance ARN, <code>ListPhoneNumbersV2</code> returns only the phone numbers claimed to the instance.</p> </li> <li> <p>When given a traffic distribution group ARN <code>ListPhoneNumbersV2</code> returns only the phone numbers claimed to the traffic distribution group.</p> </li> </ul> </note>"
     },
     "ListPrompts":{
       "name":"ListPrompts",
@@ -1962,6 +2203,23 @@
       ],
       "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>Returns a paginated list of all security keys associated with the instance.</p>"
     },
+    "ListSecurityProfileApplications":{
+      "name":"ListSecurityProfileApplications",
+      "http":{
+        "method":"GET",
+        "requestUri":"/security-profiles-applications/{InstanceId}/{SecurityProfileId}"
+      },
+      "input":{"shape":"ListSecurityProfileApplicationsRequest"},
+      "output":{"shape":"ListSecurityProfileApplicationsResponse"},
+      "errors":[
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"InternalServiceException"}
+      ],
+      "documentation":"<p>Returns a list of third party applications in a specific security profile.</p>"
+    },
     "ListSecurityProfilePermissions":{
       "name":"ListSecurityProfilePermissions",
       "http":{
@@ -1977,7 +2235,7 @@
         {"shape":"ThrottlingException"},
         {"shape":"InternalServiceException"}
       ],
-      "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>Lists the permissions granted to a security profile.</p>"
+      "documentation":"<p>Lists the permissions granted to a security profile.</p>"
     },
     "ListSecurityProfiles":{
       "name":"ListSecurityProfiles",
@@ -2029,6 +2287,23 @@
         {"shape":"InternalServiceException"}
       ],
       "documentation":"<p>Lists task templates for the specified Amazon Connect instance.</p>"
+    },
+    "ListTrafficDistributionGroupUsers":{
+      "name":"ListTrafficDistributionGroupUsers",
+      "http":{
+        "method":"GET",
+        "requestUri":"/traffic-distribution-group/{TrafficDistributionGroupId}/user"
+      },
+      "input":{"shape":"ListTrafficDistributionGroupUsersRequest"},
+      "output":{"shape":"ListTrafficDistributionGroupUsersResponse"},
+      "errors":[
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"InvalidRequestException"},
+        {"shape":"AccessDeniedException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"InternalServiceException"}
+      ],
+      "documentation":"<p>Lists traffic distribution group users.</p>"
     },
     "ListTrafficDistributionGroups":{
       "name":"ListTrafficDistributionGroups",
@@ -2096,6 +2371,42 @@
       ],
       "documentation":"<p>Provides summary information about the users for the specified Amazon Connect instance.</p>"
     },
+    "ListViewVersions":{
+      "name":"ListViewVersions",
+      "http":{
+        "method":"GET",
+        "requestUri":"/views/{InstanceId}/{ViewId}/versions"
+      },
+      "input":{"shape":"ListViewVersionsRequest"},
+      "output":{"shape":"ListViewVersionsResponse"},
+      "errors":[
+        {"shape":"AccessDeniedException"},
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"TooManyRequestsException"}
+      ],
+      "documentation":"<p>Returns all the available versions for the specified Amazon Connect instance and view identifier.</p> <p>Results will be sorted from highest to lowest.</p>"
+    },
+    "ListViews":{
+      "name":"ListViews",
+      "http":{
+        "method":"GET",
+        "requestUri":"/views/{InstanceId}"
+      },
+      "input":{"shape":"ListViewsRequest"},
+      "output":{"shape":"ListViewsResponse"},
+      "errors":[
+        {"shape":"AccessDeniedException"},
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"TooManyRequestsException"}
+      ],
+      "documentation":"<p>Returns views in the given instance.</p> <p>Results are sorted primarily by type, and secondarily by name.</p>"
+    },
     "MonitorContact":{
       "name":"MonitorContact",
       "http":{
@@ -2149,7 +2460,7 @@
         {"shape":"IdempotencyException"},
         {"shape":"AccessDeniedException"}
       ],
-      "documentation":"<p>Releases a phone number previously claimed to an Amazon Connect instance or traffic distribution group. You can call this API only in the Amazon Web Services Region where the number was claimed.</p> <important> <p>To release phone numbers from a traffic distribution group, use the <code>ReleasePhoneNumber</code> API, not the Amazon Connect console.</p> <p>After releasing a phone number, the phone number enters into a cooldown period of 30 days. It cannot be searched for or claimed again until the period has ended. If you accidentally release a phone number, contact Amazon Web Services Support.</p> </important>"
+      "documentation":"<p>Releases a phone number previously claimed to an Amazon Connect instance or traffic distribution group. You can call this API only in the Amazon Web Services Region where the number was claimed.</p> <important> <p>To release phone numbers from a traffic distribution group, use the <code>ReleasePhoneNumber</code> API, not the Amazon Connect console.</p> <p>After releasing a phone number, the phone number enters into a cooldown period of 30 days. It cannot be searched for or claimed again until the period has ended. If you accidentally release a phone number, contact Amazon Web Services Support.</p> </important> <p>If you plan to claim and release numbers frequently during a 30 day period, contact us for a service quota exception. Otherwise, it is possible you will be blocked from claiming and releasing any more numbers until 30 days past the oldest number released has expired.</p> <p>By default you can claim and release up to 200% of your maximum number of active phone numbers during any 30 day period. If you claim and release phone numbers using the UI or API during a rolling 30 day cycle that exceeds 200% of your phone number service level quota, you will be blocked from claiming any more numbers until 30 days past the oldest number released has expired. </p> <p>For example, if you already have 99 claimed numbers and a service level quota of 99 phone numbers, and in any 30 day period you release 99, claim 99, and then release 99, you will have exceeded the 200% limit. At that point you are blocked from claiming any more numbers until you open an Amazon Web Services support ticket.</p>"
     },
     "ReplicateInstance":{
       "name":"ReplicateInstance",
@@ -2184,7 +2495,7 @@
         {"shape":"ResourceNotFoundException"},
         {"shape":"InternalServiceException"}
       ],
-      "documentation":"<p>When a contact is being recorded, and the recording has been suspended using SuspendContactRecording, this API resumes recording the call.</p> <p>Only voice recordings are supported at this time.</p>"
+      "documentation":"<p>When a contact is being recorded, and the recording has been suspended using SuspendContactRecording, this API resumes recording the call or screen.</p> <p>Voice and screen recordings are supported.</p>"
     },
     "SearchAvailablePhoneNumbers":{
       "name":"SearchAvailablePhoneNumbers",
@@ -2202,6 +2513,40 @@
       ],
       "documentation":"<p>Searches for available phone numbers that you can claim to your Amazon Connect instance or traffic distribution group. If the provided <code>TargetArn</code> is a traffic distribution group, you can call this API in both Amazon Web Services Regions associated with the traffic distribution group.</p>"
     },
+    "SearchHoursOfOperations":{
+      "name":"SearchHoursOfOperations",
+      "http":{
+        "method":"POST",
+        "requestUri":"/search-hours-of-operations"
+      },
+      "input":{"shape":"SearchHoursOfOperationsRequest"},
+      "output":{"shape":"SearchHoursOfOperationsResponse"},
+      "errors":[
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"InternalServiceException"}
+      ],
+      "documentation":"<p>Searches the hours of operation in an Amazon Connect instance, with optional filtering.</p>"
+    },
+    "SearchPrompts":{
+      "name":"SearchPrompts",
+      "http":{
+        "method":"POST",
+        "requestUri":"/search-prompts"
+      },
+      "input":{"shape":"SearchPromptsRequest"},
+      "output":{"shape":"SearchPromptsResponse"},
+      "errors":[
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"InternalServiceException"}
+      ],
+      "documentation":"<p>Searches prompts in an Amazon Connect instance, with optional filtering.</p>"
+    },
     "SearchQueues":{
       "name":"SearchQueues",
       "http":{
@@ -2217,7 +2562,42 @@
         {"shape":"ThrottlingException"},
         {"shape":"InternalServiceException"}
       ],
-      "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>Searches queues in an Amazon Connect instance, with optional filtering.</p>"
+      "documentation":"<p>Searches queues in an Amazon Connect instance, with optional filtering.</p>"
+    },
+    "SearchQuickConnects":{
+      "name":"SearchQuickConnects",
+      "http":{
+        "method":"POST",
+        "requestUri":"/search-quick-connects"
+      },
+      "input":{"shape":"SearchQuickConnectsRequest"},
+      "output":{"shape":"SearchQuickConnectsResponse"},
+      "errors":[
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"InternalServiceException"}
+      ],
+      "documentation":"<p>Searches quick connects in an Amazon Connect instance, with optional filtering.</p>"
+    },
+    "SearchResourceTags":{
+      "name":"SearchResourceTags",
+      "http":{
+        "method":"POST",
+        "requestUri":"/search-resource-tags"
+      },
+      "input":{"shape":"SearchResourceTagsRequest"},
+      "output":{"shape":"SearchResourceTagsResponse"},
+      "errors":[
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"MaximumResultReturnedException"}
+      ],
+      "documentation":"<p>Searches tags used in an Amazon Connect instance using optional search criteria.</p>"
     },
     "SearchRoutingProfiles":{
       "name":"SearchRoutingProfiles",
@@ -2234,7 +2614,7 @@
         {"shape":"ThrottlingException"},
         {"shape":"InternalServiceException"}
       ],
-      "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>Searches routing profiles in an Amazon Connect instance, with optional filtering.</p>"
+      "documentation":"<p>Searches routing profiles in an Amazon Connect instance, with optional filtering.</p>"
     },
     "SearchSecurityProfiles":{
       "name":"SearchSecurityProfiles",
@@ -2251,7 +2631,7 @@
         {"shape":"ThrottlingException"},
         {"shape":"InternalServiceException"}
       ],
-      "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>Searches security profiles in an Amazon Connect instance, with optional filtering.</p>"
+      "documentation":"<p>Searches security profiles in an Amazon Connect instance, with optional filtering.</p>"
     },
     "SearchUsers":{
       "name":"SearchUsers",
@@ -2268,7 +2648,7 @@
         {"shape":"ThrottlingException"},
         {"shape":"InternalServiceException"}
       ],
-      "documentation":"<p>Searches users in an Amazon Connect instance, with optional filtering.</p> <note> <p> <code>AfterContactWorkTimeLimit</code> is returned in milliseconds. </p> </note>"
+      "documentation":"<p>Searches users in an Amazon Connect instance, with optional filtering. </p> <note> <p> <code>AfterContactWorkTimeLimit</code> is returned in milliseconds. </p> </note>"
     },
     "SearchVocabularies":{
       "name":"SearchVocabularies",
@@ -2390,7 +2770,7 @@
         {"shape":"ServiceQuotaExceededException"},
         {"shape":"InternalServiceException"}
       ],
-      "documentation":"<p>Initiates a flow to start a new task.</p>"
+      "documentation":"<p>Initiates a flow to start a new task contact. For more information about task contacts, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/tasks.html\">Concepts: Tasks in Amazon Connect</a> in the <i>Amazon Connect Administrator Guide</i>. </p> <p>When using <code>PreviousContactId</code> and <code>RelatedContactId</code> input parameters, note the following:</p> <ul> <li> <p> <code>PreviousContactId</code> </p> <ul> <li> <p>Any updates to user-defined task contact attributes on any contact linked through the same <code>PreviousContactId</code> will affect every contact in the chain.</p> </li> <li> <p>There can be a maximum of 12 linked task contacts in a chain. That is, 12 task contacts can be created that share the same <code>PreviousContactId</code>.</p> </li> </ul> </li> <li> <p> <code>RelatedContactId</code> </p> <ul> <li> <p>Copies contact attributes from the related task contact to the new contact.</p> </li> <li> <p>Any update on attributes in a new task contact does not update attributes on previous contact.</p> </li> <li> <p>There’s no limit on the number of task contacts that can be created that use the same <code>RelatedContactId</code>.</p> </li> </ul> </li> </ul> <p>In addition, when calling StartTaskContact include only one of these parameters: <code>ContactFlowID</code>, <code>QuickConnectID</code>, or <code>TaskTemplateID</code>. Only one parameter is required as long as the task template has a flow configured to run it. If more than one parameter is specified, or only the <code>TaskTemplateID</code> is specified but it does not have a flow configured, the request returns an error because Amazon Connect cannot identify the unique flow to run when the task is created.</p> <p>A <code>ServiceQuotaExceededException</code> occurs when the number of open tasks exceeds the active tasks quota or there are already 12 tasks referencing the same <code>PreviousContactId</code>. For more information about service quotas for task contacts, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/amazon-connect-service-limits.html\">Amazon Connect service quotas</a> in the <i>Amazon Connect Administrator Guide</i>. </p>"
     },
     "StopContact":{
       "name":"StopContact",
@@ -2407,7 +2787,7 @@
         {"shape":"ResourceNotFoundException"},
         {"shape":"InternalServiceException"}
       ],
-      "documentation":"<p>Ends the specified contact. This call does not work for the following initiation methods:</p> <ul> <li> <p>DISCONNECT</p> </li> <li> <p>TRANSFER</p> </li> <li> <p>QUEUE_TRANSFER</p> </li> </ul>"
+      "documentation":"<p>Ends the specified contact. This call does not work for voice contacts that use the following initiation methods:</p> <ul> <li> <p>DISCONNECT</p> </li> <li> <p>TRANSFER</p> </li> <li> <p>QUEUE_TRANSFER</p> </li> </ul> <p>Chat and task contacts, however, can be terminated in any state, regardless of initiation method.</p>"
     },
     "StopContactRecording":{
       "name":"StopContactRecording",
@@ -2470,7 +2850,7 @@
         {"shape":"ResourceNotFoundException"},
         {"shape":"InternalServiceException"}
       ],
-      "documentation":"<p>When a contact is being recorded, this API suspends recording the call. For example, you might suspend the call recording while collecting sensitive information, such as a credit card number. Then use ResumeContactRecording to restart recording. </p> <p>The period of time that the recording is suspended is filled with silence in the final recording. </p> <p>Only voice recordings are supported at this time.</p>"
+      "documentation":"<p>When a contact is being recorded, this API suspends recording the call or screen. For example, you might suspend the call or screen recording while collecting sensitive information, such as a credit card number. Then use ResumeContactRecording to restart recording.</p> <p>The period of time that the recording is suspended is filled with silence in the final recording.</p> <p>Voice and screen recordings are supported.</p>"
     },
     "TagResource":{
       "name":"TagResource",
@@ -2805,6 +3185,42 @@
       ],
       "documentation":"<p>Updates your claimed phone number from its current Amazon Connect instance or traffic distribution group to another Amazon Connect instance or traffic distribution group in the same Amazon Web Services Region.</p> <important> <p>After using this API, you must verify that the phone number is attached to the correct flow in the target instance or traffic distribution group. You need to do this because the API switches only the phone number to a new instance or traffic distribution group. It doesn't migrate the flow configuration of the phone number, too.</p> <p>You can call <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_DescribePhoneNumber.html\">DescribePhoneNumber</a> API to verify the status of a previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdatePhoneNumber.html\">UpdatePhoneNumber</a> operation.</p> </important>"
     },
+    "UpdatePhoneNumberMetadata":{
+      "name":"UpdatePhoneNumberMetadata",
+      "http":{
+        "method":"PUT",
+        "requestUri":"/phone-number/{PhoneNumberId}/metadata"
+      },
+      "input":{"shape":"UpdatePhoneNumberMetadataRequest"},
+      "errors":[
+        {"shape":"InvalidParameterException"},
+        {"shape":"InvalidRequestException"},
+        {"shape":"AccessDeniedException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ResourceInUseException"},
+        {"shape":"IdempotencyException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"InternalServiceException"}
+      ],
+      "documentation":"<p>Updates a phone number’s metadata.</p> <important> <p>To verify the status of a previous UpdatePhoneNumberMetadata operation, call the <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_DescribePhoneNumber.html\">DescribePhoneNumber</a> API.</p> </important>"
+    },
+    "UpdatePrompt":{
+      "name":"UpdatePrompt",
+      "http":{
+        "method":"POST",
+        "requestUri":"/prompts/{InstanceId}/{PromptId}"
+      },
+      "input":{"shape":"UpdatePromptRequest"},
+      "output":{"shape":"UpdatePromptResponse"},
+      "errors":[
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"InternalServiceException"}
+      ],
+      "documentation":"<p>Updates a prompt.</p>"
+    },
     "UpdateQueueHoursOfOperation":{
       "name":"UpdateQueueHoursOfOperation",
       "http":{
@@ -2868,7 +3284,7 @@
         {"shape":"ThrottlingException"},
         {"shape":"InternalServiceException"}
       ],
-      "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>Updates the outbound caller ID name, number, and outbound whisper flow for a specified queue.</p> <important> <p>If the number being used in the input is claimed to a traffic distribution group, and you are calling this API using an instance in the Amazon Web Services Region where the traffic distribution group was created, you can use either a full phone number ARN or UUID value for the <code>OutboundCallerIdNumberId</code> value of the <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_OutboundCallerConfig\">OutboundCallerConfig</a> request body parameter. However, if the number is claimed to a traffic distribution group and you are calling this API using an instance in the alternate Amazon Web Services Region associated with the traffic distribution group, you must provide a full phone number ARN. If a UUID is provided in this scenario, you will receive a <code>ResourceNotFoundException</code>.</p> </important>"
+      "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>Updates the outbound caller ID name, number, and outbound whisper flow for a specified queue.</p> <important> <ul> <li> <p>If the phone number is claimed to a traffic distribution group that was created in the same Region as the Amazon Connect instance where you are calling this API, then you can use a full phone number ARN or a UUID for <code>OutboundCallerIdNumberId</code>. However, if the phone number is claimed to a traffic distribution group that is in one Region, and you are calling this API from an instance in another Amazon Web Services Region that is associated with the traffic distribution group, you must provide a full phone number ARN. If a UUID is provided in this scenario, you will receive a <code>ResourceNotFoundException</code>.</p> </li> <li> <p>Only use the phone number ARN format that doesn't contain <code>instance</code> in the path, for example, <code>arn:aws:connect:us-east-1:1234567890:phone-number/uuid</code>. This is the same ARN format that is returned when you call the <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ListPhoneNumbersV2.html\">ListPhoneNumbersV2</a> API.</p> </li> <li> <p>If you plan to use IAM policies to allow/deny access to this API for phone number resources claimed to a traffic distribution group, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/security_iam_resource-level-policy-examples.html#allow-deny-queue-actions-replica-region\">Allow or Deny queue API actions for phone numbers in a replica Region</a>.</p> </li> </ul> </important>"
     },
     "UpdateQueueStatus":{
       "name":"UpdateQueueStatus",
@@ -2917,6 +3333,22 @@
         {"shape":"InternalServiceException"}
       ],
       "documentation":"<p>Updates the name and description of a quick connect. The request accepts the following data in JSON format. At least <code>Name</code> or <code>Description</code> must be provided.</p>"
+    },
+    "UpdateRoutingProfileAgentAvailabilityTimer":{
+      "name":"UpdateRoutingProfileAgentAvailabilityTimer",
+      "http":{
+        "method":"POST",
+        "requestUri":"/routing-profiles/{InstanceId}/{RoutingProfileId}/agent-availability-timer"
+      },
+      "input":{"shape":"UpdateRoutingProfileAgentAvailabilityTimerRequest"},
+      "errors":[
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"ThrottlingException"},
+        {"shape":"InternalServiceException"}
+      ],
+      "documentation":"<p>Whether agents with this routing profile will have their routing order calculated based on <i>time since their last inbound contact</i> or <i>longest idle time</i>. </p>"
     },
     "UpdateRoutingProfileConcurrency":{
       "name":"UpdateRoutingProfileConcurrency",
@@ -3014,7 +3446,7 @@
         {"shape":"ThrottlingException"},
         {"shape":"InternalServiceException"}
       ],
-      "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>Updates a security profile.</p>"
+      "documentation":"<p>Updates a security profile.</p>"
     },
     "UpdateTaskTemplate":{
       "name":"UpdateTaskTemplate",
@@ -3050,7 +3482,7 @@
         {"shape":"ThrottlingException"},
         {"shape":"InternalServiceException"}
       ],
-      "documentation":"<p>Updates the traffic distribution for a given traffic distribution group. </p> <p>For more information about updating a traffic distribution group, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/update-telephony-traffic-distribution.html\">Update telephony traffic distribution across Amazon Web Services Regions </a> in the <i>Amazon Connect Administrator Guide</i>. </p>"
+      "documentation":"<p>Updates the traffic distribution for a given traffic distribution group. </p> <note> <p>The <code>SignInConfig</code> distribution is available only on a default <code>TrafficDistributionGroup</code> (see the <code>IsDefault</code> parameter in the <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_TrafficDistributionGroup.html\">TrafficDistributionGroup</a> data type). If you call <code>UpdateTrafficDistribution</code> with a modified <code>SignInConfig</code> and a non-default <code>TrafficDistributionGroup</code>, an <code>InvalidRequestException</code> is returned.</p> </note> <p>For more information about updating a traffic distribution group, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/update-telephony-traffic-distribution.html\">Update telephony traffic distribution across Amazon Web Services Regions </a> in the <i>Amazon Connect Administrator Guide</i>. </p>"
     },
     "UpdateUserHierarchy":{
       "name":"UpdateUserHierarchy",
@@ -3165,6 +3597,45 @@
         {"shape":"InternalServiceException"}
       ],
       "documentation":"<p>Assigns the specified security profiles to the specified user.</p>"
+    },
+    "UpdateViewContent":{
+      "name":"UpdateViewContent",
+      "http":{
+        "method":"POST",
+        "requestUri":"/views/{InstanceId}/{ViewId}"
+      },
+      "input":{"shape":"UpdateViewContentRequest"},
+      "output":{"shape":"UpdateViewContentResponse"},
+      "errors":[
+        {"shape":"AccessDeniedException"},
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"TooManyRequestsException"},
+        {"shape":"ResourceInUseException"}
+      ],
+      "documentation":"<p>Updates the view content of the given view identifier in the specified Amazon Connect instance.</p> <p>It performs content validation if <code>Status</code> is set to <code>SAVED</code> and performs full content validation if <code>Status</code> is <code>PUBLISHED</code>. Note that the <code>$SAVED</code> alias' content will always be updated, but the <code>$LATEST</code> alias' content will only be updated if <code>Status</code> is <code>PUBLISHED</code>.</p>"
+    },
+    "UpdateViewMetadata":{
+      "name":"UpdateViewMetadata",
+      "http":{
+        "method":"POST",
+        "requestUri":"/views/{InstanceId}/{ViewId}/metadata"
+      },
+      "input":{"shape":"UpdateViewMetadataRequest"},
+      "output":{"shape":"UpdateViewMetadataResponse"},
+      "errors":[
+        {"shape":"AccessDeniedException"},
+        {"shape":"InvalidRequestException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"TooManyRequestsException"},
+        {"shape":"DuplicateResourceException"},
+        {"shape":"ResourceInUseException"}
+      ],
+      "documentation":"<p>Updates the view metadata. Note that either <code>Name</code> or <code>Description</code> must be provided.</p>"
     }
   },
   "shapes":{
@@ -3253,6 +3724,24 @@
     "AfterContactWorkTimeLimit":{
       "type":"integer",
       "min":0
+    },
+    "AgentAvailabilityTimer":{
+      "type":"string",
+      "enum":[
+        "TIME_SINCE_LAST_ACTIVITY",
+        "TIME_SINCE_LAST_INBOUND"
+      ]
+    },
+    "AgentConfig":{
+      "type":"structure",
+      "required":["Distributions"],
+      "members":{
+        "Distributions":{
+          "shape":"DistributionList",
+          "documentation":"<p>Information about traffic distributions.</p>"
+        }
+      },
+      "documentation":"<p>The distribution of agents between the instance and its replica(s).</p>"
     },
     "AgentContactReference":{
       "type":"structure",
@@ -3476,6 +3965,31 @@
         }
       },
       "documentation":"<p>Configuration of the answering machine detection.</p>"
+    },
+    "Application":{
+      "type":"structure",
+      "members":{
+        "Namespace":{
+          "shape":"Namespace",
+          "documentation":"<p>Namespace of the application that you want to give access to.</p>"
+        },
+        "ApplicationPermissions":{
+          "shape":"ApplicationPermissions",
+          "documentation":"<p>The permissions that the agent is granted on the application. Only the <code>ACCESS</code> permission is supported.</p>"
+        }
+      },
+      "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>A third party application's metadata.</p>"
+    },
+    "ApplicationPermissions":{
+      "type":"list",
+      "member":{"shape":"Permission"},
+      "max":10,
+      "min":1
+    },
+    "Applications":{
+      "type":"list",
+      "member":{"shape":"Application"},
+      "max":10
     },
     "ApproximateTotalCount":{"type":"long"},
     "AssignContactCategoryActionDefinition":{
@@ -3725,6 +4239,35 @@
         }
       }
     },
+    "AssociateTrafficDistributionGroupUserRequest":{
+      "type":"structure",
+      "required":[
+        "TrafficDistributionGroupId",
+        "UserId",
+        "InstanceId"
+      ],
+      "members":{
+        "TrafficDistributionGroupId":{
+          "shape":"TrafficDistributionGroupIdOrArn",
+          "documentation":"<p>The identifier of the traffic distribution group. This can be the ID or the ARN if the API is being called in the Region where the traffic distribution group was created. The ARN must be provided if the call is from the replicated Region.</p>",
+          "location":"uri",
+          "locationName":"TrafficDistributionGroupId"
+        },
+        "UserId":{
+          "shape":"UserId",
+          "documentation":"<p>The identifier of the user account. This can be the ID or the ARN of the user. </p>"
+        },
+        "InstanceId":{
+          "shape":"InstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/find-instance-arn.html\">find the instance ID</a> in the Amazon Resource Name (ARN) of the instance.</p>"
+        }
+      }
+    },
+    "AssociateTrafficDistributionGroupUserResponse":{
+      "type":"structure",
+      "members":{
+      }
+    },
     "AssociationId":{
       "type":"string",
       "max":100,
@@ -3822,10 +4365,7 @@
       "type":"string",
       "max":50
     },
-    "BoxedBoolean":{
-      "type":"boolean",
-      "box":true
-    },
+    "BoxedBoolean":{"type":"boolean"},
     "BucketName":{
       "type":"string",
       "max":128,
@@ -3994,7 +4534,7 @@
         },
         "PhoneNumberStatus":{
           "shape":"PhoneNumberStatus",
-          "documentation":"<p>The status of the phone number.</p> <ul> <li> <p> <code>CLAIMED</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ClaimedPhoneNumber.html\">ClaimedPhoneNumber</a> or <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdatePhoneNumber.html\">UpdatePhoneNumber</a> operation succeeded.</p> </li> <li> <p> <code>IN_PROGRESS</code> means a <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ClaimedPhoneNumber.html\">ClaimedPhoneNumber</a> or <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdatePhoneNumber.html\">UpdatePhoneNumber</a> operation is still in progress and has not yet completed. You can call <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_DescribePhoneNumber.html\">DescribePhoneNumber</a> at a later time to verify if the previous operation has completed.</p> </li> <li> <p> <code>FAILED</code> indicates that the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ClaimedPhoneNumber.html\">ClaimedPhoneNumber</a> or <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdatePhoneNumber.html\">UpdatePhoneNumber</a> operation has failed. It will include a message indicating the failure reason. A common reason for a failure may be that the <code>TargetArn</code> value you are claiming or updating a phone number to has reached its limit of total claimed numbers. If you received a <code>FAILED</code> status from a <code>ClaimPhoneNumber</code> API call, you have one day to retry claiming the phone number before the number is released back to the inventory for other customers to claim.</p> </li> </ul> <note> <p>You will not be billed for the phone number during the 1-day period if number claiming fails. </p> </note>"
+          "documentation":"<p>The status of the phone number.</p> <ul> <li> <p> <code>CLAIMED</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ClaimPhoneNumber.html\">ClaimPhoneNumber</a> or <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdatePhoneNumber.html\">UpdatePhoneNumber</a> operation succeeded.</p> </li> <li> <p> <code>IN_PROGRESS</code> means a <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ClaimPhoneNumber.html\">ClaimPhoneNumber</a>, <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdatePhoneNumber.html\">UpdatePhoneNumber</a>, or <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdatePhoneNumberMetadata.html\">UpdatePhoneNumberMetadata</a> operation is still in progress and has not yet completed. You can call <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_DescribePhoneNumber.html\">DescribePhoneNumber</a> at a later time to verify if the previous operation has completed.</p> </li> <li> <p> <code>FAILED</code> indicates that the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ClaimPhoneNumber.html\">ClaimPhoneNumber</a> or <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdatePhoneNumber.html\">UpdatePhoneNumber</a> operation has failed. It will include a message indicating the failure reason. A common reason for a failure may be that the <code>TargetArn</code> value you are claiming or updating a phone number to has reached its limit of total claimed numbers. If you received a <code>FAILED</code> status from a <code>ClaimPhoneNumber</code> API call, you have one day to retry claiming the phone number before the number is released back to the inventory for other customers to claim.</p> </li> </ul> <note> <p>You will not be billed for the phone number during the 1-day period if number claiming fails. </p> </note>"
         }
       },
       "documentation":"<p>Information about a phone number that has been claimed to your Amazon Connect instance or traffic distribution group.</p>"
@@ -4062,7 +4602,7 @@
         },
         "InitiationTimestamp":{
           "shape":"timestamp",
-          "documentation":"<p>The date and time this contact was initiated, in UTC time. For <code>INBOUND</code>, this is when the contact arrived. For <code>OUTBOUND</code>, this is when the agent began dialing. For <code>CALLBACK</code>, this is when the callback contact was created. For <code>TRANSFER</code> and <code>QUEUE_TRANSFER</code>, this is when the transfer was initiated. For <code>API</code>, this is when the request arrived.</p>"
+          "documentation":"<p>The date and time this contact was initiated, in UTC time. For <code>INBOUND</code>, this is when the contact arrived. For <code>OUTBOUND</code>, this is when the agent began dialing. For <code>CALLBACK</code>, this is when the callback contact was created. For <code>TRANSFER</code> and <code>QUEUE_TRANSFER</code>, this is when the transfer was initiated. For <code>API</code>, this is when the request arrived. For <code>EXTERNAL_OUTBOUND</code>, this is when the agent started dialing the external participant. For <code>MONITOR</code>, this is when the supervisor started listening to a contact.</p>"
         },
         "DisconnectTimestamp":{
           "shape":"timestamp",
@@ -4126,7 +4666,7 @@
         },
         "Content":{
           "shape":"ContactFlowContent",
-          "documentation":"<p>The content of the flow.</p>"
+          "documentation":"<p>The JSON string that represents the content of the flow. For an example, see <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/flow-language-example.html\">Example flow in Amazon Connect Flow language</a>. </p> <p>Length Constraints: Minimum length of 1. Maximum length of 256000.</p>"
         },
         "Tags":{
           "shape":"TagMap",
@@ -4158,7 +4698,7 @@
         },
         "Content":{
           "shape":"ContactFlowModuleContent",
-          "documentation":"<p>The content of the flow module.</p>"
+          "documentation":"<p>The JSON string that represents the content of the flow. For an example, see <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/flow-language-example.html\">Example flow in Amazon Connect Flow language</a>. </p>"
         },
         "Description":{
           "shape":"ContactFlowModuleDescription",
@@ -4325,7 +4865,8 @@
         "CALLBACK",
         "API",
         "DISCONNECT",
-        "MONITOR"
+        "MONITOR",
+        "EXTERNAL_OUTBOUND"
       ]
     },
     "ContactNotFoundException":{
@@ -4336,7 +4877,7 @@
           "documentation":"<p>The message.</p>"
         }
       },
-      "documentation":"<p>The contact with the specified ID is not active or does not exist. Applies to Voice calls only, not to Chat, Task, or Voice Callback.</p>",
+      "documentation":"<p>The contact with the specified ID is not active or does not exist. Applies to Voice calls only, not to Chat or Task contacts.</p>",
       "error":{"httpStatusCode":410},
       "exception":true
     },
@@ -4461,7 +5002,7 @@
         },
         "Content":{
           "shape":"ContactFlowModuleContent",
-          "documentation":"<p>The content of the flow module.</p>"
+          "documentation":"<p>The JSON string that represents the content of the flow. For an example, see <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/flow-language-example.html\">Example flow in Amazon Connect Flow language</a>. </p>"
         },
         "Tags":{
           "shape":"TagMap",
@@ -4516,7 +5057,7 @@
         },
         "Content":{
           "shape":"ContactFlowContent",
-          "documentation":"<p>The content of the flow. </p>"
+          "documentation":"<p>The JSON string that represents the content of the flow. For an example, see <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/flow-language-example.html\">Example flow in Amazon Connect Flow language</a>. </p> <p>Length Constraints: Minimum length of 1. Maximum length of 256000.</p>"
         },
         "Tags":{
           "shape":"TagMap",
@@ -4781,6 +5322,51 @@
         }
       }
     },
+    "CreatePromptRequest":{
+      "type":"structure",
+      "required":[
+        "InstanceId",
+        "Name",
+        "S3Uri"
+      ],
+      "members":{
+        "InstanceId":{
+          "shape":"InstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/find-instance-arn.html\">find the instance ID</a> in the Amazon Resource Name (ARN) of the instance.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "Name":{
+          "shape":"CommonNameLength127",
+          "documentation":"<p>The name of the prompt.</p>"
+        },
+        "Description":{
+          "shape":"PromptDescription",
+          "documentation":"<p>The description of the prompt.</p>"
+        },
+        "S3Uri":{
+          "shape":"S3Uri",
+          "documentation":"<p>The URI for the S3 bucket where the prompt is stored.</p>"
+        },
+        "Tags":{
+          "shape":"TagMap",
+          "documentation":"<p>The tags used to organize, track, or control access for this resource. For example, { \"tags\": {\"key1\":\"value1\", \"key2\":\"value2\"} }.</p>"
+        }
+      }
+    },
+    "CreatePromptResponse":{
+      "type":"structure",
+      "members":{
+        "PromptARN":{
+          "shape":"ARN",
+          "documentation":"<p>The Amazon Resource Name (ARN) of the prompt.</p>"
+        },
+        "PromptId":{
+          "shape":"PromptId",
+          "documentation":"<p>A unique identifier for the prompt.</p>"
+        }
+      }
+    },
     "CreateQueueRequest":{
       "type":"structure",
       "required":[
@@ -4855,7 +5441,7 @@
         },
         "Name":{
           "shape":"QuickConnectName",
-          "documentation":"<p>The name of the quick connect.</p>"
+          "documentation":"<p>A unique name of the quick connect.</p>"
         },
         "Description":{
           "shape":"QuickConnectDescription",
@@ -4923,6 +5509,10 @@
         "Tags":{
           "shape":"TagMap",
           "documentation":"<p>The tags used to organize, track, or control access for this resource. For example, { \"tags\": {\"key1\":\"value1\", \"key2\":\"value2\"} }.</p>"
+        },
+        "AgentAvailabilityTimer":{
+          "shape":"AgentAvailabilityTimer",
+          "documentation":"<p>Whether agents with this routing profile will have their routing order calculated based on <i>longest idle time</i> or <i>time since their last inbound contact</i>. </p>"
         }
       }
     },
@@ -5042,6 +5632,10 @@
         "TagRestrictedResources":{
           "shape":"TagRestrictedResourceList",
           "documentation":"<p>The list of resources that a security profile applies tag restrictions to in Amazon Connect. Following are acceptable ResourceNames: <code>User</code> | <code>SecurityProfile</code> | <code>Queue</code> | <code>RoutingProfile</code> </p>"
+        },
+        "Applications":{
+          "shape":"Applications",
+          "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>A list of third party applications that the security profile will give access to.</p>"
         }
       }
     },
@@ -5314,6 +5908,94 @@
         "UserArn":{
           "shape":"ARN",
           "documentation":"<p>The Amazon Resource Name (ARN) of the user account.</p>"
+        }
+      }
+    },
+    "CreateViewRequest":{
+      "type":"structure",
+      "required":[
+        "InstanceId",
+        "Status",
+        "Content",
+        "Name"
+      ],
+      "members":{
+        "InstanceId":{
+          "shape":"ViewsInstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can find the instanceId in the ARN of the instance.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "ClientToken":{
+          "shape":"ViewsClientToken",
+          "documentation":"<p>A unique Id for each create view request to avoid duplicate view creation. For example, the view is idempotent ClientToken is provided.</p>"
+        },
+        "Status":{
+          "shape":"ViewStatus",
+          "documentation":"<p>Indicates the view status as either <code>SAVED</code> or <code>PUBLISHED</code>. The <code>PUBLISHED</code> status will initiate validation on the content.</p>"
+        },
+        "Content":{
+          "shape":"ViewInputContent",
+          "documentation":"<p>View content containing all content necessary to render a view except for runtime input data.</p> <p>The total uncompressed content has a maximum file size of 400kB.</p>"
+        },
+        "Description":{
+          "shape":"ViewDescription",
+          "documentation":"<p>The description of the view.</p>"
+        },
+        "Name":{
+          "shape":"ViewName",
+          "documentation":"<p>The name of the view.</p>"
+        },
+        "Tags":{
+          "shape":"TagMap",
+          "documentation":"<p>The tags associated with the view resource (not specific to view version).These tags can be used to organize, track, or control access for this resource. For example, { \"tags\": {\"key1\":\"value1\", \"key2\":\"value2\"} }.</p>"
+        }
+      }
+    },
+    "CreateViewResponse":{
+      "type":"structure",
+      "members":{
+        "View":{
+          "shape":"View",
+          "documentation":"<p>A view resource object. Contains metadata and content necessary to render the view.</p>"
+        }
+      }
+    },
+    "CreateViewVersionRequest":{
+      "type":"structure",
+      "required":[
+        "InstanceId",
+        "ViewId"
+      ],
+      "members":{
+        "InstanceId":{
+          "shape":"ViewsInstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can find the instanceId in the ARN of the instance.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "ViewId":{
+          "shape":"ViewId",
+          "documentation":"<p>The identifier of the view. Both <code>ViewArn</code> and <code>ViewId</code> can be used.</p>",
+          "location":"uri",
+          "locationName":"ViewId"
+        },
+        "VersionDescription":{
+          "shape":"ViewDescription",
+          "documentation":"<p>The description for the version being published.</p>"
+        },
+        "ViewContentSha256":{
+          "shape":"ViewContentSha256",
+          "documentation":"<p>Indicates the checksum value of the latest published view content.</p>"
+        }
+      }
+    },
+    "CreateViewVersionResponse":{
+      "type":"structure",
+      "members":{
+        "View":{
+          "shape":"View",
+          "documentation":"<p>All view data is contained within the View object.</p>"
         }
       }
     },
@@ -5695,6 +6377,7 @@
         "EvaluationFormVersion":{
           "shape":"VersionNumber",
           "documentation":"<p>The unique identifier for the evaluation form.</p>",
+          "box":true,
           "location":"querystring",
           "locationName":"version"
         }
@@ -5754,6 +6437,48 @@
         }
       }
     },
+    "DeletePromptRequest":{
+      "type":"structure",
+      "required":[
+        "InstanceId",
+        "PromptId"
+      ],
+      "members":{
+        "InstanceId":{
+          "shape":"InstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/find-instance-arn.html\">find the instance ID</a> in the Amazon Resource Name (ARN) of the instance.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "PromptId":{
+          "shape":"PromptId",
+          "documentation":"<p>A unique identifier for the prompt.</p>",
+          "location":"uri",
+          "locationName":"PromptId"
+        }
+      }
+    },
+    "DeleteQueueRequest":{
+      "type":"structure",
+      "required":[
+        "InstanceId",
+        "QueueId"
+      ],
+      "members":{
+        "InstanceId":{
+          "shape":"InstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/find-instance-arn.html\">find the instance ID</a> in the Amazon Resource Name (ARN) of the instance.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "QueueId":{
+          "shape":"QueueId",
+          "documentation":"<p>The identifier for the queue.</p>",
+          "location":"uri",
+          "locationName":"QueueId"
+        }
+      }
+    },
     "DeleteQuickConnectRequest":{
       "type":"structure",
       "required":[
@@ -5772,6 +6497,27 @@
           "documentation":"<p>The identifier for the quick connect.</p>",
           "location":"uri",
           "locationName":"QuickConnectId"
+        }
+      }
+    },
+    "DeleteRoutingProfileRequest":{
+      "type":"structure",
+      "required":[
+        "InstanceId",
+        "RoutingProfileId"
+      ],
+      "members":{
+        "InstanceId":{
+          "shape":"InstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/find-instance-arn.html\">find the instance ID</a> in the Amazon Resource Name (ARN) of the instance.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "RoutingProfileId":{
+          "shape":"RoutingProfileId",
+          "documentation":"<p>The identifier of the routing profile.</p>",
+          "location":"uri",
+          "locationName":"RoutingProfileId"
         }
       }
     },
@@ -5928,6 +6674,65 @@
           "location":"uri",
           "locationName":"UserId"
         }
+      }
+    },
+    "DeleteViewRequest":{
+      "type":"structure",
+      "required":[
+        "InstanceId",
+        "ViewId"
+      ],
+      "members":{
+        "InstanceId":{
+          "shape":"ViewsInstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can find the instanceId in the ARN of the instance.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "ViewId":{
+          "shape":"ViewId",
+          "documentation":"<p>The identifier of the view. Both <code>ViewArn</code> and <code>ViewId</code> can be used.</p>",
+          "location":"uri",
+          "locationName":"ViewId"
+        }
+      }
+    },
+    "DeleteViewResponse":{
+      "type":"structure",
+      "members":{
+      }
+    },
+    "DeleteViewVersionRequest":{
+      "type":"structure",
+      "required":[
+        "InstanceId",
+        "ViewId",
+        "ViewVersion"
+      ],
+      "members":{
+        "InstanceId":{
+          "shape":"ViewsInstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can find the instanceId in the ARN of the instance.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "ViewId":{
+          "shape":"ViewId",
+          "documentation":"<p>The identifier of the view. Both <code>ViewArn</code> and <code>ViewId</code> can be used.</p>",
+          "location":"uri",
+          "locationName":"ViewId"
+        },
+        "ViewVersion":{
+          "shape":"ViewVersion",
+          "documentation":"<p>The version number of the view.</p>",
+          "location":"uri",
+          "locationName":"ViewVersion"
+        }
+      }
+    },
+    "DeleteViewVersionResponse":{
+      "type":"structure",
+      "members":{
       }
     },
     "DeleteVocabularyRequest":{
@@ -6153,6 +6958,7 @@
         "EvaluationFormVersion":{
           "shape":"VersionNumber",
           "documentation":"<p>A version of the evaluation form.</p>",
+          "box":true,
           "location":"querystring",
           "locationName":"version"
         }
@@ -6304,6 +7110,36 @@
         "ClaimedPhoneNumberSummary":{
           "shape":"ClaimedPhoneNumberSummary",
           "documentation":"<p>Information about a phone number that's been claimed to your Amazon Connect instance or traffic distribution group.</p>"
+        }
+      }
+    },
+    "DescribePromptRequest":{
+      "type":"structure",
+      "required":[
+        "InstanceId",
+        "PromptId"
+      ],
+      "members":{
+        "InstanceId":{
+          "shape":"InstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/find-instance-arn.html\">find the instance ID</a> in the Amazon Resource Name (ARN) of the instance.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "PromptId":{
+          "shape":"PromptId",
+          "documentation":"<p>A unique identifier for the prompt.</p>",
+          "location":"uri",
+          "locationName":"PromptId"
+        }
+      }
+    },
+    "DescribePromptResponse":{
+      "type":"structure",
+      "members":{
+        "Prompt":{
+          "shape":"Prompt",
+          "documentation":"<p>Information about the prompt.</p>"
         }
       }
     },
@@ -6557,6 +7393,36 @@
         "User":{
           "shape":"User",
           "documentation":"<p>Information about the user account and configuration settings.</p>"
+        }
+      }
+    },
+    "DescribeViewRequest":{
+      "type":"structure",
+      "required":[
+        "InstanceId",
+        "ViewId"
+      ],
+      "members":{
+        "InstanceId":{
+          "shape":"ViewsInstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can find the instanceId in the ARN of the instance.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "ViewId":{
+          "shape":"ViewId",
+          "documentation":"<p>The ViewId of the view. This must be an ARN for Amazon Web Services managed views.</p>",
+          "location":"uri",
+          "locationName":"ViewId"
+        }
+      }
+    },
+    "DescribeViewResponse":{
+      "type":"structure",
+      "members":{
+        "View":{
+          "shape":"View",
+          "documentation":"<p>All view data is contained within the View object.</p>"
         }
       }
     },
@@ -6865,6 +7731,39 @@
           "location":"uri",
           "locationName":"AssociationId"
         }
+      }
+    },
+    "DisassociateTrafficDistributionGroupUserRequest":{
+      "type":"structure",
+      "required":[
+        "TrafficDistributionGroupId",
+        "UserId",
+        "InstanceId"
+      ],
+      "members":{
+        "TrafficDistributionGroupId":{
+          "shape":"TrafficDistributionGroupIdOrArn",
+          "documentation":"<p>The identifier of the traffic distribution group. This can be the ID or the ARN if the API is being called in the Region where the traffic distribution group was created. The ARN must be provided if the call is from the replicated Region.</p>",
+          "location":"uri",
+          "locationName":"TrafficDistributionGroupId"
+        },
+        "UserId":{
+          "shape":"UserId",
+          "documentation":"<p>The identifier for the user. This can be the ID or the ARN of the user.</p>",
+          "location":"querystring",
+          "locationName":"UserId"
+        },
+        "InstanceId":{
+          "shape":"InstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/find-instance-arn.html\">find the instance ID</a> in the Amazon Resource Name (ARN) of the instance.</p>",
+          "location":"querystring",
+          "locationName":"InstanceId"
+        }
+      }
+    },
+    "DisassociateTrafficDistributionGroupUserResponse":{
+      "type":"structure",
+      "members":{
       }
     },
     "DismissUserContactRequest":{
@@ -7233,7 +8132,7 @@
       "type":"list",
       "member":{"shape":"EvaluationFormItem"},
       "max":100,
-      "min":0
+      "min":1
     },
     "EvaluationFormNumericQuestionAutomation":{
       "type":"structure",
@@ -7417,7 +8316,8 @@
       "type":"structure",
       "required":[
         "Title",
-        "RefId"
+        "RefId",
+        "Items"
       ],
       "members":{
         "Title":{
@@ -7598,7 +8498,8 @@
         },
         "ActiveVersion":{
           "shape":"VersionNumber",
-          "documentation":"<p>The version of the active evaluation form version.</p>"
+          "documentation":"<p>The version of the active evaluation form version.</p>",
+          "box":true
         }
       },
       "documentation":"<p>Summary information about an evaluation form.</p>"
@@ -7610,7 +8511,7 @@
     "EvaluationFormTitle":{
       "type":"string",
       "max":128,
-      "min":0
+      "min":1
     },
     "EvaluationFormVersionIsLocked":{"type":"boolean"},
     "EvaluationFormVersionStatus":{
@@ -7841,7 +8742,8 @@
         "OnZendeskTicketCreate",
         "OnZendeskTicketStatusUpdate",
         "OnSalesforceCaseCreate",
-        "OnContactEvaluationSubmit"
+        "OnContactEvaluationSubmit",
+        "OnMetricDataUpdate"
       ]
     },
     "FilterV2":{
@@ -8063,7 +8965,7 @@
         },
         "UserId":{
           "shape":"AgentResourceId",
-          "documentation":"<p>The identifier for the user.</p>"
+          "documentation":"<p>The identifier for the user. This can be the ID or the ARN of the user.</p>"
         }
       }
     },
@@ -8143,15 +9045,19 @@
         },
         "StartTime":{
           "shape":"Timestamp",
-          "documentation":"<p>The timestamp, in UNIX Epoch time format, at which to start the reporting interval for the retrieval of historical metrics data. The time must be before the end time timestamp. The time range between the start and end time must be less than 24 hours. The start time cannot be earlier than 35 days before the time of the request. Historical metrics are available for 35 days.</p>"
+          "documentation":"<p>The timestamp, in UNIX Epoch time format, at which to start the reporting interval for the retrieval of historical metrics data. The time must be before the end time timestamp. The start and end time depends on the <code>IntervalPeriod</code> selected. By default the time range between start and end time is 35 days. Historical metrics are available for 3 months.</p>"
         },
         "EndTime":{
           "shape":"Timestamp",
-          "documentation":"<p>The timestamp, in UNIX Epoch time format, at which to end the reporting interval for the retrieval of historical metrics data. The time must be later than the start time timestamp. It cannot be later than the current timestamp.</p> <p>The time range between the start and end time must be less than 24 hours.</p>"
+          "documentation":"<p>The timestamp, in UNIX Epoch time format, at which to end the reporting interval for the retrieval of historical metrics data. The time must be later than the start time timestamp. It cannot be later than the current timestamp.</p>"
+        },
+        "Interval":{
+          "shape":"IntervalDetails",
+          "documentation":"<p>The interval period and timezone to apply to returned metrics.</p> <ul> <li> <p> <code>IntervalPeriod</code>: An aggregated grouping applied to request metrics. Valid <code>IntervalPeriod</code> values are: <code>FIFTEEN_MIN</code> | <code>THIRTY_MIN</code> | <code>HOUR</code> | <code>DAY</code> | <code>WEEK</code> | <code>TOTAL</code>. </p> <p>For example, if <code>IntervalPeriod</code> is selected <code>THIRTY_MIN</code>, <code>StartTime</code> and <code>EndTime</code> differs by 1 day, then Amazon Connect returns 48 results in the response. Each result is aggregated by the THIRTY_MIN period. By default Amazon Connect aggregates results based on the <code>TOTAL</code> interval period. </p> <p>The following list describes restrictions on <code>StartTime</code> and <code>EndTime</code> based on which <code>IntervalPeriod</code> is requested. </p> <ul> <li> <p> <code>FIFTEEN_MIN</code>: The difference between <code>StartTime</code> and <code>EndTime</code> must be less than 3 days.</p> </li> <li> <p> <code>THIRTY_MIN</code>: The difference between <code>StartTime</code> and <code>EndTime</code> must be less than 3 days.</p> </li> <li> <p> <code>HOUR</code>: The difference between <code>StartTime</code> and <code>EndTime</code> must be less than 3 days.</p> </li> <li> <p> <code>DAY</code>: The difference between <code>StartTime</code> and <code>EndTime</code> must be less than 35 days.</p> </li> <li> <p> <code>WEEK</code>: The difference between <code>StartTime</code> and <code>EndTime</code> must be less than 35 days.</p> </li> <li> <p> <code>TOTAL</code>: The difference between <code>StartTime</code> and <code>EndTime</code> must be less than 35 days.</p> </li> </ul> </li> <li> <p> <code>TimeZone</code>: The timezone applied to requested metrics.</p> </li> </ul>"
         },
         "Filters":{
           "shape":"FiltersV2List",
-          "documentation":"<p>The filters to apply to returned metrics. You can filter on the following resources:</p> <ul> <li> <p>Queues</p> </li> <li> <p>Routing profiles</p> </li> <li> <p>Agents</p> </li> <li> <p>Channels</p> </li> <li> <p>User hierarchy groups</p> </li> </ul> <p>At least one filter must be passed from queues, routing profiles, agents, or user hierarchy groups.</p> <p>To filter by phone number, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/create-historical-metrics-report.html\">Create a historical metrics report</a> in the <i>Amazon Connect Administrator's Guide</i>.</p> <p>Note the following limits:</p> <ul> <li> <p> <b>Filter keys</b>: A maximum of 5 filter keys are supported in a single request. Valid filter keys: <code>QUEUE</code> | <code>ROUTING_PROFILE</code> | <code>AGENT</code> | <code>CHANNEL</code> | <code>AGENT_HIERARCHY_LEVEL_ONE</code> | <code>AGENT_HIERARCHY_LEVEL_TWO</code> | <code>AGENT_HIERARCHY_LEVEL_THREE</code> | <code>AGENT_HIERARCHY_LEVEL_FOUR</code> | <code>AGENT_HIERARCHY_LEVEL_FIVE</code> </p> </li> <li> <p> <b>Filter values</b>: A maximum of 100 filter values are supported in a single request. For example, a <code>GetMetricDataV2</code> request can filter by 50 queues, 35 agents, and 15 routing profiles for a total of 100 filter values. <code>VOICE</code>, <code>CHAT</code>, and <code>TASK</code> are valid <code>filterValue</code> for the <code>CHANNEL</code> filter key.</p> </li> </ul>"
+          "documentation":"<p>The filters to apply to returned metrics. You can filter on the following resources:</p> <ul> <li> <p>Queues</p> </li> <li> <p>Routing profiles</p> </li> <li> <p>Agents</p> </li> <li> <p>Channels</p> </li> <li> <p>User hierarchy groups</p> </li> <li> <p>Feature</p> </li> </ul> <p>At least one filter must be passed from queues, routing profiles, agents, or user hierarchy groups.</p> <p>To filter by phone number, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/create-historical-metrics-report.html\">Create a historical metrics report</a> in the <i>Amazon Connect Administrator's Guide</i>.</p> <p>Note the following limits:</p> <ul> <li> <p> <b>Filter keys</b>: A maximum of 5 filter keys are supported in a single request. Valid filter keys: <code>QUEUE</code> | <code>ROUTING_PROFILE</code> | <code>AGENT</code> | <code>CHANNEL</code> | <code>AGENT_HIERARCHY_LEVEL_ONE</code> | <code>AGENT_HIERARCHY_LEVEL_TWO</code> | <code>AGENT_HIERARCHY_LEVEL_THREE</code> | <code>AGENT_HIERARCHY_LEVEL_FOUR</code> | <code>AGENT_HIERARCHY_LEVEL_FIVE</code> | <code>FEATURE</code> </p> </li> <li> <p> <b>Filter values</b>: A maximum of 100 filter values are supported in a single request. VOICE, CHAT, and TASK are valid <code>filterValue</code> for the CHANNEL filter key. They do not count towards limitation of 100 filter values. For example, a GetMetricDataV2 request can filter by 50 queues, 35 agents, and 15 routing profiles for a total of 100 filter values, along with 3 channel filters. </p> <p> <code>contact_lens_conversational_analytics</code> is a valid filterValue for the <code>FEATURE</code> filter key. It is available only to contacts analyzed by Contact Lens conversational analytics.</p> </li> </ul>"
         },
         "Groupings":{
           "shape":"GroupingsV2",
@@ -8159,7 +9065,7 @@
         },
         "Metrics":{
           "shape":"MetricsV2",
-          "documentation":"<p>The metrics to retrieve. Specify the name, groupings, and filters for each metric. The following historical metrics are available. For a description of each metric, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/historical-metrics-definitions.html\">Historical metrics definitions</a> in the <i>Amazon Connect Administrator's Guide</i>.</p> <dl> <dt>AGENT_ADHERENT_TIME</dt> <dd> <p>This metric is available only in Amazon Web Services Regions where <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/regions.html#optimization_region\">Forecasting, capacity planning, and scheduling</a> is available.</p> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy </p> </dd> <dt>AGENT_NON_RESPONSE</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy </p> </dd> <dt>AGENT_OCCUPANCY</dt> <dd> <p>Unit: Percentage</p> <p>Valid groupings and filters: Routing Profile, Agent, Agent Hierarchy </p> </dd> <dt>AGENT_SCHEDULE_ADHERENCE</dt> <dd> <p>This metric is available only in Amazon Web Services Regions where <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/regions.html#optimization_region\">Forecasting, capacity planning, and scheduling</a> is available.</p> <p>Unit: Percent</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AGENT_SCHEDULED_TIME</dt> <dd> <p>This metric is available only in Amazon Web Services Regions where <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/regions.html#optimization_region\">Forecasting, capacity planning, and scheduling</a> is available.</p> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_ABANDON_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_AFTER_CONTACT_WORK_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_AGENT_CONNECTING_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid metric filter key: <code>INITIATION_METHOD</code>. For now, this metric only supports the following as <code>INITIATION_METHOD</code>: <code>INBOUND</code> | <code>OUTBOUND</code> | <code>CALLBACK</code> | <code>API</code> </p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_HANDLE_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_HOLD_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_INTERACTION_AND_HOLD_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_INTERACTION_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile</p> </dd> <dt>AVG_QUEUE_ANSWER_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile</p> </dd> <dt>CONTACTS_ABANDONED</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>CONTACTS_CREATED</dt> <dd> <p>Unit: Count</p> <p>Valid metric filter key: <code>INITIATION_METHOD</code> </p> <p>Valid groupings and filters: Queue, Channel, Routing Profile</p> </dd> <dt>CONTACTS_HANDLED</dt> <dd> <p>Unit: Count</p> <p>Valid metric filter key: <code>INITIATION_METHOD</code>, <code>DISCONNECT_REASON</code> </p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>CONTACTS_HOLD_ABANDONS</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>CONTACTS_QUEUED</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>CONTACTS_TRANSFERRED_OUT</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>CONTACTS_TRANSFERRED_OUT_BY_AGENT</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>CONTACTS_TRANSFERRED_OUT_FROM_QUEUE</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>MAX_QUEUED_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>SERVICE_LEVEL</dt> <dd> <p>You can include up to 20 SERVICE_LEVEL metrics in a request.</p> <p>Unit: Percent</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile</p> <p>Threshold: For <code>ThresholdValue</code>, enter any whole number from 1 to 604800 (inclusive), in seconds. For <code>Comparison</code>, you must enter <code>LT</code> (for \"Less than\"). </p> </dd> <dt>SUM_CONTACTS_ANSWERED_IN_X</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile</p> <p>Threshold: For <code>ThresholdValue</code>, enter any whole number from 1 to 604800 (inclusive), in seconds. For <code>Comparison</code>, you must enter <code>LT</code> (for \"Less than\"). </p> </dd> <dt>SUM_CONTACTS_ABANDONED_IN_X</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile</p> <p>Threshold: For <code>ThresholdValue</code>, enter any whole number from 1 to 604800 (inclusive), in seconds. For <code>Comparison</code>, you must enter <code>LT</code> (for \"Less than\"). </p> </dd> <dt>SUM_CONTACTS_DISCONNECTED </dt> <dd> <p>Valid metric filter key: <code>DISCONNECT_REASON</code> </p> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile</p> </dd> <dt>SUM_RETRY_CALLBACK_ATTEMPTS</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile</p> </dd> </dl>"
+          "documentation":"<p>The metrics to retrieve. Specify the name, groupings, and filters for each metric. The following historical metrics are available. For a description of each metric, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/historical-metrics-definitions.html\">Historical metrics definitions</a> in the <i>Amazon Connect Administrator's Guide</i>.</p> <dl> <dt>ABANDONMENT_RATE</dt> <dd> <p>Unit: Percent</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AGENT_ADHERENT_TIME</dt> <dd> <p>This metric is available only in Amazon Web Services Regions where <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/regions.html#optimization_region\">Forecasting, capacity planning, and scheduling</a> is available.</p> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy </p> </dd> <dt>AGENT_NON_RESPONSE</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy </p> </dd> <dt>AGENT_NON_RESPONSE_WITHOUT_CUSTOMER_ABANDONS</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> <p>Data for this metric is available starting from October 1, 2023 0:00:00 GMT.</p> </dd> <dt>AGENT_OCCUPANCY</dt> <dd> <p>Unit: Percentage</p> <p>Valid groupings and filters: Routing Profile, Agent, Agent Hierarchy </p> </dd> <dt>AGENT_SCHEDULE_ADHERENCE</dt> <dd> <p>This metric is available only in Amazon Web Services Regions where <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/regions.html#optimization_region\">Forecasting, capacity planning, and scheduling</a> is available.</p> <p>Unit: Percent</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AGENT_SCHEDULED_TIME</dt> <dd> <p>This metric is available only in Amazon Web Services Regions where <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/regions.html#optimization_region\">Forecasting, capacity planning, and scheduling</a> is available.</p> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_ABANDON_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_AFTER_CONTACT_WORK_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy, Feature</p> <note> <p>Feature is a valid filter but not a valid grouping.</p> </note> </dd> <dt>AVG_AGENT_CONNECTING_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid metric filter key: <code>INITIATION_METHOD</code>. For now, this metric only supports the following as <code>INITIATION_METHOD</code>: <code>INBOUND</code> | <code>OUTBOUND</code> | <code>CALLBACK</code> | <code>API</code> </p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> <note> <p>The <code>Negate</code> key in Metric Level Filters is not applicable for this metric.</p> </note> </dd> <dt>AVG_CONTACT_DURATION</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy, Feature</p> <note> <p>Feature is a valid filter but not a valid grouping.</p> </note> </dd> <dt>AVG_CONVERSATION_DURATION</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_GREETING_TIME_AGENT</dt> <dd> <p>This metric is available only for contacts analyzed by Contact Lens conversational analytics.</p> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_HANDLE_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy, Feature</p> <note> <p>Feature is a valid filter but not a valid grouping.</p> </note> </dd> <dt>AVG_HOLD_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy, Feature</p> <note> <p>Feature is a valid filter but not a valid grouping.</p> </note> </dd> <dt>AVG_HOLD_TIME_ALL_CONTACTS</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_HOLDS</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy, Feature</p> <note> <p>Feature is a valid filter but not a valid grouping.</p> </note> </dd> <dt>AVG_INTERACTION_AND_HOLD_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_INTERACTION_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Feature</p> <note> <p>Feature is a valid filter but not a valid grouping.</p> </note> </dd> <dt>AVG_INTERRUPTIONS_AGENT</dt> <dd> <p>This metric is available only for contacts analyzed by Contact Lens conversational analytics.</p> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_INTERRUPTION_TIME_AGENT</dt> <dd> <p>This metric is available only for contacts analyzed by Contact Lens conversational analytics.</p> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_NON_TALK_TIME</dt> <dd> <p>This metric is available only for contacts analyzed by Contact Lens conversational analytics.</p> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_QUEUE_ANSWER_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Feature</p> <note> <p>Feature is a valid filter but not a valid grouping.</p> </note> </dd> <dt>AVG_RESOLUTION_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile</p> </dd> <dt>AVG_TALK_TIME</dt> <dd> <p>This metric is available only for contacts analyzed by Contact Lens conversational analytics.</p> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_TALK_TIME_AGENT</dt> <dd> <p>This metric is available only for contacts analyzed by Contact Lens conversational analytics.</p> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>AVG_TALK_TIME_CUSTOMER</dt> <dd> <p>This metric is available only for contacts analyzed by Contact Lens conversational analytics.</p> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>CONTACTS_ABANDONED</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>CONTACTS_CREATED</dt> <dd> <p>Unit: Count</p> <p>Valid metric filter key: <code>INITIATION_METHOD</code> </p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Feature</p> <note> <p>Feature is a valid filter but not a valid grouping.</p> </note> </dd> <dt>CONTACTS_HANDLED</dt> <dd> <p>Unit: Count</p> <p>Valid metric filter key: <code>INITIATION_METHOD</code>, <code>DISCONNECT_REASON</code> </p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy, Feature</p> <note> <p>Feature is a valid filter but not a valid grouping.</p> </note> </dd> <dt>CONTACTS_HOLD_ABANDONS</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>CONTACTS_QUEUED</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>CONTACTS_RESOLVED_IN_X</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile</p> <p>Threshold: For <code>ThresholdValue</code> enter any whole number from 1 to 604800 (inclusive), in seconds. For <code>Comparison</code>, you must enter <code>LT</code> (for \"Less than\").</p> </dd> <dt>CONTACTS_TRANSFERRED_OUT</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy, Feature</p> <note> <p>Feature is a valid filter but not a valid grouping.</p> </note> </dd> <dt>CONTACTS_TRANSFERRED_OUT_BY_AGENT</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>CONTACTS_TRANSFERRED_OUT_FROM_QUEUE</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>MAX_QUEUED_TIME</dt> <dd> <p>Unit: Seconds</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile, Agent, Agent Hierarchy</p> </dd> <dt>SERVICE_LEVEL</dt> <dd> <p>You can include up to 20 SERVICE_LEVEL metrics in a request.</p> <p>Unit: Percent</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile</p> <p>Threshold: For <code>ThresholdValue</code>, enter any whole number from 1 to 604800 (inclusive), in seconds. For <code>Comparison</code>, you must enter <code>LT</code> (for \"Less than\"). </p> </dd> <dt>SUM_CONTACTS_ANSWERED_IN_X</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile</p> <p>Threshold: For <code>ThresholdValue</code>, enter any whole number from 1 to 604800 (inclusive), in seconds. For <code>Comparison</code>, you must enter <code>LT</code> (for \"Less than\"). </p> </dd> <dt>SUM_CONTACTS_ABANDONED_IN_X</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile</p> <p>Threshold: For <code>ThresholdValue</code>, enter any whole number from 1 to 604800 (inclusive), in seconds. For <code>Comparison</code>, you must enter <code>LT</code> (for \"Less than\"). </p> </dd> <dt>SUM_CONTACTS_DISCONNECTED </dt> <dd> <p>Valid metric filter key: <code>DISCONNECT_REASON</code> </p> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile</p> </dd> <dt>SUM_RETRY_CALLBACK_ATTEMPTS</dt> <dd> <p>Unit: Count</p> <p>Valid groupings and filters: Queue, Channel, Routing Profile</p> </dd> </dl>"
         },
         "NextToken":{
           "shape":"NextToken2500",
@@ -8182,6 +9088,36 @@
         "MetricResults":{
           "shape":"MetricResultsV2",
           "documentation":"<p>Information about the metrics requested in the API request If no grouping is specified, a summary of metric data is returned. </p>"
+        }
+      }
+    },
+    "GetPromptFileRequest":{
+      "type":"structure",
+      "required":[
+        "InstanceId",
+        "PromptId"
+      ],
+      "members":{
+        "InstanceId":{
+          "shape":"InstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/find-instance-arn.html\">find the instance ID</a> in the Amazon Resource Name (ARN) of the instance.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "PromptId":{
+          "shape":"PromptId",
+          "documentation":"<p>A unique identifier for the prompt.</p>",
+          "location":"uri",
+          "locationName":"PromptId"
+        }
+      }
+    },
+    "GetPromptFileResponse":{
+      "type":"structure",
+      "members":{
+        "PromptPresignedUrl":{
+          "shape":"PromptPresignedUrl",
+          "documentation":"<p>A generated URL to the prompt that can be given to an unauthorized user so they can access the prompt in S3.</p>"
         }
       }
     },
@@ -8300,6 +9236,14 @@
         "Arn":{
           "shape":"TrafficDistributionGroupArn",
           "documentation":"<p>The Amazon Resource Name (ARN) of the traffic distribution group.</p>"
+        },
+        "SignInConfig":{
+          "shape":"SignInConfig",
+          "documentation":"<p>The distribution that determines which Amazon Web Services Regions should be used to sign in agents in to both the instance and its replica(s).</p>"
+        },
+        "AgentConfig":{
+          "shape":"AgentConfig",
+          "documentation":"<p>The distribution of agents between the instance and its replica(s).</p>"
         }
       }
     },
@@ -8732,7 +9676,40 @@
       "min":1
     },
     "HoursOfOperationId":{"type":"string"},
+    "HoursOfOperationList":{
+      "type":"list",
+      "member":{"shape":"HoursOfOperation"}
+    },
     "HoursOfOperationName":{"type":"string"},
+    "HoursOfOperationSearchConditionList":{
+      "type":"list",
+      "member":{"shape":"HoursOfOperationSearchCriteria"}
+    },
+    "HoursOfOperationSearchCriteria":{
+      "type":"structure",
+      "members":{
+        "OrConditions":{
+          "shape":"HoursOfOperationSearchConditionList",
+          "documentation":"<p>A list of conditions which would be applied together with an OR condition.</p>"
+        },
+        "AndConditions":{
+          "shape":"HoursOfOperationSearchConditionList",
+          "documentation":"<p>A list of conditions which would be applied together with an AND condition.</p>"
+        },
+        "StringCondition":{
+          "shape":"StringCondition",
+          "documentation":"<p>A leaf node condition which can be used to specify a string condition.</p> <note> <p>The currently supported values for <code>FieldName</code> are <code>name</code>, <code>description</code>, <code>timezone</code>, and <code>resourceID</code>.</p> </note>"
+        }
+      },
+      "documentation":"<p>The search criteria to be used to return hours of operations.</p>"
+    },
+    "HoursOfOperationSearchFilter":{
+      "type":"structure",
+      "members":{
+        "TagFilter":{"shape":"ControlPlaneTagFilter"}
+      },
+      "documentation":"<p>Filters to be applied to search results.</p>"
+    },
     "HoursOfOperationSummary":{
       "type":"structure",
       "members":{
@@ -8828,6 +9805,10 @@
         "OutboundCallsEnabled":{
           "shape":"OutboundCallsEnabled",
           "documentation":"<p>Whether outbound calls are enabled.</p>"
+        },
+        "InstanceAccessUrl":{
+          "shape":"Url",
+          "documentation":"<p>This URL allows contact center users to access the Amazon Connect admin website.</p>"
         }
       },
       "documentation":"<p>The Amazon Connect instance.</p>"
@@ -8931,7 +9912,8 @@
         "AGENT_EVENTS",
         "REAL_TIME_CONTACT_ANALYSIS_SEGMENTS",
         "ATTACHMENTS",
-        "CONTACT_EVALUATIONS"
+        "CONTACT_EVALUATIONS",
+        "SCREEN_RECORDINGS"
       ]
     },
     "InstanceSummary":{
@@ -8972,6 +9954,10 @@
         "OutboundCallsEnabled":{
           "shape":"OutboundCallsEnabled",
           "documentation":"<p>Whether outbound calls are enabled.</p>"
+        },
+        "InstanceAccessUrl":{
+          "shape":"Url",
+          "documentation":"<p>This URL allows contact center users to access the Amazon Connect admin website.</p>"
         }
       },
       "documentation":"<p>Information about the instance.</p>"
@@ -9040,7 +10026,8 @@
         "PINPOINT_APP",
         "WISDOM_ASSISTANT",
         "WISDOM_KNOWLEDGE_BASE",
-        "CASES_DOMAIN"
+        "CASES_DOMAIN",
+        "APPLICATION"
       ]
     },
     "InternalServiceException":{
@@ -9054,6 +10041,31 @@
       "documentation":"<p>Request processing failed because of an error or failure with the service.</p>",
       "error":{"httpStatusCode":500},
       "exception":true
+    },
+    "IntervalDetails":{
+      "type":"structure",
+      "members":{
+        "TimeZone":{
+          "shape":"String",
+          "documentation":"<p>The timezone applied to requested metrics.</p>"
+        },
+        "IntervalPeriod":{
+          "shape":"IntervalPeriod",
+          "documentation":"<p> <code>IntervalPeriod</code>: An aggregated grouping applied to request metrics. Valid <code>IntervalPeriod</code> values are: <code>FIFTEEN_MIN</code> | <code>THIRTY_MIN</code> | <code>HOUR</code> | <code>DAY</code> | <code>WEEK</code> | <code>TOTAL</code>. </p> <p>For example, if <code>IntervalPeriod</code> is selected <code>THIRTY_MIN</code>, <code>StartTime</code> and <code>EndTime</code> differs by 1 day, then Amazon Connect returns 48 results in the response. Each result is aggregated by the THIRTY_MIN period. By default Amazon Connect aggregates results based on the <code>TOTAL</code> interval period. </p> <p>The following list describes restrictions on <code>StartTime</code> and <code>EndTime</code> based on what <code>IntervalPeriod</code> is requested. </p> <ul> <li> <p> <code>FIFTEEN_MIN</code>: The difference between <code>StartTime</code> and <code>EndTime</code> must be less than 3 days.</p> </li> <li> <p> <code>THIRTY_MIN</code>: The difference between <code>StartTime</code> and <code>EndTime</code> must be less than 3 days.</p> </li> <li> <p> <code>HOUR</code>: The difference between <code>StartTime</code> and <code>EndTime</code> must be less than 3 days.</p> </li> <li> <p> <code>DAY</code>: The difference between <code>StartTime</code> and <code>EndTime</code> must be less than 35 days.</p> </li> <li> <p> <code>WEEK</code>: The difference between <code>StartTime</code> and <code>EndTime</code> must be less than 35 days.</p> </li> <li> <p> <code>TOTAL</code>: The difference between <code>StartTime</code> and <code>EndTime</code> must be less than 35 days.</p> </li> </ul>"
+        }
+      },
+      "documentation":"<p>Information about the interval period to use for returning results.</p>"
+    },
+    "IntervalPeriod":{
+      "type":"string",
+      "enum":[
+        "FIFTEEN_MIN",
+        "THIRTY_MIN",
+        "HOUR",
+        "DAY",
+        "WEEK",
+        "TOTAL"
+      ]
     },
     "InvalidContactFlowException":{
       "type":"structure",
@@ -9953,7 +10965,7 @@
         },
         "PhoneNumberTypes":{
           "shape":"PhoneNumberTypes",
-          "documentation":"<p>The type of phone number.</p>",
+          "documentation":"<p>The type of phone number.</p> <note> <p>We recommend using <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ListPhoneNumbersV2.html\">ListPhoneNumbersV2</a> to return phone number types. While ListPhoneNumbers returns number types <code>UIFN</code>, <code>SHARED</code>, <code>THIRD_PARTY_TF</code>, and <code>THIRD_PARTY_DID</code>, it incorrectly lists them as <code>TOLL_FREE</code> or <code>DID</code>. </p> </note>",
           "location":"querystring",
           "locationName":"phoneNumberTypes"
         },
@@ -10413,6 +11425,52 @@
         }
       }
     },
+    "ListSecurityProfileApplicationsRequest":{
+      "type":"structure",
+      "required":[
+        "SecurityProfileId",
+        "InstanceId"
+      ],
+      "members":{
+        "SecurityProfileId":{
+          "shape":"SecurityProfileId",
+          "documentation":"<p>The security profile identifier.</p>",
+          "location":"uri",
+          "locationName":"SecurityProfileId"
+        },
+        "InstanceId":{
+          "shape":"InstanceId",
+          "documentation":"<p>The instance identifier.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "NextToken":{
+          "shape":"NextToken",
+          "documentation":"<p>The token for the next set of results. The next set of results can be retrieved by using the token value returned in the previous response when making the next request.</p>",
+          "location":"querystring",
+          "locationName":"nextToken"
+        },
+        "MaxResults":{
+          "shape":"MaxResult1000",
+          "documentation":"<p>The maximum number of results to return per page.</p>",
+          "location":"querystring",
+          "locationName":"maxResults"
+        }
+      }
+    },
+    "ListSecurityProfileApplicationsResponse":{
+      "type":"structure",
+      "members":{
+        "Applications":{
+          "shape":"Applications",
+          "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>A list of the third party application's metadata.</p>"
+        },
+        "NextToken":{
+          "shape":"NextToken",
+          "documentation":"<p>The token for the next set of results. The next set of results can be retrieved by using the token value returned in the previous response when making the next request.</p>"
+        }
+      }
+    },
     "ListSecurityProfilePermissionsRequest":{
       "type":"structure",
       "required":[
@@ -10566,6 +11624,44 @@
         "NextToken":{
           "shape":"NextToken",
           "documentation":"<p>If there are additional results, this is the token for the next set of results.</p> <important> <p>This is always returned as a null in the response.</p> </important>"
+        }
+      }
+    },
+    "ListTrafficDistributionGroupUsersRequest":{
+      "type":"structure",
+      "required":["TrafficDistributionGroupId"],
+      "members":{
+        "TrafficDistributionGroupId":{
+          "shape":"TrafficDistributionGroupIdOrArn",
+          "documentation":"<p>The identifier of the traffic distribution group. This can be the ID or the ARN if the API is being called in the Region where the traffic distribution group was created. The ARN must be provided if the call is from the replicated Region.</p>",
+          "location":"uri",
+          "locationName":"TrafficDistributionGroupId"
+        },
+        "MaxResults":{
+          "shape":"MaxResult10",
+          "documentation":"<p>The maximum number of results to return per page.</p>",
+          "box":true,
+          "location":"querystring",
+          "locationName":"maxResults"
+        },
+        "NextToken":{
+          "shape":"NextToken",
+          "documentation":"<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>",
+          "location":"querystring",
+          "locationName":"nextToken"
+        }
+      }
+    },
+    "ListTrafficDistributionGroupUsersResponse":{
+      "type":"structure",
+      "members":{
+        "NextToken":{
+          "shape":"NextToken",
+          "documentation":"<p>If there are additional results, this is the token for the next set of results.</p>"
+        },
+        "TrafficDistributionGroupUserSummaryList":{
+          "shape":"TrafficDistributionGroupUserSummaryList",
+          "documentation":"<p>A list of traffic distribution group users.</p>"
         }
       }
     },
@@ -10729,6 +11825,97 @@
         }
       }
     },
+    "ListViewVersionsRequest":{
+      "type":"structure",
+      "required":[
+        "InstanceId",
+        "ViewId"
+      ],
+      "members":{
+        "InstanceId":{
+          "shape":"ViewsInstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can find the instanceId in the ARN of the instance.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "ViewId":{
+          "shape":"ViewId",
+          "documentation":"<p>The identifier of the view. Both <code>ViewArn</code> and <code>ViewId</code> can be used.</p>",
+          "location":"uri",
+          "locationName":"ViewId"
+        },
+        "NextToken":{
+          "shape":"ViewsNextToken",
+          "documentation":"<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>",
+          "location":"querystring",
+          "locationName":"nextToken"
+        },
+        "MaxResults":{
+          "shape":"MaxResults",
+          "documentation":"<p>The maximum number of results to return per page. The default MaxResult size is 100.</p>",
+          "box":true,
+          "location":"querystring",
+          "locationName":"maxResults"
+        }
+      }
+    },
+    "ListViewVersionsResponse":{
+      "type":"structure",
+      "members":{
+        "ViewVersionSummaryList":{
+          "shape":"ViewVersionSummaryList",
+          "documentation":"<p>A list of view version summaries.</p>"
+        },
+        "NextToken":{
+          "shape":"ViewsNextToken",
+          "documentation":"<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>"
+        }
+      }
+    },
+    "ListViewsRequest":{
+      "type":"structure",
+      "required":["InstanceId"],
+      "members":{
+        "InstanceId":{
+          "shape":"ViewsInstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can find the instanceId in the ARN of the instance.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "Type":{
+          "shape":"ViewType",
+          "documentation":"<p>The type of the view.</p>",
+          "location":"querystring",
+          "locationName":"type"
+        },
+        "NextToken":{
+          "shape":"ViewsNextToken",
+          "documentation":"<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>",
+          "location":"querystring",
+          "locationName":"nextToken"
+        },
+        "MaxResults":{
+          "shape":"MaxResults",
+          "documentation":"<p>The maximum number of results to return per page. The default MaxResult size is 100.</p>",
+          "box":true,
+          "location":"querystring",
+          "locationName":"maxResults"
+        }
+      }
+    },
+    "ListViewsResponse":{
+      "type":"structure",
+      "members":{
+        "ViewsSummaryList":{
+          "shape":"ViewsSummaryList",
+          "documentation":"<p>A list of view summaries.</p>"
+        },
+        "NextToken":{
+          "shape":"ViewsNextToken",
+          "documentation":"<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>"
+        }
+      }
+    },
     "Long":{"type":"long"},
     "MaxResult10":{
       "type":"integer",
@@ -10764,6 +11951,20 @@
       "type":"integer",
       "max":7,
       "min":1
+    },
+    "MaxResults":{
+      "type":"integer",
+      "max":100,
+      "min":1
+    },
+    "MaximumResultReturnedException":{
+      "type":"structure",
+      "members":{
+        "Message":{"shape":"Message"}
+      },
+      "documentation":"<p>Maximum number (1000) of tags have been returned with current request. Consider changing request parameters to get more tags.</p>",
+      "error":{"httpStatusCode":400},
+      "exception":true
     },
     "MediaConcurrencies":{
       "type":"list",
@@ -10821,6 +12022,10 @@
         "MetricFilterValues":{
           "shape":"MetricFilterValueList",
           "documentation":"<p>The values to use for filtering data. </p> <p>Valid metric filter values for <code>INITIATION_METHOD</code>: <code>INBOUND</code> | <code>OUTBOUND</code> | <code>TRANSFER</code> | <code>QUEUE_TRANSFER</code> | <code>CALLBACK</code> | <code>API</code> </p> <p>Valid metric filter values for <code>DISCONNECT_REASON</code>: <code>CUSTOMER_DISCONNECT</code> | <code>AGENT_DISCONNECT</code> | <code>THIRD_PARTY_DISCONNECT</code> | <code>TELECOM_PROBLEM</code> | <code>BARGED</code> | <code>CONTACT_FLOW_DISCONNECT</code> | <code>OTHER</code> | <code>EXPIRED</code> | <code>API</code> </p>"
+        },
+        "Negate":{
+          "shape":"Boolean",
+          "documentation":"<p>The flag to use to filter on requested metric filter values or to not filter on requested metric filter values. By default the negate is <code>false</code>, which indicates to filter on the requested metric filter. </p>"
         }
       },
       "documentation":"<p>Contains information about the filter used when retrieving metrics. <code>MetricFiltersV2</code> can be used on the following metrics: <code>AVG_AGENT_CONNECTING_TIME</code>, <code>CONTACTS_CREATED</code>, <code>CONTACTS_HANDLED</code>, <code>SUM_CONTACTS_DISCONNECTED</code>.</p>"
@@ -10836,6 +12041,24 @@
       "member":{"shape":"MetricFilterV2"},
       "max":2
     },
+    "MetricInterval":{
+      "type":"structure",
+      "members":{
+        "Interval":{
+          "shape":"IntervalPeriod",
+          "documentation":"<p>The interval period provided in the API request. </p>"
+        },
+        "StartTime":{
+          "shape":"Timestamp",
+          "documentation":"<p>The timestamp, in UNIX Epoch time format. Start time is based on the interval period selected. </p>"
+        },
+        "EndTime":{
+          "shape":"Timestamp",
+          "documentation":"<p>The timestamp, in UNIX Epoch time format. End time is based on the interval period selected. For example, If <code>IntervalPeriod</code> is selected <code>THIRTY_MIN</code>, <code>StartTime</code> and <code>EndTime</code> in the API request differs by 1 day, then 48 results are returned in the response. Each result is aggregated by the 30 minutes period, with each <code>StartTime</code> and <code>EndTime</code> differing by 30 minutes. </p>"
+        }
+      },
+      "documentation":"<p>The interval period with the start and end time for the metrics.</p>"
+    },
     "MetricNameV2":{"type":"string"},
     "MetricResultV2":{
       "type":"structure",
@@ -10843,6 +12066,10 @@
         "Dimensions":{
           "shape":"DimensionsV2Map",
           "documentation":"<p>The dimension for the metrics.</p>"
+        },
+        "MetricInterval":{
+          "shape":"MetricInterval",
+          "documentation":"<p>The interval period with the start and end time for the metrics.</p>"
         },
         "Collections":{
           "shape":"MetricDataCollectionsV2",
@@ -10943,6 +12170,11 @@
       "max":128,
       "min":1,
       "pattern":"(^[\\S].*[\\S]$)|(^[\\S]$)"
+    },
+    "Namespace":{
+      "type":"string",
+      "max":128,
+      "min":1
     },
     "NextToken":{"type":"string"},
     "NextToken2500":{
@@ -11185,6 +12417,11 @@
       "type":"integer",
       "max":100,
       "min":0
+    },
+    "Permission":{
+      "type":"string",
+      "max":128,
+      "min":1
     },
     "PermissionsList":{
       "type":"list",
@@ -11490,7 +12727,7 @@
           "documentation":"<p>The status message.</p>"
         }
       },
-      "documentation":"<p>The status of the phone number.</p> <ul> <li> <p> <code>CLAIMED</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ClaimedPhoneNumber.html\">ClaimedPhoneNumber</a> or <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdatePhoneNumber.html\">UpdatePhoneNumber</a> operation succeeded.</p> </li> <li> <p> <code>IN_PROGRESS</code> means a <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ClaimedPhoneNumber.html\">ClaimedPhoneNumber</a> or <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdatePhoneNumber.html\">UpdatePhoneNumber</a> operation is still in progress and has not yet completed. You can call <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_DescribePhoneNumber.html\">DescribePhoneNumber</a> at a later time to verify if the previous operation has completed.</p> </li> <li> <p> <code>FAILED</code> indicates that the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ClaimedPhoneNumber.html\">ClaimedPhoneNumber</a> or <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdatePhoneNumber.html\">UpdatePhoneNumber</a> operation has failed. It will include a message indicating the failure reason. A common reason for a failure may be that the <code>TargetArn</code> value you are claiming or updating a phone number to has reached its limit of total claimed numbers. If you received a <code>FAILED</code> status from a <code>ClaimPhoneNumber</code> API call, you have one day to retry claiming the phone number before the number is released back to the inventory for other customers to claim.</p> </li> </ul>"
+      "documentation":"<p>The status of the phone number.</p> <ul> <li> <p> <code>CLAIMED</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ClaimPhoneNumber.html\">ClaimPhoneNumber</a> or <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdatePhoneNumber.html\">UpdatePhoneNumber</a> operation succeeded.</p> </li> <li> <p> <code>IN_PROGRESS</code> means a <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ClaimPhoneNumber.html\">ClaimPhoneNumber</a>, <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdatePhoneNumber.html\">UpdatePhoneNumber</a>, or <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdatePhoneNumberMetadata.html\">UpdatePhoneNumberMetadata</a> operation is still in progress and has not yet completed. You can call <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_DescribePhoneNumber.html\">DescribePhoneNumber</a> at a later time to verify if the previous operation has completed.</p> </li> <li> <p> <code>FAILED</code> indicates that the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_ClaimPhoneNumber.html\">ClaimPhoneNumber</a> or <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdatePhoneNumber.html\">UpdatePhoneNumber</a> operation has failed. It will include a message indicating the failure reason. A common reason for a failure may be that the <code>TargetArn</code> value you are claiming or updating a phone number to has reached its limit of total claimed numbers. If you received a <code>FAILED</code> status from a <code>ClaimPhoneNumber</code> API call, you have one day to retry claiming the phone number before the number is released back to the inventory for other customers to claim.</p> </li> </ul>"
     },
     "PhoneNumberSummary":{
       "type":"structure",
@@ -11526,13 +12763,17 @@
       "type":"string",
       "enum":[
         "TOLL_FREE",
-        "DID"
+        "DID",
+        "UIFN",
+        "SHARED",
+        "THIRD_PARTY_TF",
+        "THIRD_PARTY_DID"
       ]
     },
     "PhoneNumberTypes":{
       "type":"list",
       "member":{"shape":"PhoneNumberType"},
-      "max":2
+      "max":6
     },
     "PhoneNumberWorkflowMessage":{
       "type":"string",
@@ -11586,15 +12827,84 @@
       "max":50,
       "min":1
     },
+    "Prompt":{
+      "type":"structure",
+      "members":{
+        "PromptARN":{
+          "shape":"ARN",
+          "documentation":"<p>The Amazon Resource Name (ARN) of the prompt.</p>"
+        },
+        "PromptId":{
+          "shape":"PromptId",
+          "documentation":"<p>A unique identifier for the prompt.</p>"
+        },
+        "Name":{
+          "shape":"CommonNameLength127",
+          "documentation":"<p>The name of the prompt.</p>"
+        },
+        "Description":{
+          "shape":"PromptDescription",
+          "documentation":"<p>The description of the prompt.</p>"
+        },
+        "Tags":{
+          "shape":"TagMap",
+          "documentation":"<p>The tags used to organize, track, or control access for this resource. For example, { \"tags\": {\"key1\":\"value1\", \"key2\":\"value2\"} }.</p>"
+        }
+      },
+      "documentation":"<p>Information about a prompt.</p>"
+    },
+    "PromptDescription":{
+      "type":"string",
+      "max":250,
+      "min":1
+    },
     "PromptId":{
       "type":"string",
       "max":256,
       "min":1
     },
+    "PromptList":{
+      "type":"list",
+      "member":{"shape":"Prompt"}
+    },
     "PromptName":{
       "type":"string",
       "max":256,
       "min":1
+    },
+    "PromptPresignedUrl":{
+      "type":"string",
+      "max":2000,
+      "min":1
+    },
+    "PromptSearchConditionList":{
+      "type":"list",
+      "member":{"shape":"PromptSearchCriteria"}
+    },
+    "PromptSearchCriteria":{
+      "type":"structure",
+      "members":{
+        "OrConditions":{
+          "shape":"PromptSearchConditionList",
+          "documentation":"<p>A list of conditions which would be applied together with an OR condition.</p>"
+        },
+        "AndConditions":{
+          "shape":"PromptSearchConditionList",
+          "documentation":"<p>A list of conditions which would be applied together with an AND condition.</p>"
+        },
+        "StringCondition":{
+          "shape":"StringCondition",
+          "documentation":"<p>A leaf node condition which can be used to specify a string condition.</p> <note> <p>The currently supported values for <code>FieldName</code> are <code>name</code>, <code>description</code>, and <code>resourceID</code>.</p> </note>"
+        }
+      },
+      "documentation":"<p>The search criteria to be used to return prompts.</p>"
+    },
+    "PromptSearchFilter":{
+      "type":"structure",
+      "members":{
+        "TagFilter":{"shape":"ControlPlaneTagFilter"}
+      },
+      "documentation":"<p>Filters to be applied to search results.</p>"
     },
     "PromptSummary":{
       "type":"structure",
@@ -11817,7 +13127,10 @@
           "shape":"QueueSearchConditionList",
           "documentation":"<p>A list of conditions which would be applied together with an AND condition.</p>"
         },
-        "StringCondition":{"shape":"StringCondition"},
+        "StringCondition":{
+          "shape":"StringCondition",
+          "documentation":"<p>A leaf node condition which can be used to specify a string condition.</p> <note> <p>The currently supported values for <code>FieldName</code> are <code>name</code>, <code>description</code>, and <code>resourceID</code>.</p> </note>"
+        },
         "QueueTypeCondition":{
           "shape":"SearchableQueueType",
           "documentation":"<p>The type of queue.</p>"
@@ -11951,6 +13264,39 @@
       "max":127,
       "min":1
     },
+    "QuickConnectSearchConditionList":{
+      "type":"list",
+      "member":{"shape":"QuickConnectSearchCriteria"}
+    },
+    "QuickConnectSearchCriteria":{
+      "type":"structure",
+      "members":{
+        "OrConditions":{
+          "shape":"QuickConnectSearchConditionList",
+          "documentation":"<p>A list of conditions which would be applied together with an OR condition.</p>"
+        },
+        "AndConditions":{
+          "shape":"QuickConnectSearchConditionList",
+          "documentation":"<p>A list of conditions which would be applied together with an AND condition.</p>"
+        },
+        "StringCondition":{
+          "shape":"StringCondition",
+          "documentation":"<p>A leaf node condition which can be used to specify a string condition.</p> <note> <p>The currently supported values for <code>FieldName</code> are <code>name</code>, <code>description</code>, and <code>resourceID</code>.</p> </note>"
+        }
+      },
+      "documentation":"<p>The search criteria to be used to return quick connects.</p>"
+    },
+    "QuickConnectSearchFilter":{
+      "type":"structure",
+      "members":{
+        "TagFilter":{"shape":"ControlPlaneTagFilter"}
+      },
+      "documentation":"<p>Filters to be applied to search results.</p>"
+    },
+    "QuickConnectSearchSummaryList":{
+      "type":"list",
+      "member":{"shape":"QuickConnect"}
+    },
     "QuickConnectSummary":{
       "type":"structure",
       "members":{
@@ -12031,7 +13377,7 @@
     "ReferenceId":{
       "type":"string",
       "max":40,
-      "min":0
+      "min":1
     },
     "ReferenceKey":{
       "type":"string",
@@ -12199,7 +13545,7 @@
     },
     "ResourceId":{
       "type":"string",
-      "max":50,
+      "max":500,
       "min":1
     },
     "ResourceInUseException":{
@@ -12240,6 +13586,16 @@
       "error":{"httpStatusCode":409},
       "exception":true
     },
+    "ResourceTagsSearchCriteria":{
+      "type":"structure",
+      "members":{
+        "TagSearchCondition":{
+          "shape":"TagSearchCondition",
+          "documentation":"<p>The search criteria to be used to return tags.</p>"
+        }
+      },
+      "documentation":"<p>The search criteria to be used to search tags.</p>"
+    },
     "ResourceType":{
       "type":"string",
       "enum":[
@@ -12251,6 +13607,10 @@
         "HIERARCHY_GROUP",
         "USER"
       ]
+    },
+    "ResourceTypeList":{
+      "type":"list",
+      "member":{"shape":"String"}
     },
     "ResumeContactRecordingRequest":{
       "type":"structure",
@@ -12321,6 +13681,10 @@
         "NumberOfAssociatedUsers":{
           "shape":"Long",
           "documentation":"<p>The number of associated users in routing profile.</p>"
+        },
+        "AgentAvailabilityTimer":{
+          "shape":"AgentAvailabilityTimer",
+          "documentation":"<p>Whether agents with this routing profile will have their routing order calculated based on <i>time since their last inbound contact</i> or <i>longest idle time</i>. </p>"
         }
       },
       "documentation":"<p>Contains information about a routing profile.</p>"
@@ -12464,7 +13828,10 @@
           "shape":"RoutingProfileSearchConditionList",
           "documentation":"<p>A list of conditions which would be applied together with an AND condition.</p>"
         },
-        "StringCondition":{"shape":"StringCondition"}
+        "StringCondition":{
+          "shape":"StringCondition",
+          "documentation":"<p>A leaf node condition which can be used to specify a string condition.</p> <note> <p>The currently supported values for <code>FieldName</code> are <code>name</code>, <code>description</code>, and <code>resourceID</code>.</p> </note>"
+        }
       },
       "documentation":"<p>The search criteria to be used to return routing profiles.</p> <note> <p>The <code>name</code> and <code>description</code> fields support \"contains\" queries with a minimum of 2 characters and a maximum of 25 characters. Any queries with character lengths outside of this range will throw invalid results. </p> </note>"
     },
@@ -12579,15 +13946,15 @@
         },
         "EventBridgeAction":{
           "shape":"EventBridgeActionDefinition",
-          "documentation":"<p>Information about the EventBridge action.</p>"
+          "documentation":"<p>Information about the EventBridge action.</p> <p>Supported only for <code>TriggerEventSource</code> values: <code>OnPostCallAnalysisAvailable</code> | <code>OnRealTimeCallAnalysisAvailable</code> | <code>OnPostChatAnalysisAvailable</code> | <code>OnContactEvaluationSubmit</code> | <code>OnMetricDataUpdate</code> </p>"
         },
         "AssignContactCategoryAction":{
           "shape":"AssignContactCategoryActionDefinition",
-          "documentation":"<p>Information about the contact category action.</p>"
+          "documentation":"<p>Information about the contact category action.</p> <p>Supported only for <code>TriggerEventSource</code> values: <code>OnPostCallAnalysisAvailable</code> | <code>OnRealTimeCallAnalysisAvailable</code> | <code>OnPostChatAnalysisAvailable</code> | <code>OnZendeskTicketCreate</code> | <code>OnZendeskTicketStatusUpdate</code> | <code>OnSalesforceCaseCreate</code> </p>"
         },
         "SendNotificationAction":{
           "shape":"SendNotificationActionDefinition",
-          "documentation":"<p>Information about the send notification action.</p>"
+          "documentation":"<p>Information about the send notification action.</p> <p>Supported only for <code>TriggerEventSource</code> values: <code>OnPostCallAnalysisAvailable</code> | <code>OnRealTimeCallAnalysisAvailable</code> | <code>OnPostChatAnalysisAvailable</code> | <code>OnContactEvaluationSubmit</code> | <code>OnMetricDataUpdate</code> </p>"
         }
       },
       "documentation":"<p>Information about the action to be performed when a rule is triggered.</p>"
@@ -12680,7 +14047,7 @@
           "documentation":"<p>The identifier for the integration association.</p>"
         }
       },
-      "documentation":"<p>The name of the event source. This field is required if <code>TriggerEventSource</code> is one of the following values: <code>OnZendeskTicketCreate</code> | <code>OnZendeskTicketStatusUpdate</code> | <code>OnSalesforceCaseCreate</code> </p>"
+      "documentation":"<p>The name of the event source. This field is required if <code>TriggerEventSource</code> is one of the following values: <code>OnZendeskTicketCreate</code> | <code>OnZendeskTicketStatusUpdate</code> | <code>OnSalesforceCaseCreate</code> | <code>OnContactEvaluationSubmit</code> | <code>OnMetricDataUpdate</code>.</p>"
     },
     "S3Config":{
       "type":"structure",
@@ -12703,6 +14070,12 @@
         }
       },
       "documentation":"<p>Information about the Amazon Simple Storage Service (Amazon S3) storage type.</p>"
+    },
+    "S3Uri":{
+      "type":"string",
+      "max":512,
+      "min":1,
+      "pattern":"s3://\\S+/.+"
     },
     "SearchAvailablePhoneNumbersRequest":{
       "type":"structure",
@@ -12752,6 +14125,94 @@
         }
       }
     },
+    "SearchHoursOfOperationsRequest":{
+      "type":"structure",
+      "required":["InstanceId"],
+      "members":{
+        "InstanceId":{
+          "shape":"InstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/find-instance-arn.html\">find the instance ID</a> in the Amazon Resource Name (ARN) of the instance.</p>"
+        },
+        "NextToken":{
+          "shape":"NextToken2500",
+          "documentation":"<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>"
+        },
+        "MaxResults":{
+          "shape":"MaxResult100",
+          "documentation":"<p>The maximum number of results to return per page.</p>",
+          "box":true
+        },
+        "SearchFilter":{
+          "shape":"HoursOfOperationSearchFilter",
+          "documentation":"<p>Filters to be applied to search results.</p>"
+        },
+        "SearchCriteria":{
+          "shape":"HoursOfOperationSearchCriteria",
+          "documentation":"<p>The search criteria to be used to return hours of operations.</p>"
+        }
+      }
+    },
+    "SearchHoursOfOperationsResponse":{
+      "type":"structure",
+      "members":{
+        "HoursOfOperations":{
+          "shape":"HoursOfOperationList",
+          "documentation":"<p>Information about the hours of operations.</p>"
+        },
+        "NextToken":{
+          "shape":"NextToken2500",
+          "documentation":"<p>If there are additional results, this is the token for the next set of results.</p>"
+        },
+        "ApproximateTotalCount":{
+          "shape":"ApproximateTotalCount",
+          "documentation":"<p>The total number of hours of operations which matched your search query.</p>"
+        }
+      }
+    },
+    "SearchPromptsRequest":{
+      "type":"structure",
+      "required":["InstanceId"],
+      "members":{
+        "InstanceId":{
+          "shape":"InstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/find-instance-arn.html\">find the instance ID</a> in the Amazon Resource Name (ARN) of the instance.</p>"
+        },
+        "NextToken":{
+          "shape":"NextToken2500",
+          "documentation":"<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>"
+        },
+        "MaxResults":{
+          "shape":"MaxResult100",
+          "documentation":"<p>The maximum number of results to return per page.</p>",
+          "box":true
+        },
+        "SearchFilter":{
+          "shape":"PromptSearchFilter",
+          "documentation":"<p>Filters to be applied to search results.</p>"
+        },
+        "SearchCriteria":{
+          "shape":"PromptSearchCriteria",
+          "documentation":"<p>The search criteria to be used to return prompts.</p>"
+        }
+      }
+    },
+    "SearchPromptsResponse":{
+      "type":"structure",
+      "members":{
+        "Prompts":{
+          "shape":"PromptList",
+          "documentation":"<p>Information about the prompts.</p>"
+        },
+        "NextToken":{
+          "shape":"NextToken2500",
+          "documentation":"<p>If there are additional results, this is the token for the next set of results.</p>"
+        },
+        "ApproximateTotalCount":{
+          "shape":"ApproximateTotalCount",
+          "documentation":"<p>The total number of quick connects which matched your search query.</p>"
+        }
+      }
+    },
     "SearchQueuesRequest":{
       "type":"structure",
       "required":["InstanceId"],
@@ -12793,6 +14254,90 @@
         "ApproximateTotalCount":{
           "shape":"ApproximateTotalCount",
           "documentation":"<p>The total number of queues which matched your search query.</p>"
+        }
+      }
+    },
+    "SearchQuickConnectsRequest":{
+      "type":"structure",
+      "required":["InstanceId"],
+      "members":{
+        "InstanceId":{
+          "shape":"InstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/find-instance-arn.html\">find the instance ID</a> in the Amazon Resource Name (ARN) of the instance.</p>"
+        },
+        "NextToken":{
+          "shape":"NextToken2500",
+          "documentation":"<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>"
+        },
+        "MaxResults":{
+          "shape":"MaxResult100",
+          "documentation":"<p>The maximum number of results to return per page.</p>",
+          "box":true
+        },
+        "SearchFilter":{
+          "shape":"QuickConnectSearchFilter",
+          "documentation":"<p>Filters to be applied to search results.</p>"
+        },
+        "SearchCriteria":{
+          "shape":"QuickConnectSearchCriteria",
+          "documentation":"<p>The search criteria to be used to return quick connects.</p>"
+        }
+      }
+    },
+    "SearchQuickConnectsResponse":{
+      "type":"structure",
+      "members":{
+        "QuickConnects":{
+          "shape":"QuickConnectSearchSummaryList",
+          "documentation":"<p>Information about the quick connects.</p>"
+        },
+        "NextToken":{
+          "shape":"NextToken2500",
+          "documentation":"<p>If there are additional results, this is the token for the next set of results.</p>"
+        },
+        "ApproximateTotalCount":{
+          "shape":"ApproximateTotalCount",
+          "documentation":"<p>The total number of quick connects which matched your search query.</p>"
+        }
+      }
+    },
+    "SearchResourceTagsRequest":{
+      "type":"structure",
+      "required":["InstanceId"],
+      "members":{
+        "InstanceId":{
+          "shape":"InstanceIdOrArn",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can find the instanceId in the Amazon Resource Name (ARN) of the instance.</p>"
+        },
+        "ResourceTypes":{
+          "shape":"ResourceTypeList",
+          "documentation":"<p>The list of resource types to be used to search tags from. If not provided or if any empty list is provided, this API will search from all supported resource types.</p>"
+        },
+        "NextToken":{
+          "shape":"NextToken2500",
+          "documentation":"<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>"
+        },
+        "MaxResults":{
+          "shape":"MaxResult100",
+          "documentation":"<p>The maximum number of results to return per page.</p>",
+          "box":true
+        },
+        "SearchCriteria":{
+          "shape":"ResourceTagsSearchCriteria",
+          "documentation":"<p>The search criteria to be used to return tags.</p>"
+        }
+      }
+    },
+    "SearchResourceTagsResponse":{
+      "type":"structure",
+      "members":{
+        "Tags":{
+          "shape":"TagsList",
+          "documentation":"<p>A list of tags used in the Amazon Connect instance.</p>"
+        },
+        "NextToken":{
+          "shape":"NextToken2500",
+          "documentation":"<p>If there are additional results, this is the token for the next set of results.</p>"
         }
       }
     },
@@ -12889,7 +14434,7 @@
       "members":{
         "InstanceId":{
           "shape":"InstanceId",
-          "documentation":"<p>The identifier of the Amazon Connect instance. You can <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/find-instance-arn.html\">find the instance ID</a> in the Amazon Resource Name (ARN) of the instance.</p>"
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/find-instance-arn.html\">find the instance ID</a> in the Amazon Resource Name (ARN) of the instance.</p> <note> <p>InstanceID is a required field. The \"Required: No\" below is incorrect.</p> </note>"
         },
         "NextToken":{
           "shape":"NextToken2500",
@@ -13185,6 +14730,39 @@
       "documentation":"<p>The service quota has been exceeded.</p>",
       "error":{"httpStatusCode":402},
       "exception":true
+    },
+    "SignInConfig":{
+      "type":"structure",
+      "required":["Distributions"],
+      "members":{
+        "Distributions":{
+          "shape":"SignInDistributionList",
+          "documentation":"<p>Information about traffic distributions.</p>"
+        }
+      },
+      "documentation":"<p>The distribution that determines which Amazon Web Services Regions should be used to sign in agents in to both the instance and its replica(s).</p>"
+    },
+    "SignInDistribution":{
+      "type":"structure",
+      "required":[
+        "Region",
+        "Enabled"
+      ],
+      "members":{
+        "Region":{
+          "shape":"AwsRegion",
+          "documentation":"<p>The Amazon Web Services Region of the sign in distribution.</p>"
+        },
+        "Enabled":{
+          "shape":"Boolean",
+          "documentation":"<p>Whether sign in distribution is enabled.</p>"
+        }
+      },
+      "documentation":"<p>The distribution of sign in traffic between the instance and its replica(s).</p>"
+    },
+    "SignInDistributionList":{
+      "type":"list",
+      "member":{"shape":"SignInDistribution"}
     },
     "SingleSelectOptions":{
       "type":"list",
@@ -13507,7 +15085,7 @@
         },
         "PreviousContactId":{
           "shape":"ContactId",
-          "documentation":"<p>The identifier of the previous chat, voice, or task contact. </p>"
+          "documentation":"<p>The identifier of the previous chat, voice, or task contact. Any updates to user-defined attributes to task contacts linked using the same <code>PreviousContactID</code> will affect every contact in the chain. There can be a maximum of 12 linked task contacts in a chain.</p>"
         },
         "ContactFlowId":{
           "shape":"ContactFlowId",
@@ -13523,7 +15101,7 @@
         },
         "References":{
           "shape":"ContactReferences",
-          "documentation":"<p>A formatted URL that is shown to an agent in the Contact Control Panel (CCP).</p>"
+          "documentation":"<p>A formatted URL that is shown to an agent in the Contact Control Panel (CCP). Tasks can have the following reference types at the time of creation: <code>URL</code> | <code>NUMBER</code> | <code>STRING</code> | <code>DATE</code> | <code>EMAIL</code>. <code>ATTACHMENT</code> is not a supported reference type during task creation.</p>"
         },
         "Description":{
           "shape":"Description",
@@ -13540,15 +15118,15 @@
         },
         "TaskTemplateId":{
           "shape":"TaskTemplateId",
-          "documentation":"<p>A unique identifier for the task template.</p>"
+          "documentation":"<p>A unique identifier for the task template. For more information about task templates, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/task-templates.html\">Create task templates</a> in the <i>Amazon Connect Administrator Guide</i>. </p>"
         },
         "QuickConnectId":{
           "shape":"QuickConnectId",
-          "documentation":"<p>The identifier for the quick connect.</p>"
+          "documentation":"<p>The identifier for the quick connect. Tasks that are created by using <code>QuickConnectId</code> will use the flow that is defined on agent or queue quick connect. For more information about quick connects, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/quick-connects.html\">Create quick connects</a>.</p>"
         },
         "RelatedContactId":{
           "shape":"ContactId",
-          "documentation":"<p>The contactId that is <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/tasks.html#linked-tasks\">related</a> to this contact.</p>"
+          "documentation":"<p>The contactId that is <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/tasks.html#linked-tasks\">related</a> to this contact. Linking tasks together by using <code>RelatedContactID</code> copies over contact attributes from the related task contact to the new task contact. All updates to user-defined attributes in the new task contact are limited to the individual contact ID, unlike what happens when tasks are linked by using <code>PreviousContactID</code>. There are no limits to the number of contacts that can be linked by using <code>RelatedContactId</code>. </p>"
         }
       }
     },
@@ -13684,7 +15262,7 @@
           "documentation":"<p>The type of comparison to be made when evaluating the string condition.</p>"
         }
       },
-      "documentation":"<p>A leaf node condition which can be used to specify a string condition. </p> <note> <p>The currently supported value for <code>FieldName</code>: <code>name</code> </p> </note>"
+      "documentation":"<p>A leaf node condition which can be used to specify a string condition. </p>"
     },
     "StringReference":{
       "type":"structure",
@@ -13817,6 +15395,10 @@
       "max":50,
       "min":1
     },
+    "TagKeyString":{
+      "type":"string",
+      "max":128
+    },
     "TagMap":{
       "type":"map",
       "key":{"shape":"TagKey"},
@@ -13857,9 +15439,53 @@
       "max":128,
       "min":1
     },
+    "TagSearchCondition":{
+      "type":"structure",
+      "members":{
+        "tagKey":{
+          "shape":"TagKeyString",
+          "documentation":"<p>The tag key used in the tag search condition.</p>"
+        },
+        "tagValue":{
+          "shape":"TagValueString",
+          "documentation":"<p>The tag value used in the tag search condition.</p>"
+        },
+        "tagKeyComparisonType":{
+          "shape":"StringComparisonType",
+          "documentation":"<p>The type of comparison to be made when evaluating the tag key in tag search condition.</p>"
+        },
+        "tagValueComparisonType":{
+          "shape":"StringComparisonType",
+          "documentation":"<p>The type of comparison to be made when evaluating the tag value in tag search condition.</p>"
+        }
+      },
+      "documentation":"<p>The search criteria to be used to return tags.</p>"
+    },
+    "TagSet":{
+      "type":"structure",
+      "members":{
+        "key":{
+          "shape":"TagKey",
+          "documentation":"<p>The tag key in the tagSet.</p>"
+        },
+        "value":{
+          "shape":"TagValue",
+          "documentation":"<p>The tag value in the tagSet.</p>"
+        }
+      },
+      "documentation":"<p>A tag set contains tag key and tag value.</p>"
+    },
     "TagValue":{
       "type":"string",
       "max":256
+    },
+    "TagValueString":{
+      "type":"string",
+      "max":256
+    },
+    "TagsList":{
+      "type":"list",
+      "member":{"shape":"TagSet"}
     },
     "TaskActionDefinition":{
       "type":"structure",
@@ -14147,6 +15773,15 @@
       ]
     },
     "Timestamp":{"type":"timestamp"},
+    "TooManyRequestsException":{
+      "type":"structure",
+      "members":{
+        "Message":{"shape":"Message"}
+      },
+      "documentation":"<p>Displayed when rate-related API limits are exceeded.</p>",
+      "error":{"httpStatusCode":429},
+      "exception":true
+    },
     "TrafficDistributionGroup":{
       "type":"structure",
       "members":{
@@ -14172,11 +15807,15 @@
         },
         "Status":{
           "shape":"TrafficDistributionGroupStatus",
-          "documentation":"<p>The status of the traffic distribution group.</p> <ul> <li> <p> <code>CREATION_IN_PROGRESS</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_CreateTrafficDistributionGroup.html\">CreateTrafficDistributionGroup</a> operation is still in progress and has not yet completed.</p> </li> <li> <p> <code>ACTIVE</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_CreateTrafficDistributionGroup.html\">CreateTrafficDistributionGroup</a> operation has succeeded.</p> </li> <li> <p> <code>CREATION_FAILED</code> indicates that the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_CreateTrafficDistributionGroup.html\">CreateTrafficDistributionGroup</a> operation has failed.</p> </li> <li> <p> <code>PENDING_DELETION</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_DeleteTrafficDistributionGroup.html\">DeleteTrafficDistributionGroup</a> operation is still in progress and has not yet completed.</p> </li> <li> <p> <code>DELETION_FAILED</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_DeleteTrafficDistributionGroup.html\">DeleteTrafficDistributionGroup</a> operation has failed.</p> </li> <li> <p> <code>UPDATE_IN_PROGRESS</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdateTrafficDistributionGroup.html\">UpdateTrafficDistributionGroup</a> operation is still in progress and has not yet completed.</p> </li> </ul>"
+          "documentation":"<p>The status of the traffic distribution group.</p> <ul> <li> <p> <code>CREATION_IN_PROGRESS</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_CreateTrafficDistributionGroup.html\">CreateTrafficDistributionGroup</a> operation is still in progress and has not yet completed.</p> </li> <li> <p> <code>ACTIVE</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_CreateTrafficDistributionGroup.html\">CreateTrafficDistributionGroup</a> operation has succeeded.</p> </li> <li> <p> <code>CREATION_FAILED</code> indicates that the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_CreateTrafficDistributionGroup.html\">CreateTrafficDistributionGroup</a> operation has failed.</p> </li> <li> <p> <code>PENDING_DELETION</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_DeleteTrafficDistributionGroup.html\">DeleteTrafficDistributionGroup</a> operation is still in progress and has not yet completed.</p> </li> <li> <p> <code>DELETION_FAILED</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_DeleteTrafficDistributionGroup.html\">DeleteTrafficDistributionGroup</a> operation has failed.</p> </li> <li> <p> <code>UPDATE_IN_PROGRESS</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdateTrafficDistribution.html\">UpdateTrafficDistribution</a> operation is still in progress and has not yet completed.</p> </li> </ul>"
         },
         "Tags":{
           "shape":"TagMap",
           "documentation":"<p>The tags used to organize, track, or control access for this resource. For example, { \"tags\": {\"key1\":\"value1\", \"key2\":\"value2\"} }.</p>"
+        },
+        "IsDefault":{
+          "shape":"Boolean",
+          "documentation":"<p>Whether this is the default traffic distribution group created during instance replication. The default traffic distribution group cannot be deleted by the <code>DeleteTrafficDistributionGroup</code> API. The default traffic distribution group is deleted as part of the process for deleting a replica.</p> <note> <p>The <code>SignInConfig</code> distribution is available only on the default <code>TrafficDistributionGroup</code>. If you call <code>UpdateTrafficDistribution</code> with a modified <code>SignInConfig</code> and a non-default <code>TrafficDistributionGroup</code>, an <code>InvalidRequestException</code> is returned.</p> </note>"
         }
       },
       "documentation":"<p>Information about a traffic distribution group.</p>"
@@ -14226,6 +15865,10 @@
         "Status":{
           "shape":"TrafficDistributionGroupStatus",
           "documentation":"<p>The status of the traffic distribution group. </p> <ul> <li> <p> <code>CREATION_IN_PROGRESS</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_CreateTrafficDistributionGroup.html\">CreateTrafficDistributionGroup</a> operation is still in progress and has not yet completed.</p> </li> <li> <p> <code>ACTIVE</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_CreateTrafficDistributionGroup.html\">CreateTrafficDistributionGroup</a> operation has succeeded.</p> </li> <li> <p> <code>CREATION_FAILED</code> indicates that the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_CreateTrafficDistributionGroup.html\">CreateTrafficDistributionGroup</a> operation has failed.</p> </li> <li> <p> <code>PENDING_DELETION</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_DeleteTrafficDistributionGroup.html\">DeleteTrafficDistributionGroup</a> operation is still in progress and has not yet completed.</p> </li> <li> <p> <code>DELETION_FAILED</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_DeleteTrafficDistributionGroup.html\">DeleteTrafficDistributionGroup</a> operation has failed.</p> </li> <li> <p> <code>UPDATE_IN_PROGRESS</code> means the previous <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/API_UpdateTrafficDistributionGroup.html\">UpdateTrafficDistributionGroup</a> operation is still in progress and has not yet completed.</p> </li> </ul>"
+        },
+        "IsDefault":{
+          "shape":"Boolean",
+          "documentation":"<p>Whether this is the default traffic distribution group created during instance replication. The default traffic distribution group cannot be deleted by the <code>DeleteTrafficDistributionGroup</code> API. The default traffic distribution group is deleted as part of the process for deleting a replica.</p>"
         }
       },
       "documentation":"<p>Information about traffic distribution groups.</p>"
@@ -14233,6 +15876,22 @@
     "TrafficDistributionGroupSummaryList":{
       "type":"list",
       "member":{"shape":"TrafficDistributionGroupSummary"},
+      "max":10,
+      "min":0
+    },
+    "TrafficDistributionGroupUserSummary":{
+      "type":"structure",
+      "members":{
+        "UserId":{
+          "shape":"UserId",
+          "documentation":"<p>The identifier for the user. This can be the ID or the ARN of the user.</p>"
+        }
+      },
+      "documentation":"<p>Summary information about a traffic distribution group user.</p>"
+    },
+    "TrafficDistributionGroupUserSummaryList":{
+      "type":"list",
+      "member":{"shape":"TrafficDistributionGroupUserSummary"},
       "max":10,
       "min":0
     },
@@ -14265,7 +15924,7 @@
         },
         "UserId":{
           "shape":"AgentResourceId",
-          "documentation":"<p>The identifier for the user.</p>"
+          "documentation":"<p>The identifier for the user. This can be the ID or the ARN of the user.</p>"
         },
         "ContactFlowId":{
           "shape":"ContactFlowId",
@@ -14467,7 +16126,7 @@
         },
         "Content":{
           "shape":"ContactFlowContent",
-          "documentation":"<p>The JSON string that represents flow's content. For an example, see <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/flow-language-example.html\">Example contact flow in Amazon Connect Flow language</a>. </p>"
+          "documentation":"<p>The JSON string that represents the content of the flow. For an example, see <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/flow-language-example.html\">Example flow in Amazon Connect Flow language</a>. </p> <p>Length Constraints: Minimum length of 1. Maximum length of 256000.</p>"
         }
       }
     },
@@ -14536,7 +16195,7 @@
         },
         "Content":{
           "shape":"ContactFlowModuleContent",
-          "documentation":"<p>The content of the flow module.</p>"
+          "documentation":"<p>The JSON string that represents the content of the flow. For an example, see <a href=\"https://docs.aws.amazon.com/connect/latest/APIReference/flow-language-example.html\">Example flow in Amazon Connect Flow language</a>. </p>"
         }
       }
     },
@@ -14710,7 +16369,8 @@
         },
         "CreateNewVersion":{
           "shape":"BoxedBoolean",
-          "documentation":"<p>A flag indicating whether the operation must create a new version.</p>"
+          "documentation":"<p>A flag indicating whether the operation must create a new version.</p>",
+          "box":true
         },
         "Title":{
           "shape":"EvaluationFormTitle",
@@ -14897,6 +16557,27 @@
       "members":{
       }
     },
+    "UpdatePhoneNumberMetadataRequest":{
+      "type":"structure",
+      "required":["PhoneNumberId"],
+      "members":{
+        "PhoneNumberId":{
+          "shape":"PhoneNumberId",
+          "documentation":"<p>The Amazon Resource Name (ARN) or resource ID of the phone number.</p>",
+          "location":"uri",
+          "locationName":"PhoneNumberId"
+        },
+        "PhoneNumberDescription":{
+          "shape":"PhoneNumberDescription",
+          "documentation":"<p>The description of the phone number.</p>"
+        },
+        "ClientToken":{
+          "shape":"ClientToken",
+          "documentation":"<p>A unique, case-sensitive identifier that you provide to ensure the idempotency of the request. If not provided, the Amazon Web Services SDK populates this field. For more information about idempotency, see <a href=\"https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/\">Making retries safe with idempotent APIs</a>.</p>",
+          "idempotencyToken":true
+        }
+      }
+    },
     "UpdatePhoneNumberRequest":{
       "type":"structure",
       "required":[
@@ -14931,6 +16612,52 @@
         "PhoneNumberArn":{
           "shape":"ARN",
           "documentation":"<p>The Amazon Resource Name (ARN) of the phone number.</p>"
+        }
+      }
+    },
+    "UpdatePromptRequest":{
+      "type":"structure",
+      "required":[
+        "InstanceId",
+        "PromptId"
+      ],
+      "members":{
+        "InstanceId":{
+          "shape":"InstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/find-instance-arn.html\">find the instance ID</a> in the Amazon Resource Name (ARN) of the instance.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "PromptId":{
+          "shape":"PromptId",
+          "documentation":"<p>A unique identifier for the prompt.</p>",
+          "location":"uri",
+          "locationName":"PromptId"
+        },
+        "Name":{
+          "shape":"CommonNameLength127",
+          "documentation":"<p>The name of the prompt.</p>"
+        },
+        "Description":{
+          "shape":"PromptDescription",
+          "documentation":"<p>A description of the prompt.</p>"
+        },
+        "S3Uri":{
+          "shape":"S3Uri",
+          "documentation":"<p>The URI for the S3 bucket where the prompt is stored.</p>"
+        }
+      }
+    },
+    "UpdatePromptResponse":{
+      "type":"structure",
+      "members":{
+        "PromptARN":{
+          "shape":"ARN",
+          "documentation":"<p>The Amazon Resource Name (ARN) of the prompt.</p>"
+        },
+        "PromptId":{
+          "shape":"PromptId",
+          "documentation":"<p>A unique identifier for the prompt.</p>"
         }
       }
     },
@@ -15127,6 +16854,32 @@
         }
       }
     },
+    "UpdateRoutingProfileAgentAvailabilityTimerRequest":{
+      "type":"structure",
+      "required":[
+        "InstanceId",
+        "RoutingProfileId",
+        "AgentAvailabilityTimer"
+      ],
+      "members":{
+        "InstanceId":{
+          "shape":"InstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/find-instance-arn.html\">find the instance ID</a> in the Amazon Resource Name (ARN) of the instance.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "RoutingProfileId":{
+          "shape":"RoutingProfileId",
+          "documentation":"<p>The identifier of the routing profile.</p>",
+          "location":"uri",
+          "locationName":"RoutingProfileId"
+        },
+        "AgentAvailabilityTimer":{
+          "shape":"AgentAvailabilityTimer",
+          "documentation":"<p>Whether agents with this routing profile will have their routing order calculated based on <i>time since their last inbound contact</i> or <i>longest idle time</i>. </p>"
+        }
+      }
+    },
     "UpdateRoutingProfileConcurrencyRequest":{
       "type":"structure",
       "required":[
@@ -15309,6 +17062,10 @@
         "TagRestrictedResources":{
           "shape":"TagRestrictedResourceList",
           "documentation":"<p>The list of resources that a security profile applies tag restrictions to in Amazon Connect.</p>"
+        },
+        "Applications":{
+          "shape":"Applications",
+          "documentation":"<p>This API is in preview release for Amazon Connect and is subject to change.</p> <p>A list of the third party application's metadata.</p>"
         }
       }
     },
@@ -15427,6 +17184,14 @@
         "TelephonyConfig":{
           "shape":"TelephonyConfig",
           "documentation":"<p>The distribution of traffic between the instance and its replica(s).</p>"
+        },
+        "SignInConfig":{
+          "shape":"SignInConfig",
+          "documentation":"<p>The distribution that determines which Amazon Web Services Regions should be used to sign in agents in to both the instance and its replica(s).</p>"
+        },
+        "AgentConfig":{
+          "shape":"AgentConfig",
+          "documentation":"<p>The distribution of agents between the instance and its replica(s).</p>"
         }
       }
     },
@@ -15607,6 +17372,80 @@
           "location":"uri",
           "locationName":"InstanceId"
         }
+      }
+    },
+    "UpdateViewContentRequest":{
+      "type":"structure",
+      "required":[
+        "InstanceId",
+        "ViewId",
+        "Status",
+        "Content"
+      ],
+      "members":{
+        "InstanceId":{
+          "shape":"ViewsInstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can find the instanceId in the ARN of the instance.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "ViewId":{
+          "shape":"ViewId",
+          "documentation":"<p>The identifier of the view. Both <code>ViewArn</code> and <code>ViewId</code> can be used.</p>",
+          "location":"uri",
+          "locationName":"ViewId"
+        },
+        "Status":{
+          "shape":"ViewStatus",
+          "documentation":"<p>Indicates the view status as either <code>SAVED</code> or <code>PUBLISHED</code>. The <code>PUBLISHED</code> status will initiate validation on the content.</p>"
+        },
+        "Content":{
+          "shape":"ViewInputContent",
+          "documentation":"<p>View content containing all content necessary to render a view except for runtime input data and the runtime input schema, which is auto-generated by this operation.</p> <p>The total uncompressed content has a maximum file size of 400kB.</p>"
+        }
+      }
+    },
+    "UpdateViewContentResponse":{
+      "type":"structure",
+      "members":{
+        "View":{
+          "shape":"View",
+          "documentation":"<p>A view resource object. Contains metadata and content necessary to render the view.</p>"
+        }
+      }
+    },
+    "UpdateViewMetadataRequest":{
+      "type":"structure",
+      "required":[
+        "InstanceId",
+        "ViewId"
+      ],
+      "members":{
+        "InstanceId":{
+          "shape":"ViewsInstanceId",
+          "documentation":"<p>The identifier of the Amazon Connect instance. You can find the instanceId in the ARN of the instance.</p>",
+          "location":"uri",
+          "locationName":"InstanceId"
+        },
+        "ViewId":{
+          "shape":"ViewId",
+          "documentation":"<p>The identifier of the view. Both <code>ViewArn</code> and <code>ViewId</code> can be used.</p>",
+          "location":"uri",
+          "locationName":"ViewId"
+        },
+        "Name":{
+          "shape":"ViewName",
+          "documentation":"<p>The name of the view.</p>"
+        },
+        "Description":{
+          "shape":"ViewDescription",
+          "documentation":"<p>The description of the view.</p>"
+        }
+      }
+    },
+    "UpdateViewMetadataResponse":{
+      "type":"structure",
+      "members":{
       }
     },
     "Url":{"type":"string"},
@@ -15908,7 +17747,7 @@
         },
         "StringCondition":{
           "shape":"StringCondition",
-          "documentation":"<p>A leaf node condition which can be used to specify a string condition.</p>"
+          "documentation":"<p>A leaf node condition which can be used to specify a string condition.</p> <note> <p>The currently supported values for <code>FieldName</code> are <code>name</code>, <code>description</code>, and <code>resourceID</code>.</p> </note>"
         },
         "HierarchyGroupCondition":{
           "shape":"HierarchyGroupCondition",
@@ -16001,8 +17840,242 @@
     "Value":{"type":"double"},
     "VersionNumber":{
       "type":"integer",
-      "box":true,
       "min":1
+    },
+    "View":{
+      "type":"structure",
+      "members":{
+        "Id":{
+          "shape":"ViewId",
+          "documentation":"<p>The identifier of the view.</p>"
+        },
+        "Arn":{
+          "shape":"ARN",
+          "documentation":"<p>The Amazon Resource Name (ARN) of the view.</p>"
+        },
+        "Name":{
+          "shape":"ViewName",
+          "documentation":"<p>The name of the view.</p>"
+        },
+        "Status":{
+          "shape":"ViewStatus",
+          "documentation":"<p>Indicates the view status as either <code>SAVED</code> or <code>PUBLISHED</code>. The <code>PUBLISHED</code> status will initiate validation on the content.</p>"
+        },
+        "Type":{
+          "shape":"ViewType",
+          "documentation":"<p>The type of the view - <code>CUSTOMER_MANAGED</code>.</p>"
+        },
+        "Description":{
+          "shape":"ViewDescription",
+          "documentation":"<p>The description of the view.</p>"
+        },
+        "Version":{
+          "shape":"ViewVersion",
+          "documentation":"<p>Current version of the view.</p>"
+        },
+        "VersionDescription":{
+          "shape":"ViewDescription",
+          "documentation":"<p>The description of the version.</p>"
+        },
+        "Content":{
+          "shape":"ViewContent",
+          "documentation":"<p>View content containing all content necessary to render a view except for runtime input data.</p>"
+        },
+        "Tags":{
+          "shape":"TagMap",
+          "documentation":"<p>The tags associated with the view resource (not specific to view version).</p>"
+        },
+        "CreatedTime":{
+          "shape":"Timestamp",
+          "documentation":"<p>The timestamp of when the view was created.</p>"
+        },
+        "LastModifiedTime":{
+          "shape":"Timestamp",
+          "documentation":"<p>Latest timestamp of the <code>UpdateViewContent</code> or <code>CreateViewVersion</code> operations.</p>"
+        },
+        "ViewContentSha256":{
+          "shape":"ViewContentSha256",
+          "documentation":"<p>Indicates the checksum value of the latest published view content.</p>"
+        }
+      },
+      "documentation":"<p>A view resource object. Contains metadata and content necessary to render the view.</p>"
+    },
+    "ViewAction":{
+      "type":"string",
+      "max":255,
+      "min":1,
+      "pattern":"^([\\p{L}\\p{N}_.:\\/=+\\-@()']+[\\p{L}\\p{Z}\\p{N}_.:\\/=+\\-@()']*)$",
+      "sensitive":true
+    },
+    "ViewActions":{
+      "type":"list",
+      "member":{"shape":"ViewAction"}
+    },
+    "ViewContent":{
+      "type":"structure",
+      "members":{
+        "InputSchema":{
+          "shape":"ViewInputSchema",
+          "documentation":"<p>The data schema matching data that the view template must be provided to render.</p>"
+        },
+        "Template":{
+          "shape":"ViewTemplate",
+          "documentation":"<p>The view template representing the structure of the view.</p>"
+        },
+        "Actions":{
+          "shape":"ViewActions",
+          "documentation":"<p>A list of possible actions from the view.</p>"
+        }
+      },
+      "documentation":"<p>View content containing all content necessary to render a view except for runtime input data.</p>"
+    },
+    "ViewContentSha256":{
+      "type":"string",
+      "max":64,
+      "min":1,
+      "pattern":"^[a-zA-Z0-9]$"
+    },
+    "ViewDescription":{
+      "type":"string",
+      "max":4096,
+      "min":1,
+      "pattern":"^([\\p{L}\\p{N}_.:\\/=+\\-@,()']+[\\p{L}\\p{Z}\\p{N}_.:\\/=+\\-@,()']*)$"
+    },
+    "ViewId":{
+      "type":"string",
+      "max":500,
+      "min":1,
+      "pattern":"^[a-zA-Z0-9\\_\\-:\\/$]+$"
+    },
+    "ViewInputContent":{
+      "type":"structure",
+      "members":{
+        "Template":{
+          "shape":"ViewTemplate",
+          "documentation":"<p>The view template representing the structure of the view.</p>"
+        },
+        "Actions":{
+          "shape":"ViewActions",
+          "documentation":"<p>A list of possible actions from the view.</p>"
+        }
+      },
+      "documentation":"<p>View content containing all content necessary to render a view except for runtime input data and the runtime input schema, which is auto-generated by this operation.</p>"
+    },
+    "ViewInputSchema":{
+      "type":"string",
+      "sensitive":true
+    },
+    "ViewName":{
+      "type":"string",
+      "max":255,
+      "min":1,
+      "pattern":"^([\\p{L}\\p{N}_.:\\/=+\\-@()']+[\\p{L}\\p{Z}\\p{N}_.:\\/=+\\-@()']*)$",
+      "sensitive":true
+    },
+    "ViewStatus":{
+      "type":"string",
+      "enum":[
+        "PUBLISHED",
+        "SAVED"
+      ]
+    },
+    "ViewSummary":{
+      "type":"structure",
+      "members":{
+        "Id":{
+          "shape":"ViewId",
+          "documentation":"<p>The identifier of the view.</p>"
+        },
+        "Arn":{
+          "shape":"ARN",
+          "documentation":"<p>The Amazon Resource Name (ARN) of the view.</p>"
+        },
+        "Name":{
+          "shape":"ViewName",
+          "documentation":"<p>The name of the view.</p>"
+        },
+        "Type":{
+          "shape":"ViewType",
+          "documentation":"<p>The type of the view.</p>"
+        },
+        "Status":{
+          "shape":"ViewStatus",
+          "documentation":"<p>Indicates the view status as either <code>SAVED</code> or <code>PUBLISHED</code>. The <code>PUBLISHED</code> status will initiate validation on the content.</p>"
+        },
+        "Description":{
+          "shape":"ViewDescription",
+          "documentation":"<p>The description of the view.</p>"
+        }
+      },
+      "documentation":"<p>A summary of a view's metadata.</p>"
+    },
+    "ViewTemplate":{"type":"string"},
+    "ViewType":{
+      "type":"string",
+      "enum":[
+        "CUSTOMER_MANAGED",
+        "AWS_MANAGED"
+      ]
+    },
+    "ViewVersion":{"type":"integer"},
+    "ViewVersionSummary":{
+      "type":"structure",
+      "members":{
+        "Id":{
+          "shape":"ViewId",
+          "documentation":"<p>The identifier of the view version.</p>"
+        },
+        "Arn":{
+          "shape":"ARN",
+          "documentation":"<p>The Amazon Resource Name (ARN) of the view version.</p>"
+        },
+        "Description":{
+          "shape":"ViewDescription",
+          "documentation":"<p>The description of the view version.</p>"
+        },
+        "Name":{
+          "shape":"ViewName",
+          "documentation":"<p>The name of the view version.</p>"
+        },
+        "Type":{
+          "shape":"ViewType",
+          "documentation":"<p>The type of the view version.</p>"
+        },
+        "Version":{
+          "shape":"ViewVersion",
+          "documentation":"<p>The sequentially incremented version of the view version.</p>"
+        },
+        "VersionDescription":{
+          "shape":"ViewDescription",
+          "documentation":"<p>The description of the view version.</p>"
+        }
+      },
+      "documentation":"<p>A summary of a view version's metadata.</p>"
+    },
+    "ViewVersionSummaryList":{
+      "type":"list",
+      "member":{"shape":"ViewVersionSummary"}
+    },
+    "ViewsClientToken":{
+      "type":"string",
+      "max":500,
+      "pattern":"^([\\p{L}\\p{Z}\\p{N}_.:\\/=+\\-@]*)$"
+    },
+    "ViewsInstanceId":{
+      "type":"string",
+      "max":100,
+      "min":1,
+      "pattern":"^[a-zA-Z0-9\\_\\-:\\/]+$"
+    },
+    "ViewsNextToken":{
+      "type":"string",
+      "max":4096,
+      "min":1,
+      "pattern":"^[a-zA-Z0-9=\\/+_.-]+$"
+    },
+    "ViewsSummaryList":{
+      "type":"list",
+      "member":{"shape":"ViewSummary"}
     },
     "Vocabulary":{
       "type":"structure",
@@ -16191,5 +18264,5 @@
     },
     "timestamp":{"type":"timestamp"}
   },
-  "documentation":"<p>Amazon Connect is a cloud-based contact center solution that you use to set up and manage a customer contact center and provide reliable customer engagement at any scale.</p> <p>Amazon Connect provides metrics and real-time reporting that enable you to optimize contact routing. You can also resolve customer issues more efficiently by getting customers in touch with the appropriate agents.</p> <p>There are limits to the number of Amazon Connect resources that you can create. There are also limits to the number of requests that you can make per second. For more information, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/amazon-connect-service-limits.html\">Amazon Connect Service Quotas</a> in the <i>Amazon Connect Administrator Guide</i>.</p> <p>You can connect programmatically to an Amazon Web Services service by using an endpoint. For a list of Amazon Connect endpoints, see <a href=\"https://docs.aws.amazon.com/general/latest/gr/connect_region.html\">Amazon Connect Endpoints</a>.</p>"
+  "documentation":"<p>Amazon Connect is a cloud-based contact center solution that you use to set up and manage a customer contact center and provide reliable customer engagement at any scale.</p> <p>Amazon Connect provides metrics and real-time reporting that enable you to optimize contact routing. You can also resolve customer issues more efficiently by getting customers in touch with the appropriate agents.</p> <p>There are limits to the number of Amazon Connect resources that you can create. There are also limits to the number of requests that you can make per second. For more information, seeP98941055 <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/amazon-connect-service-limits.html\">Amazon Connect Service Quotas</a> in the <i>Amazon Connect Administrator Guide</i>.</p> <p>You can connect programmatically to an Amazon Web Services service by using an endpoint. For a list of Amazon Connect endpoints, see <a href=\"https://docs.aws.amazon.com/general/latest/gr/connect_region.html\">Amazon Connect Endpoints</a>.</p>"
 }

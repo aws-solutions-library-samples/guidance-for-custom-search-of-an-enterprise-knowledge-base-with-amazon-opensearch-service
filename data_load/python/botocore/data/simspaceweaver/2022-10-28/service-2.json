@@ -368,7 +368,7 @@
       "members":{
         "Destination":{
           "shape":"S3Destination",
-          "documentation":"<p>The Amazon S3 bucket and optional folder (object key prefix) where SimSpace Weaver creates the snapshot file.</p>"
+          "documentation":"<p>The Amazon S3 bucket and optional folder (object key prefix) where SimSpace Weaver creates the snapshot file.</p> <p>The Amazon S3 bucket must be in the same Amazon Web Services Region as the simulation.</p>"
         },
         "Simulation":{
           "shape":"SimSpaceWeaverResourceName",
@@ -751,7 +751,7 @@
       "type":"string",
       "max":1600,
       "min":0,
-      "pattern":"^arn:(?:aws|aws-cn):log-group:([a-z]{2}-[a-z]+-\\d{1}):(\\d{12})?:role\\/(.+)$"
+      "pattern":"^arn:(?:aws|aws-cn|aws-us-gov):log-group:([a-z]{2}-[a-z]+-\\d{1}):(\\d{12})?:role\\/(.+)$"
     },
     "LoggingConfiguration":{
       "type":"structure",
@@ -806,10 +806,11 @@
       "type":"string",
       "max":1600,
       "min":0,
-      "pattern":"^arn:(?:aws|aws-cn):iam::(\\d{12})?:role\\/(.+)$"
+      "pattern":"^arn:(?:aws|aws-cn|aws-us-gov):iam::(\\d{12})?:role\\/(.+)$"
     },
     "S3Destination":{
       "type":"structure",
+      "required":["BucketName"],
       "members":{
         "BucketName":{
           "shape":"BucketName",
@@ -824,6 +825,10 @@
     },
     "S3Location":{
       "type":"structure",
+      "required":[
+        "BucketName",
+        "ObjectKey"
+      ],
       "members":{
         "BucketName":{
           "shape":"BucketName",
@@ -852,7 +857,7 @@
       "type":"string",
       "max":1600,
       "min":0,
-      "pattern":"^arn:(?:aws|aws-cn):simspaceweaver:([a-z]{2}-[a-z]+-\\d{1}):(\\d{12})?:([a-z]+)\\/(.+)$"
+      "pattern":"^arn:(?:aws|aws-cn|aws-us-gov):simspaceweaver:([a-z]{2}-[a-z]+-\\d{1}):(\\d{12})?:([a-z]+)\\/(.+)$"
     },
     "SimSpaceWeaverLongResourceName":{
       "type":"string",
@@ -1112,7 +1117,7 @@
         },
         "SnapshotS3Location":{
           "shape":"S3Location",
-          "documentation":"<p>The location of the snapshot .zip file in Amazon Simple Storage Service (Amazon S3). For more information about Amazon S3, see the <a href=\"https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html\"> <i>Amazon Simple Storage Service User Guide</i> </a>.</p> <p>Provide a <code>SnapshotS3Location</code> to start your simulation from a snapshot.</p> <p>If you provide a <code>SnapshotS3Location</code> then you can't provide a <code>SchemaS3Location</code>.</p>"
+          "documentation":"<p>The location of the snapshot .zip file in Amazon Simple Storage Service (Amazon S3). For more information about Amazon S3, see the <a href=\"https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html\"> <i>Amazon Simple Storage Service User Guide</i> </a>.</p> <p>Provide a <code>SnapshotS3Location</code> to start your simulation from a snapshot.</p> <p>The Amazon S3 bucket must be in the same Amazon Web Services Region as the simulation.</p> <p>If you provide a <code>SnapshotS3Location</code> then you can't provide a <code>SchemaS3Location</code>.</p>"
         },
         "Tags":{
           "shape":"TagMap",
@@ -1304,5 +1309,5 @@
       "exception":true
     }
   },
-  "documentation":"<p>SimSpace Weaver (SimSpace Weaver) is a managed service that you can use to build and operate large-scale spatial simulations in the Amazon Web Services Cloud. For example, you can create a digital twin of a city, crowd simulations with millions of people and objects, and massively multiplayer games with hundreds of thousands of connected players. For more information about SimSpace Weaver, see the <i> <a href=\"https://docs.aws.amazon.com/simspaceweaver/latest/userguide/\">SimSpace Weaver User Guide</a> </i>.</p> <p>This API reference describes the API operations and data types that you can use to communicate directly with SimSpace Weaver.</p> <p>SimSpace Weaver also provides the SimSpace Weaver app SDK, which you use for app development. The SimSpace Weaver app SDK API reference is included in the SimSpace Weaver app SDK documentation. This documentation is part of the SimSpace Weaver app SDK distributable package.</p>"
+  "documentation":"<p>SimSpace Weaver (SimSpace Weaver) is a service that you can use to build and run large-scale spatial simulations in the Amazon Web Services Cloud. For example, you can create crowd simulations, large real-world environments, and immersive and interactive experiences. For more information about SimSpace Weaver, see the <i> <a href=\"https://docs.aws.amazon.com/simspaceweaver/latest/userguide/\">SimSpace Weaver User Guide</a> </i>.</p> <p>This API reference describes the API operations and data types that you can use to communicate directly with SimSpace Weaver.</p> <p>SimSpace Weaver also provides the SimSpace Weaver app SDK, which you use for app development. The SimSpace Weaver app SDK API reference is included in the SimSpace Weaver app SDK documentation. This documentation is part of the SimSpace Weaver app SDK distributable package.</p>"
 }

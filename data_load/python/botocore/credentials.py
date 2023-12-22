@@ -344,6 +344,7 @@ class RefreshableCredentials(Credentials):
     :param str access_key: The access key part of the credentials.
     :param str secret_key: The secret key part of the credentials.
     :param str token: The security token, valid only for session credentials.
+    :param datetime expiry_time: The expiration time of the credentials.
     :param function refresh_using: Callback function to refresh the credentials.
     :param str method: A string which identifies where the credentials
         were found.
@@ -651,7 +652,7 @@ class CachedCredentialFetcher:
 
     def _make_file_safe(self, filename):
         # Replace :, path sep, and / to make it the string filename safe.
-        filename = filename.replace(':', '_').replace(os.path.sep, '_')
+        filename = filename.replace(':', '_').replace(os.sep, '_')
         return filename.replace('/', '_')
 
     def _get_credentials(self):

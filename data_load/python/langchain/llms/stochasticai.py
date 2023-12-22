@@ -1,21 +1,20 @@
-"""Wrapper around StochasticAI APIs."""
 import logging
 import time
 from typing import Any, Dict, List, Mapping, Optional
 
 import requests
-from pydantic import Extra, Field, root_validator
 
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.llms.utils import enforce_stop_tokens
+from langchain.pydantic_v1 import Extra, Field, root_validator
 from langchain.utils import get_from_dict_or_env
 
 logger = logging.getLogger(__name__)
 
 
 class StochasticAI(LLM):
-    """Wrapper around StochasticAI large language models.
+    """StochasticAI large language models.
 
     To use, you should have the environment variable ``STOCHASTICAI_API_KEY``
     set with your API key.
@@ -52,7 +51,7 @@ class StochasticAI(LLM):
                 if field_name in extra:
                     raise ValueError(f"Found {field_name} supplied twice.")
                 logger.warning(
-                    f"""{field_name} was transfered to model_kwargs.
+                    f"""{field_name} was transferred to model_kwargs.
                     Please confirm that {field_name} is what you intended."""
                 )
                 extra[field_name] = values.pop(field_name)
@@ -86,6 +85,7 @@ class StochasticAI(LLM):
         prompt: str,
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> str:
         """Call out to StochasticAI's complete endpoint.
 
@@ -102,6 +102,7 @@ class StochasticAI(LLM):
                 response = StochasticAI("Tell me a joke.")
         """
         params = self.model_kwargs or {}
+        params = {**params, **kwargs}
         response_post = requests.post(
             url=self.api_url,
             json={"prompt": prompt, "params": params},

@@ -1,14 +1,7 @@
 """Util that calls Jira."""
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Extra, root_validator
-
-from langchain.tools.jira.prompt import (
-    JIRA_CATCH_ALL_PROMPT,
-    JIRA_GET_ALL_PROJECTS_PROMPT,
-    JIRA_ISSUE_CREATE_PROMPT,
-    JIRA_JQL_PROMPT,
-)
+from langchain.pydantic_v1 import BaseModel, Extra, root_validator
 from langchain.utils import get_from_dict_or_env
 
 
@@ -17,40 +10,15 @@ class JiraAPIWrapper(BaseModel):
     """Wrapper for Jira API."""
 
     jira: Any  #: :meta private:
+    confluence: Any
     jira_username: Optional[str] = None
     jira_api_token: Optional[str] = None
     jira_instance_url: Optional[str] = None
-
-    operations: List[Dict] = [
-        {
-            "mode": "jql",
-            "name": "JQL Query",
-            "description": JIRA_JQL_PROMPT,
-        },
-        {
-            "mode": "get_projects",
-            "name": "Get Projects",
-            "description": JIRA_GET_ALL_PROJECTS_PROMPT,
-        },
-        {
-            "mode": "create_issue",
-            "name": "Create Issue",
-            "description": JIRA_ISSUE_CREATE_PROMPT,
-        },
-        {
-            "mode": "other",
-            "name": "Catch all Jira API call",
-            "description": JIRA_CATCH_ALL_PROMPT,
-        },
-    ]
 
     class Config:
         """Configuration for this pydantic object."""
 
         extra = Extra.forbid
-
-    def list(self) -> List[Dict]:
-        return self.operations
 
     @root_validator()
     def validate_environment(cls, values: Dict) -> Dict:
@@ -69,7 +37,7 @@ class JiraAPIWrapper(BaseModel):
         values["jira_instance_url"] = jira_instance_url
 
         try:
-            from atlassian import Jira
+            from atlassian import Confluence, Jira
         except ImportError:
             raise ImportError(
                 "atlassian-python-api is not installed. "
@@ -82,7 +50,16 @@ class JiraAPIWrapper(BaseModel):
             password=jira_api_token,
             cloud=True,
         )
+
+        confluence = Confluence(
+            url=jira_instance_url,
+            username=jira_username,
+            password=jira_api_token,
+            cloud=True,
+        )
+
         values["jira"] = jira
+        values["confluence"] = confluence
 
         return values
 
@@ -151,21 +128,36 @@ class JiraAPIWrapper(BaseModel):
         )
         return parsed_projects_str
 
-    def create(self, query: str) -> str:
+    def issue_create(self, query: str) -> str:
         try:
             import json
         except ImportError:
             raise ImportError(
-                "json is not installed. " "Please install it with `pip install json`"
+                "json is not installed. Please install it with `pip install json`"
             )
         params = json.loads(query)
         return self.jira.issue_create(fields=dict(params))
 
+    def page_create(self, query: str) -> str:
+        try:
+            import json
+        except ImportError:
+            raise ImportError(
+                "json is not installed. Please install it with `pip install json`"
+            )
+        params = json.loads(query)
+        return self.confluence.create_page(**dict(params))
+
     def other(self, query: str) -> str:
-        context = {"self": self}
-        exec(f"result = {query}", context)
-        result = context["result"]
-        return str(result)
+        try:
+            import json
+        except ImportError:
+            raise ImportError(
+                "json is not installed. Please install it with `pip install json`"
+            )
+        params = json.loads(query)
+        jira_function = getattr(self.jira, params["function"])
+        return jira_function(*params.get("args", []), **params.get("kwargs", {}))
 
     def run(self, mode: str, query: str) -> str:
         if mode == "jql":
@@ -173,8 +165,10 @@ class JiraAPIWrapper(BaseModel):
         elif mode == "get_projects":
             return self.project()
         elif mode == "create_issue":
-            return self.create(query)
+            return self.issue_create(query)
         elif mode == "other":
             return self.other(query)
+        elif mode == "create_page":
+            return self.page_create(query)
         else:
             raise ValueError(f"Got unexpected mode {mode}")

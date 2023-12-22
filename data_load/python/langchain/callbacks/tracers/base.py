@@ -1,22 +1,26 @@
 """Base interfaces for tracing runs."""
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Sequence, Union, cast
 from uuid import UUID
 
+from tenacity import RetryCallState
+
 from langchain.callbacks.base import BaseCallbackHandler
-from langchain.callbacks.tracers.schemas import (
-    ChainRun,
-    LLMRun,
-    ToolRun,
-    TracerSession,
-    TracerSessionBase,
-    TracerSessionCreate,
-    TracerSessionV2,
+from langchain.callbacks.tracers.schemas import Run
+from langchain.load.dump import dumpd
+from langchain.schema.document import Document
+from langchain.schema.output import (
+    ChatGeneration,
+    ChatGenerationChunk,
+    GenerationChunk,
+    LLMResult,
 )
-from langchain.schema import LLMResult
+
+logger = logging.getLogger(__name__)
 
 
 class TracerException(Exception):
@@ -28,89 +32,50 @@ class BaseTracer(BaseCallbackHandler, ABC):
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self.run_map: Dict[str, Union[LLMRun, ChainRun, ToolRun]] = {}
-        self.session: Optional[Union[TracerSession, TracerSessionV2]] = None
+        self.run_map: Dict[str, Run] = {}
 
     @staticmethod
     def _add_child_run(
-        parent_run: Union[ChainRun, ToolRun],
-        child_run: Union[LLMRun, ChainRun, ToolRun],
+        parent_run: Run,
+        child_run: Run,
     ) -> None:
         """Add child run to a chain run or tool run."""
-        if isinstance(child_run, LLMRun):
-            parent_run.child_llm_runs.append(child_run)
-        elif isinstance(child_run, ChainRun):
-            parent_run.child_chain_runs.append(child_run)
-        elif isinstance(child_run, ToolRun):
-            parent_run.child_tool_runs.append(child_run)
-        else:
-            raise TracerException(f"Invalid run type: {type(child_run)}")
+        parent_run.child_runs.append(child_run)
 
     @abstractmethod
-    def _persist_run(self, run: Union[LLMRun, ChainRun, ToolRun]) -> None:
+    def _persist_run(self, run: Run) -> None:
         """Persist a run."""
 
-    @abstractmethod
-    def _persist_session(
-        self, session: TracerSessionBase
-    ) -> Union[TracerSession, TracerSessionV2]:
-        """Persist a tracing session."""
-
-    def _get_session_create(
-        self, name: Optional[str] = None, **kwargs: Any
-    ) -> TracerSessionBase:
-        return TracerSessionCreate(name=name, extra=kwargs)
-
-    def new_session(
-        self, name: Optional[str] = None, **kwargs: Any
-    ) -> Union[TracerSession, TracerSessionV2]:
-        """NOT thread safe, do not call this method from multiple threads."""
-        session_create = self._get_session_create(name=name, **kwargs)
-        session = self._persist_session(session_create)
-        self.session = session
-        return session
-
-    @abstractmethod
-    def load_session(self, session_name: str) -> Union[TracerSession, TracerSessionV2]:
-        """Load a tracing session and set it as the Tracer's session."""
-
-    @abstractmethod
-    def load_default_session(self) -> Union[TracerSession, TracerSessionV2]:
-        """Load the default tracing session and set it as the Tracer's session."""
-
-    def _start_trace(self, run: Union[LLMRun, ChainRun, ToolRun]) -> None:
+    def _start_trace(self, run: Run) -> None:
         """Start a trace for a run."""
-        if run.parent_uuid:
-            parent_run = self.run_map[run.parent_uuid]
+        if run.parent_run_id:
+            parent_run = self.run_map.get(str(run.parent_run_id))
             if parent_run:
-                if isinstance(parent_run, LLMRun):
-                    raise TracerException(
-                        "Cannot add child run to an LLM run. "
-                        "LLM runs are not allowed to have children."
-                    )
                 self._add_child_run(parent_run, run)
-            else:
-                raise TracerException(
-                    f"Parent run with UUID {run.parent_uuid} not found."
+                parent_run.child_execution_order = max(
+                    parent_run.child_execution_order, run.child_execution_order
                 )
+            else:
+                logger.debug(f"Parent run with UUID {run.parent_run_id} not found.")
+        self.run_map[str(run.id)] = run
+        self._on_run_create(run)
 
-        self.run_map[run.uuid] = run
-
-    def _end_trace(self, run: Union[LLMRun, ChainRun, ToolRun]) -> None:
+    def _end_trace(self, run: Run) -> None:
         """End a trace for a run."""
-        if not run.parent_uuid:
+        if not run.parent_run_id:
             self._persist_run(run)
         else:
-            parent_run = self.run_map.get(run.parent_uuid)
+            parent_run = self.run_map.get(str(run.parent_run_id))
             if parent_run is None:
-                raise TracerException(
-                    f"Parent run with UUID {run.parent_uuid} not found."
-                )
-            if isinstance(parent_run, LLMRun):
-                raise TracerException("LLM Runs are not allowed to have children. ")
-            if run.child_execution_order > parent_run.child_execution_order:
+                logger.debug(f"Parent run with UUID {run.parent_run_id} not found.")
+            elif (
+                run.child_execution_order is not None
+                and parent_run.child_execution_order is not None
+                and run.child_execution_order > parent_run.child_execution_order
+            ):
                 parent_run.child_execution_order = run.child_execution_order
-        self.run_map.pop(run.uuid)
+        self.run_map.pop(str(run.id))
+        self._on_run_update(run)
 
     def _get_execution_order(self, parent_run_id: Optional[str] = None) -> int:
         """Get the execution order for a run."""
@@ -119,10 +84,12 @@ class BaseTracer(BaseCallbackHandler, ABC):
 
         parent_run = self.run_map.get(parent_run_id)
         if parent_run is None:
-            raise TracerException(f"Parent run with UUID {parent_run_id} not found.")
-
-        if isinstance(parent_run, LLMRun):
-            raise TracerException("LLM Runs are not allowed to have children. ")
+            logger.debug(f"Parent run with UUID {parent_run_id} not found.")
+            return 1
+        if parent_run.child_execution_order is None:
+            raise TracerException(
+                f"Parent run with UUID {parent_run_id} has no child execution order."
+            )
 
         return parent_run.child_execution_order + 1
 
@@ -132,62 +99,146 @@ class BaseTracer(BaseCallbackHandler, ABC):
         prompts: List[str],
         *,
         run_id: UUID,
+        tags: Optional[List[str]] = None,
         parent_run_id: Optional[UUID] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        name: Optional[str] = None,
         **kwargs: Any,
-    ) -> None:
+    ) -> Run:
         """Start a trace for an LLM run."""
-        if self.session is None:
-            self.session = self.load_default_session()
-
-        run_id_ = str(run_id)
         parent_run_id_ = str(parent_run_id) if parent_run_id else None
-
         execution_order = self._get_execution_order(parent_run_id_)
-        llm_run = LLMRun(
-            uuid=run_id_,
-            parent_uuid=parent_run_id_,
+        start_time = datetime.utcnow()
+        if metadata:
+            kwargs.update({"metadata": metadata})
+        llm_run = Run(
+            id=run_id,
+            parent_run_id=parent_run_id,
             serialized=serialized,
-            prompts=prompts,
+            inputs={"prompts": prompts},
             extra=kwargs,
-            start_time=datetime.utcnow(),
+            events=[{"name": "start", "time": start_time}],
+            start_time=start_time,
             execution_order=execution_order,
             child_execution_order=execution_order,
-            session_id=self.session.id,
+            run_type="llm",
+            tags=tags or [],
+            name=name,
         )
         self._start_trace(llm_run)
+        self._on_llm_start(llm_run)
+        return llm_run
 
-    def on_llm_end(self, response: LLMResult, *, run_id: UUID, **kwargs: Any) -> None:
+    def on_llm_new_token(
+        self,
+        token: str,
+        *,
+        chunk: Optional[Union[GenerationChunk, ChatGenerationChunk]] = None,
+        run_id: UUID,
+        parent_run_id: Optional[UUID] = None,
+        **kwargs: Any,
+    ) -> Run:
+        """Run on new LLM token. Only available when streaming is enabled."""
+        if not run_id:
+            raise TracerException("No run_id provided for on_llm_new_token callback.")
+
+        run_id_ = str(run_id)
+        llm_run = self.run_map.get(run_id_)
+        if llm_run is None or llm_run.run_type != "llm":
+            raise TracerException(f"No LLM Run found to be traced for {run_id}")
+        event_kwargs: Dict[str, Any] = {"token": token}
+        if chunk:
+            event_kwargs["chunk"] = chunk
+        llm_run.events.append(
+            {
+                "name": "new_token",
+                "time": datetime.utcnow(),
+                "kwargs": event_kwargs,
+            },
+        )
+        self._on_llm_new_token(llm_run, token, chunk)
+        return llm_run
+
+    def on_retry(
+        self,
+        retry_state: RetryCallState,
+        *,
+        run_id: UUID,
+        **kwargs: Any,
+    ) -> Run:
+        if not run_id:
+            raise TracerException("No run_id provided for on_retry callback.")
+        run_id_ = str(run_id)
+        llm_run = self.run_map.get(run_id_)
+        if llm_run is None:
+            raise TracerException("No Run found to be traced for on_retry")
+        retry_d: Dict[str, Any] = {
+            "slept": retry_state.idle_for,
+            "attempt": retry_state.attempt_number,
+        }
+        if retry_state.outcome is None:
+            retry_d["outcome"] = "N/A"
+        elif retry_state.outcome.failed:
+            retry_d["outcome"] = "failed"
+            exception = retry_state.outcome.exception()
+            retry_d["exception"] = str(exception)
+            retry_d["exception_type"] = exception.__class__.__name__
+        else:
+            retry_d["outcome"] = "success"
+            retry_d["result"] = str(retry_state.outcome.result())
+        llm_run.events.append(
+            {
+                "name": "retry",
+                "time": datetime.utcnow(),
+                "kwargs": retry_d,
+            },
+        )
+        return llm_run
+
+    def on_llm_end(self, response: LLMResult, *, run_id: UUID, **kwargs: Any) -> Run:
         """End a trace for an LLM run."""
         if not run_id:
             raise TracerException("No run_id provided for on_llm_end callback.")
 
         run_id_ = str(run_id)
         llm_run = self.run_map.get(run_id_)
-        if llm_run is None or not isinstance(llm_run, LLMRun):
-            raise TracerException("No LLMRun found to be traced")
-        llm_run.response = response
+        if llm_run is None or llm_run.run_type != "llm":
+            raise TracerException(f"No LLM Run found to be traced for {run_id}")
+        llm_run.outputs = response.dict()
+        for i, generations in enumerate(response.generations):
+            for j, generation in enumerate(generations):
+                output_generation = llm_run.outputs["generations"][i][j]
+                if "message" in output_generation:
+                    output_generation["message"] = dumpd(
+                        cast(ChatGeneration, generation).message
+                    )
         llm_run.end_time = datetime.utcnow()
+        llm_run.events.append({"name": "end", "time": llm_run.end_time})
         self._end_trace(llm_run)
+        self._on_llm_end(llm_run)
+        return llm_run
 
     def on_llm_error(
         self,
-        error: Union[Exception, KeyboardInterrupt],
+        error: BaseException,
         *,
         run_id: UUID,
         **kwargs: Any,
-    ) -> None:
+    ) -> Run:
         """Handle an error for an LLM run."""
         if not run_id:
             raise TracerException("No run_id provided for on_llm_error callback.")
 
         run_id_ = str(run_id)
         llm_run = self.run_map.get(run_id_)
-        if llm_run is None or not isinstance(llm_run, LLMRun):
-            raise TracerException("No LLMRun found to be traced")
-
+        if llm_run is None or llm_run.run_type != "llm":
+            raise TracerException(f"No LLM Run found to be traced for {run_id}")
         llm_run.error = repr(error)
         llm_run.end_time = datetime.utcnow()
+        llm_run.events.append({"name": "error", "time": llm_run.end_time})
         self._end_trace(llm_run)
+        self._on_chain_error(llm_run)
+        return llm_run
 
     def on_chain_start(
         self,
@@ -195,62 +246,87 @@ class BaseTracer(BaseCallbackHandler, ABC):
         inputs: Dict[str, Any],
         *,
         run_id: UUID,
+        tags: Optional[List[str]] = None,
         parent_run_id: Optional[UUID] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        run_type: Optional[str] = None,
+        name: Optional[str] = None,
         **kwargs: Any,
-    ) -> None:
+    ) -> Run:
         """Start a trace for a chain run."""
-        if self.session is None:
-            self.session = self.load_default_session()
-
-        run_id_ = str(run_id)
         parent_run_id_ = str(parent_run_id) if parent_run_id else None
-
         execution_order = self._get_execution_order(parent_run_id_)
-        chain_run = ChainRun(
-            uuid=run_id_,
-            parent_uuid=parent_run_id_,
+        start_time = datetime.utcnow()
+        if metadata:
+            kwargs.update({"metadata": metadata})
+        chain_run = Run(
+            id=run_id,
+            parent_run_id=parent_run_id,
             serialized=serialized,
-            inputs=inputs,
+            inputs=inputs if isinstance(inputs, dict) else {"input": inputs},
             extra=kwargs,
-            start_time=datetime.utcnow(),
+            events=[{"name": "start", "time": start_time}],
+            start_time=start_time,
             execution_order=execution_order,
             child_execution_order=execution_order,
             child_runs=[],
-            session_id=self.session.id,
+            run_type=run_type or "chain",
+            name=name,
+            tags=tags or [],
         )
         self._start_trace(chain_run)
+        self._on_chain_start(chain_run)
+        return chain_run
 
     def on_chain_end(
-        self, outputs: Dict[str, Any], *, run_id: UUID, **kwargs: Any
-    ) -> None:
+        self,
+        outputs: Dict[str, Any],
+        *,
+        run_id: UUID,
+        inputs: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,
+    ) -> Run:
         """End a trace for a chain run."""
-        run_id_ = str(run_id)
+        if not run_id:
+            raise TracerException("No run_id provided for on_chain_end callback.")
+        chain_run = self.run_map.get(str(run_id))
+        if chain_run is None:
+            raise TracerException(f"No chain Run found to be traced for {run_id}")
 
-        chain_run = self.run_map.get(run_id_)
-        if chain_run is None or not isinstance(chain_run, ChainRun):
-            raise TracerException("No ChainRun found to be traced")
-
-        chain_run.outputs = outputs
+        chain_run.outputs = (
+            outputs if isinstance(outputs, dict) else {"output": outputs}
+        )
         chain_run.end_time = datetime.utcnow()
+        chain_run.events.append({"name": "end", "time": chain_run.end_time})
+        if inputs is not None:
+            chain_run.inputs = inputs if isinstance(inputs, dict) else {"input": inputs}
         self._end_trace(chain_run)
+        self._on_chain_end(chain_run)
+        return chain_run
 
     def on_chain_error(
         self,
-        error: Union[Exception, KeyboardInterrupt],
+        error: BaseException,
         *,
+        inputs: Optional[Dict[str, Any]] = None,
         run_id: UUID,
         **kwargs: Any,
-    ) -> None:
+    ) -> Run:
         """Handle an error for a chain run."""
-        run_id_ = str(run_id)
-
-        chain_run = self.run_map.get(run_id_)
-        if chain_run is None or not isinstance(chain_run, ChainRun):
-            raise TracerException("No ChainRun found to be traced")
+        if not run_id:
+            raise TracerException("No run_id provided for on_chain_error callback.")
+        chain_run = self.run_map.get(str(run_id))
+        if chain_run is None:
+            raise TracerException(f"No chain Run found to be traced for {run_id}")
 
         chain_run.error = repr(error)
         chain_run.end_time = datetime.utcnow()
+        chain_run.events.append({"name": "error", "time": chain_run.end_time})
+        if inputs is not None:
+            chain_run.inputs = inputs if isinstance(inputs, dict) else {"input": inputs}
         self._end_trace(chain_run)
+        self._on_chain_error(chain_run)
+        return chain_run
 
     def on_tool_start(
         self,
@@ -258,62 +334,146 @@ class BaseTracer(BaseCallbackHandler, ABC):
         input_str: str,
         *,
         run_id: UUID,
+        tags: Optional[List[str]] = None,
         parent_run_id: Optional[UUID] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        name: Optional[str] = None,
         **kwargs: Any,
-    ) -> None:
+    ) -> Run:
         """Start a trace for a tool run."""
-        if self.session is None:
-            self.session = self.load_default_session()
-
-        run_id_ = str(run_id)
         parent_run_id_ = str(parent_run_id) if parent_run_id else None
-
         execution_order = self._get_execution_order(parent_run_id_)
-        tool_run = ToolRun(
-            uuid=run_id_,
-            parent_uuid=parent_run_id_,
+        start_time = datetime.utcnow()
+        if metadata:
+            kwargs.update({"metadata": metadata})
+        tool_run = Run(
+            id=run_id,
+            parent_run_id=parent_run_id,
             serialized=serialized,
-            # TODO: this is duplicate info as above, not needed.
-            action=str(serialized),
-            tool_input=input_str,
+            inputs={"input": input_str},
             extra=kwargs,
-            start_time=datetime.utcnow(),
+            events=[{"name": "start", "time": start_time}],
+            start_time=start_time,
             execution_order=execution_order,
             child_execution_order=execution_order,
             child_runs=[],
-            session_id=self.session.id,
+            run_type="tool",
+            tags=tags or [],
+            name=name,
         )
         self._start_trace(tool_run)
+        self._on_tool_start(tool_run)
+        return tool_run
 
-    def on_tool_end(self, output: str, *, run_id: UUID, **kwargs: Any) -> None:
+    def on_tool_end(self, output: str, *, run_id: UUID, **kwargs: Any) -> Run:
         """End a trace for a tool run."""
-        run_id_ = str(run_id)
+        if not run_id:
+            raise TracerException("No run_id provided for on_tool_end callback.")
+        tool_run = self.run_map.get(str(run_id))
+        if tool_run is None or tool_run.run_type != "tool":
+            raise TracerException(f"No tool Run found to be traced for {run_id}")
 
-        tool_run = self.run_map.get(run_id_)
-        if tool_run is None or not isinstance(tool_run, ToolRun):
-            raise TracerException("No ToolRun found to be traced")
-
-        tool_run.output = output
+        tool_run.outputs = {"output": output}
         tool_run.end_time = datetime.utcnow()
+        tool_run.events.append({"name": "end", "time": tool_run.end_time})
         self._end_trace(tool_run)
+        self._on_tool_end(tool_run)
+        return tool_run
 
     def on_tool_error(
         self,
-        error: Union[Exception, KeyboardInterrupt],
+        error: BaseException,
         *,
         run_id: UUID,
         **kwargs: Any,
-    ) -> None:
+    ) -> Run:
         """Handle an error for a tool run."""
-        run_id_ = str(run_id)
-
-        tool_run = self.run_map.get(run_id_)
-        if tool_run is None or not isinstance(tool_run, ToolRun):
-            raise TracerException("No ToolRun found to be traced")
+        if not run_id:
+            raise TracerException("No run_id provided for on_tool_error callback.")
+        tool_run = self.run_map.get(str(run_id))
+        if tool_run is None or tool_run.run_type != "tool":
+            raise TracerException(f"No tool Run found to be traced for {run_id}")
 
         tool_run.error = repr(error)
         tool_run.end_time = datetime.utcnow()
+        tool_run.events.append({"name": "error", "time": tool_run.end_time})
         self._end_trace(tool_run)
+        self._on_tool_error(tool_run)
+        return tool_run
+
+    def on_retriever_start(
+        self,
+        serialized: Dict[str, Any],
+        query: str,
+        *,
+        run_id: UUID,
+        parent_run_id: Optional[UUID] = None,
+        tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        name: Optional[str] = None,
+        **kwargs: Any,
+    ) -> Run:
+        """Run when Retriever starts running."""
+        parent_run_id_ = str(parent_run_id) if parent_run_id else None
+        execution_order = self._get_execution_order(parent_run_id_)
+        start_time = datetime.utcnow()
+        if metadata:
+            kwargs.update({"metadata": metadata})
+        retrieval_run = Run(
+            id=run_id,
+            name=name or "Retriever",
+            parent_run_id=parent_run_id,
+            serialized=serialized,
+            inputs={"query": query},
+            extra=kwargs,
+            events=[{"name": "start", "time": start_time}],
+            start_time=start_time,
+            execution_order=execution_order,
+            child_execution_order=execution_order,
+            tags=tags,
+            child_runs=[],
+            run_type="retriever",
+        )
+        self._start_trace(retrieval_run)
+        self._on_retriever_start(retrieval_run)
+        return retrieval_run
+
+    def on_retriever_error(
+        self,
+        error: BaseException,
+        *,
+        run_id: UUID,
+        **kwargs: Any,
+    ) -> Run:
+        """Run when Retriever errors."""
+        if not run_id:
+            raise TracerException("No run_id provided for on_retriever_error callback.")
+        retrieval_run = self.run_map.get(str(run_id))
+        if retrieval_run is None or retrieval_run.run_type != "retriever":
+            raise TracerException(f"No retriever Run found to be traced for {run_id}")
+
+        retrieval_run.error = repr(error)
+        retrieval_run.end_time = datetime.utcnow()
+        retrieval_run.events.append({"name": "error", "time": retrieval_run.end_time})
+        self._end_trace(retrieval_run)
+        self._on_retriever_error(retrieval_run)
+        return retrieval_run
+
+    def on_retriever_end(
+        self, documents: Sequence[Document], *, run_id: UUID, **kwargs: Any
+    ) -> Run:
+        """Run when Retriever ends running."""
+        if not run_id:
+            raise TracerException("No run_id provided for on_retriever_end callback.")
+        retrieval_run = self.run_map.get(str(run_id))
+        if retrieval_run is None or retrieval_run.run_type != "retriever":
+            raise TracerException(f"No retriever Run found to be traced for {run_id}")
+        retrieval_run.outputs = {"documents": documents}
+        retrieval_run.end_time = datetime.utcnow()
+        retrieval_run.events.append({"name": "end", "time": retrieval_run.end_time})
+        self._end_trace(retrieval_run)
+        self._on_retriever_end(retrieval_run)
+        return retrieval_run
 
     def __deepcopy__(self, memo: dict) -> BaseTracer:
         """Deepcopy the tracer."""
@@ -322,3 +482,56 @@ class BaseTracer(BaseCallbackHandler, ABC):
     def __copy__(self) -> BaseTracer:
         """Copy the tracer."""
         return self
+
+    def _on_run_create(self, run: Run) -> None:
+        """Process a run upon creation."""
+
+    def _on_run_update(self, run: Run) -> None:
+        """Process a run upon update."""
+
+    def _on_llm_start(self, run: Run) -> None:
+        """Process the LLM Run upon start."""
+
+    def _on_llm_new_token(
+        self,
+        run: Run,
+        token: str,
+        chunk: Optional[Union[GenerationChunk, ChatGenerationChunk]],
+    ) -> None:
+        """Process new LLM token."""
+
+    def _on_llm_end(self, run: Run) -> None:
+        """Process the LLM Run."""
+
+    def _on_llm_error(self, run: Run) -> None:
+        """Process the LLM Run upon error."""
+
+    def _on_chain_start(self, run: Run) -> None:
+        """Process the Chain Run upon start."""
+
+    def _on_chain_end(self, run: Run) -> None:
+        """Process the Chain Run."""
+
+    def _on_chain_error(self, run: Run) -> None:
+        """Process the Chain Run upon error."""
+
+    def _on_tool_start(self, run: Run) -> None:
+        """Process the Tool Run upon start."""
+
+    def _on_tool_end(self, run: Run) -> None:
+        """Process the Tool Run."""
+
+    def _on_tool_error(self, run: Run) -> None:
+        """Process the Tool Run upon error."""
+
+    def _on_chat_model_start(self, run: Run) -> None:
+        """Process the Chat Model Run upon start."""
+
+    def _on_retriever_start(self, run: Run) -> None:
+        """Process the Retriever Run upon start."""
+
+    def _on_retriever_end(self, run: Run) -> None:
+        """Process the Retriever Run."""
+
+    def _on_retriever_error(self, run: Run) -> None:
+        """Process the Retriever Run upon error."""

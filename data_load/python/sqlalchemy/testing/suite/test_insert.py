@@ -1,6 +1,7 @@
 # mypy: ignore-errors
 
 from decimal import Decimal
+import uuid
 
 from . import testing
 from .. import fixtures
@@ -17,6 +18,10 @@ from ... import literal_column
 from ... import Numeric
 from ... import select
 from ... import String
+from ...dialects.postgresql import BYTEA
+from ...types import LargeBinary
+from ...types import UUID
+from ...types import Uuid
 
 
 class LastrowidTest(fixtures.TablesTest):
@@ -57,14 +62,12 @@ class LastrowidTest(fixtures.TablesTest):
         )
 
     def test_autoincrement_on_insert(self, connection):
-
         connection.execute(
             self.tables.autoinc_pk.insert(), dict(data="some data")
         )
         self._assert_round_trip(self.tables.autoinc_pk, connection)
 
     def test_last_inserted_id(self, connection):
-
         r = connection.execute(
             self.tables.autoinc_pk.insert(), dict(data="some data")
         )
@@ -102,6 +105,15 @@ class InsertBehaviorTest(fixtures.TablesTest):
             Column("data", String(50)),
         )
         Table(
+            "no_implicit_returning",
+            metadata,
+            Column(
+                "id", Integer, primary_key=True, test_needs_autoincrement=True
+            ),
+            Column("data", String(50)),
+            implicit_returning=False,
+        )
+        Table(
             "includes_defaults",
             metadata,
             Column(
@@ -115,6 +127,33 @@ class InsertBehaviorTest(fixtures.TablesTest):
                 default=literal_column("2", type_=Integer) + literal(2),
             ),
         )
+
+    @testing.variation("style", ["plain", "return_defaults"])
+    @testing.variation("executemany", [True, False])
+    def test_no_results_for_non_returning_insert(
+        self, connection, style, executemany
+    ):
+        """test another INSERT issue found during #10453"""
+
+        table = self.tables.no_implicit_returning
+
+        stmt = table.insert()
+        if style.return_defaults:
+            stmt = stmt.return_defaults()
+
+        if executemany:
+            data = [
+                {"data": "d1"},
+                {"data": "d2"},
+                {"data": "d3"},
+                {"data": "d4"},
+                {"data": "d5"},
+            ]
+        else:
+            data = {"data": "d1"}
+
+        r = connection.execute(stmt, data)
+        assert not r.returns_rows
 
     @requirements.autoincrement_insert
     def test_autoclose_on_insert(self, connection):
@@ -351,14 +390,12 @@ class ReturningTest(fixtures.TablesTest):
         eq_(fetched_pk, pk)
 
     def test_autoincrement_on_insert_implicit_returning(self, connection):
-
         connection.execute(
             self.tables.autoinc_pk.insert(), dict(data="some data")
         )
         self._assert_round_trip(self.tables.autoinc_pk, connection)
 
     def test_last_inserted_id_implicit_returning(self, connection):
-
         r = connection.execute(
             self.tables.autoinc_pk.insert(), dict(data="some data")
         )
@@ -393,7 +430,7 @@ class ReturningTest(fixtures.TablesTest):
             True,
             testing.requires.float_or_double_precision_behaves_generically,
         ),
-        (Float(), 8.5514, False),
+        (Float(), 8.5514, True),
         (
             Float(8),
             8.5514,
@@ -430,12 +467,13 @@ class ReturningTest(fixtures.TablesTest):
         this tests insertmanyvalues as well as decimal / floating point
         RETURNING types
 
-        TODO: this might be better in suite/test_types?
-
         """
 
         t = Table(
-            "t",
+            # Oracle backends seems to be getting confused if
+            # this table is named the same as the one
+            # in test_imv_returning_datatypes.  use a different name
+            "f_t",
             metadata,
             Column("id", Integer, Identity(), primary_key=True),
             Column("value", type_),
@@ -490,6 +528,89 @@ class ReturningTest(fixtures.TablesTest):
                 set(connection.scalars(select(t.c.value))),
                 {value},
             )
+
+    @testing.combinations(
+        (
+            "non_native_uuid",
+            Uuid(native_uuid=False),
+            uuid.uuid4(),
+        ),
+        (
+            "non_native_uuid_str",
+            Uuid(as_uuid=False, native_uuid=False),
+            str(uuid.uuid4()),
+        ),
+        (
+            "generic_native_uuid",
+            Uuid(native_uuid=True),
+            uuid.uuid4(),
+            testing.requires.uuid_data_type,
+        ),
+        ("UUID", UUID(), uuid.uuid4(), testing.requires.uuid_data_type),
+        (
+            "LargeBinary1",
+            LargeBinary(),
+            b"this is binary",
+        ),
+        ("LargeBinary2", LargeBinary(), b"7\xe7\x9f"),
+        ("PG BYTEA", BYTEA(), b"7\xe7\x9f", testing.only_on("postgresql")),
+        argnames="type_,value",
+        id_="iaa",
+    )
+    @testing.variation("sort_by_parameter_order", [True, False])
+    @testing.variation("multiple_rows", [True, False])
+    @testing.requires.insert_returning
+    def test_imv_returning_datatypes(
+        self,
+        connection,
+        metadata,
+        sort_by_parameter_order,
+        type_,
+        value,
+        multiple_rows,
+    ):
+        """test #9739, #9808 (similar to #9701).
+
+        this tests insertmanyvalues in conjunction with various datatypes.
+
+        These tests are particularly for the asyncpg driver which needs
+        most types to be explicitly cast for the new IMV format
+
+        """
+        t = Table(
+            "d_t",
+            metadata,
+            Column("id", Integer, Identity(), primary_key=True),
+            Column("value", type_),
+        )
+
+        t.create(connection)
+
+        result = connection.execute(
+            t.insert().returning(
+                t.c.id,
+                t.c.value,
+                sort_by_parameter_order=bool(sort_by_parameter_order),
+            ),
+            [{"value": value} for i in range(10)]
+            if multiple_rows
+            else {"value": value},
+        )
+
+        if multiple_rows:
+            i_range = range(1, 11)
+        else:
+            i_range = range(1, 2)
+
+        eq_(
+            set(result),
+            {(id_, value) for id_ in i_range},
+        )
+
+        eq_(
+            set(connection.scalars(select(t.c.value))),
+            {value},
+        )
 
 
 __all__ = ("LastrowidTest", "InsertBehaviorTest", "ReturningTest")

@@ -574,6 +574,7 @@ class TestMiscCharacter(util.F2PyTest):
 class TestStringScalarArr(util.F2PyTest):
     sources = [util.getpath("tests", "src", "string", "scalar_string.f90")]
 
+    @pytest.mark.slow
     def test_char(self):
         for out in (self.module.string_test.string,
                     self.module.string_test.string77):
@@ -582,6 +583,7 @@ class TestStringScalarArr(util.F2PyTest):
             expected = '|S8'
             assert out.dtype == expected
 
+    @pytest.mark.slow
     def test_char_arr(self):
         for out in (self.module.string_test.strarr,
                     self.module.string_test.strarr77):
@@ -589,9 +591,3 @@ class TestStringScalarArr(util.F2PyTest):
             assert out.shape == expected
             expected = '|S12'
             assert out.dtype == expected
-
-class TestStringAssumedLength(util.F2PyTest):
-    sources = [util.getpath("tests", "src", "string", "gh24008.f")]
-
-    def test_gh24008(self):
-        self.module.greet("joe", "bob")

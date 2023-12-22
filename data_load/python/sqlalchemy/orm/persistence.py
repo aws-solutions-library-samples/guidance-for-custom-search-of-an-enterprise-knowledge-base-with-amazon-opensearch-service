@@ -221,7 +221,6 @@ def _organize_states_for_save(base_mapper, states, uowtransaction):
     for state, dict_, mapper, connection in _connections_for_states(
         base_mapper, uowtransaction, states
     ):
-
         has_identity = bool(state.key)
 
         instance_key = state.key or mapper._identity_key_from_state(state)
@@ -310,7 +309,6 @@ def _organize_states_for_delete(base_mapper, states, uowtransaction):
     for state, dict_, mapper, connection in _connections_for_states(
         base_mapper, uowtransaction, states
     ):
-
         mapper.dispatch.before_delete(mapper, connection, state)
 
         if mapper.version_id_col is not None:
@@ -451,7 +449,6 @@ def _collect_update_commands(
         connection,
         update_version_id,
     ) in states_to_update:
-
         if table not in mapper._pks_by_table:
             continue
 
@@ -512,7 +509,6 @@ def _collect_update_commands(
             update_version_id is not None
             and mapper.version_id_col in mapper._cols_by_table[table]
         ):
-
             if not bulk and not (params or value_params):
                 # HACK: check for history in other tables, in case the
                 # history is only in a different table than the one
@@ -558,6 +554,18 @@ def _collect_update_commands(
                     mapper._pk_attr_keys_by_table[table]
                 )
             }
+            if util.NONE_SET.intersection(pk_params.values()):
+                raise sa_exc.InvalidRequestError(
+                    f"No primary key value supplied for column(s) "
+                    f"""{
+                        ', '.join(
+                        str(c) for c in pks if pk_params[c._label] is None)
+                    }; """
+                    "per-row ORM Bulk UPDATE by Primary Key requires that "
+                    "records contain primary key values",
+                    code="bupq",
+                )
+
         else:
             pk_params = {}
             for col in pks:
@@ -637,7 +645,6 @@ def _collect_post_update_commands(
         connection,
         update_version_id,
     ) in states_to_update:
-
         # assert table in mapper._pks_by_table
 
         pks = mapper._pks_by_table[table]
@@ -664,7 +671,6 @@ def _collect_post_update_commands(
                 update_version_id is not None
                 and mapper.version_id_col in mapper._cols_by_table[table]
             ):
-
                 col = mapper.version_id_col
                 params[col._label] = update_version_id
 
@@ -691,7 +697,6 @@ def _collect_delete_commands(
         connection,
         update_version_id,
     ) in states_to_delete:
-
         if table not in mapper._pks_by_table:
             continue
 
@@ -1002,7 +1007,6 @@ def _emit_insert_statements(
             rec[7],
         ),
     ):
-
         statement = cached_stmt
 
         if use_orm_insert_stmt is not None:
@@ -1029,7 +1033,6 @@ def _emit_insert_statements(
             and has_all_pks
             and not hasvalue
         ):
-
             # the "we don't need newly generated values back" section.
             # here we have all the PKs, all the defaults or we don't want
             # to fetch them, or the dialect doesn't support RETURNING at all
@@ -1079,7 +1082,7 @@ def _emit_insert_statements(
             records = list(records)
 
             if returning_is_required_anyway or (
-                not hasvalue and len(records) > 1
+                table.implicit_returning and not hasvalue and len(records) > 1
             ):
                 if (
                     deterministic_results_reqd
@@ -1333,7 +1336,6 @@ def _emit_post_update_statements(
         if not allow_executemany:
             check_rowcount = assert_singlerow
             for state, state_dict, mapper_rec, connection, params in records:
-
                 c = connection.execute(
                     statement, params, execution_options=execution_options
                 )
@@ -1437,7 +1439,6 @@ def _emit_delete_statements(
                 # execute deletes individually so that versioned
                 # rows can be verified
                 for params in del_objects:
-
                     c = connection.execute(
                         statement, params, execution_options=execution_options
                     )
@@ -1496,7 +1497,6 @@ def _finalize_insert_update_commands(base_mapper, uowtransaction, states):
 
     """
     for state, state_dict, mapper, connection, has_identity in states:
-
         if mapper._readonly_props:
             readonly = state.unmodified_intersection(
                 [

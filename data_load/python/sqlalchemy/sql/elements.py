@@ -117,17 +117,45 @@ _NUMERIC = Union[float, Decimal]
 _NUMBER = Union[float, int, Decimal]
 
 _T = TypeVar("_T", bound="Any")
+_T_co = TypeVar("_T_co", bound=Any, covariant=True)
 _OPT = TypeVar("_OPT", bound="Any")
 _NT = TypeVar("_NT", bound="_NUMERIC")
 
 _NMT = TypeVar("_NMT", bound="_NUMBER")
 
 
+@overload
 def literal(
     value: Any,
-    type_: Optional[_TypeEngineArgument[_T]] = None,
+    type_: _TypeEngineArgument[_T],
     literal_execute: bool = False,
 ) -> BindParameter[_T]:
+    ...
+
+
+@overload
+def literal(
+    value: _T,
+    type_: None = None,
+    literal_execute: bool = False,
+) -> BindParameter[_T]:
+    ...
+
+
+@overload
+def literal(
+    value: Any,
+    type_: Optional[_TypeEngineArgument[Any]] = None,
+    literal_execute: bool = False,
+) -> BindParameter[Any]:
+    ...
+
+
+def literal(
+    value: Any,
+    type_: Optional[_TypeEngineArgument[Any]] = None,
+    literal_execute: bool = False,
+) -> BindParameter[Any]:
     r"""Return a literal clause, bound to a bind parameter.
 
     Literal clauses are created automatically when non-
@@ -323,7 +351,7 @@ class ClauseElement(
     def description(self) -> Optional[str]:
         return None
 
-    _is_clone_of: Optional[ClauseElement] = None
+    _is_clone_of: Optional[Self] = None
 
     is_clause_element = True
     is_selectable = False
@@ -457,6 +485,11 @@ class ClauseElement(
             s.add(f)
             f = f._is_clone_of
         return s
+
+    def _de_clone(self):
+        while self._is_clone_of is not None:
+            self = self._is_clone_of
+        return self
 
     @property
     def entity_namespace(self):
@@ -772,7 +805,7 @@ class CompilerColumnElement(
 # SQLCoreOperations should be suiting the ExpressionElementRole
 # and ColumnsClauseRole.   however the MRO issues become too elaborate
 # at the moment.
-class SQLCoreOperations(Generic[_T], ColumnOperators, TypingOnly):
+class SQLCoreOperations(Generic[_T_co], ColumnOperators, TypingOnly):
     __slots__ = ()
 
     # annotations for comparison methods
@@ -794,14 +827,37 @@ class SQLCoreOperations(Generic[_T], ColumnOperators, TypingOnly):
         ) -> ColumnElement[Any]:
             ...
 
+        @overload
+        def op(
+            self,
+            opstring: str,
+            precedence: int = ...,
+            is_comparison: bool = ...,
+            *,
+            return_type: _TypeEngineArgument[_OPT],
+            python_impl: Optional[Callable[..., Any]] = None,
+        ) -> Callable[[Any], BinaryExpression[_OPT]]:
+            ...
+
+        @overload
+        def op(
+            self,
+            opstring: str,
+            precedence: int = ...,
+            is_comparison: bool = ...,
+            return_type: Optional[_TypeEngineArgument[Any]] = ...,
+            python_impl: Optional[Callable[..., Any]] = ...,
+        ) -> Callable[[Any], BinaryExpression[Any]]:
+            ...
+
         def op(
             self,
             opstring: str,
             precedence: int = 0,
             is_comparison: bool = False,
-            return_type: Optional[_TypeEngineArgument[_OPT]] = None,
+            return_type: Optional[_TypeEngineArgument[Any]] = None,
             python_impl: Optional[Callable[..., Any]] = None,
-        ) -> Callable[[Any], BinaryExpression[_OPT]]:
+        ) -> Callable[[Any], BinaryExpression[Any]]:
             ...
 
         def bool_op(
@@ -818,13 +874,20 @@ class SQLCoreOperations(Generic[_T], ColumnOperators, TypingOnly):
         def __or__(self, other: Any) -> BooleanClauseList:
             ...
 
-        def __invert__(self) -> ColumnElement[_T]:
+        def __invert__(self) -> ColumnElement[_T_co]:
             ...
 
         def __lt__(self, other: Any) -> ColumnElement[bool]:
             ...
 
         def __le__(self, other: Any) -> ColumnElement[bool]:
+            ...
+
+        # declare also that this class has an hash method otherwise
+        # it may be assumed to be None by type checkers since the
+        # object defines __eq__ and python sets it to None in that case:
+        # https://docs.python.org/3/reference/datamodel.html#object.__hash__
+        def __hash__(self) -> int:
             ...
 
         def __eq__(self, other: Any) -> ColumnElement[bool]:  # type: ignore[override]  # noqa: E501
@@ -845,7 +908,7 @@ class SQLCoreOperations(Generic[_T], ColumnOperators, TypingOnly):
         def __ge__(self, other: Any) -> ColumnElement[bool]:
             ...
 
-        def __neg__(self) -> UnaryExpression[_T]:
+        def __neg__(self) -> UnaryExpression[_T_co]:
             ...
 
         def __contains__(self, other: Any) -> ColumnElement[bool]:
@@ -854,7 +917,23 @@ class SQLCoreOperations(Generic[_T], ColumnOperators, TypingOnly):
         def __getitem__(self, index: Any) -> ColumnElement[Any]:
             ...
 
+        @overload
+        def __lshift__(self: _SQO[int], other: Any) -> ColumnElement[int]:
+            ...
+
+        @overload
         def __lshift__(self, other: Any) -> ColumnElement[Any]:
+            ...
+
+        def __lshift__(self, other: Any) -> ColumnElement[Any]:
+            ...
+
+        @overload
+        def __rshift__(self: _SQO[int], other: Any) -> ColumnElement[int]:
+            ...
+
+        @overload
+        def __rshift__(self, other: Any) -> ColumnElement[Any]:
             ...
 
         def __rshift__(self, other: Any) -> ColumnElement[Any]:
@@ -890,7 +969,7 @@ class SQLCoreOperations(Generic[_T], ColumnOperators, TypingOnly):
         def bitwise_and(self, other: Any) -> BinaryExpression[Any]:
             ...
 
-        def bitwise_not(self) -> UnaryExpression[_T]:
+        def bitwise_not(self) -> UnaryExpression[_T_co]:
             ...
 
         def bitwise_lshift(self, other: Any) -> BinaryExpression[Any]:
@@ -1003,22 +1082,22 @@ class SQLCoreOperations(Generic[_T], ColumnOperators, TypingOnly):
         ) -> ColumnElement[str]:
             ...
 
-        def desc(self) -> UnaryExpression[_T]:
+        def desc(self) -> UnaryExpression[_T_co]:
             ...
 
-        def asc(self) -> UnaryExpression[_T]:
+        def asc(self) -> UnaryExpression[_T_co]:
             ...
 
-        def nulls_first(self) -> UnaryExpression[_T]:
+        def nulls_first(self) -> UnaryExpression[_T_co]:
             ...
 
-        def nullsfirst(self) -> UnaryExpression[_T]:
+        def nullsfirst(self) -> UnaryExpression[_T_co]:
             ...
 
-        def nulls_last(self) -> UnaryExpression[_T]:
+        def nulls_last(self) -> UnaryExpression[_T_co]:
             ...
 
-        def nullslast(self) -> UnaryExpression[_T]:
+        def nullslast(self) -> UnaryExpression[_T_co]:
             ...
 
         def collate(self, collation: str) -> CollationClause:
@@ -1029,7 +1108,7 @@ class SQLCoreOperations(Generic[_T], ColumnOperators, TypingOnly):
         ) -> BinaryExpression[bool]:
             ...
 
-        def distinct(self: _SQO[_T]) -> UnaryExpression[_T]:
+        def distinct(self: _SQO[_T_co]) -> UnaryExpression[_T_co]:
             ...
 
         def any_(self) -> CollectionAggregate[Any]:
@@ -1061,11 +1140,7 @@ class SQLCoreOperations(Generic[_T], ColumnOperators, TypingOnly):
             ...
 
         @overload
-        def __radd__(self: _SQO[_NT], other: Any) -> ColumnElement[_NT]:
-            ...
-
-        @overload
-        def __radd__(self: _SQO[int], other: Any) -> ColumnElement[int]:
+        def __radd__(self: _SQO[_NMT], other: Any) -> ColumnElement[_NMT]:
             ...
 
         @overload
@@ -1207,7 +1282,7 @@ class SQLCoreOperations(Generic[_T], ColumnOperators, TypingOnly):
 
 
 class SQLColumnExpression(
-    SQLCoreOperations[_T], roles.ExpressionElementRole[_T], TypingOnly
+    SQLCoreOperations[_T_co], roles.ExpressionElementRole[_T_co], TypingOnly
 ):
     """A type that may be used to indicate any SQL column element or object
     that acts in place of one.
@@ -1516,6 +1591,9 @@ class ColumnElement(
         else:
             return comparator_factory(self)
 
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
     def __getattr__(self, key: str) -> Any:
         try:
             return getattr(self.comparator, key)
@@ -1535,12 +1613,12 @@ class ColumnElement(
         *other: Any,
         **kwargs: Any,
     ) -> ColumnElement[Any]:
-        return op(self.comparator, *other, **kwargs)  # type: ignore[return-value]  # noqa: E501
+        return op(self.comparator, *other, **kwargs)  # type: ignore[no-any-return]  # noqa: E501
 
     def reverse_operate(
         self, op: operators.OperatorType, other: Any, **kwargs: Any
     ) -> ColumnElement[Any]:
-        return op(other, self.comparator, **kwargs)  # type: ignore[return-value]  # noqa: E501
+        return op(other, self.comparator, **kwargs)  # type: ignore[no-any-return]  # noqa: E501
 
     def _bind_param(
         self,
@@ -3054,7 +3132,7 @@ class BooleanClauseList(ExpressionClauseList[bool]):
                 }, *args)'.""",
                 version="1.4",
             )
-            return cls._construct_raw(operator)  # type: ignore[no-any-return]
+            return cls._construct_raw(operator)
 
         lcc, convert_clauses = cls._process_clauses_for_boolean(
             operator,
@@ -3084,7 +3162,7 @@ class BooleanClauseList(ExpressionClauseList[bool]):
             assert lcc
             # just one element.  return it as a single boolean element,
             # not a list and discard the operator.
-            return convert_clauses[0]  # type: ignore[no-any-return] # noqa: E501
+            return convert_clauses[0]
 
     @classmethod
     def _construct_for_whereclause(
@@ -3372,6 +3450,8 @@ class Cast(WrapsColumnExpression[_T]):
 
         :func:`.cast`
 
+        :func:`.try_cast`
+
         :func:`.type_coerce` - an alternative to CAST that coerces the type
         on the Python side only, which is often sufficient to generate the
         correct SQL and data coercion.
@@ -3410,6 +3490,22 @@ class Cast(WrapsColumnExpression[_T]):
     @property
     def wrapped_column_expression(self):
         return self.clause
+
+
+class TryCast(Cast[_T]):
+    """Represent a TRY_CAST expression.
+
+    Details on :class:`.TryCast` usage is at :func:`.try_cast`.
+
+    .. seealso::
+
+        :func:`.try_cast`
+
+        :ref:`tutorial_casts`
+    """
+
+    __visit_name__ = "try_cast"
+    inherit_cache = True
 
 
 class TypeCoerce(WrapsColumnExpression[_T]):
@@ -4015,6 +4111,7 @@ class Grouping(GroupedElement, ColumnElement[_T]):
 
         # nulltype assignment issue
         self.type = getattr(element, "type", type_api.NULLTYPE)  # type: ignore
+        self._propagate_attrs = element._propagate_attrs
 
     def _with_binary_element_type(self, type_):
         return self.__class__(self.element._with_binary_element_type(type_))
@@ -4085,7 +4182,7 @@ class Over(ColumnElement[_T]):
 
     element: ColumnElement[_T]
     """The underlying expression object to which this :class:`.Over`
-    object refers towards."""
+    object refers."""
 
     range_: Optional[typing_Tuple[int, int]]
 

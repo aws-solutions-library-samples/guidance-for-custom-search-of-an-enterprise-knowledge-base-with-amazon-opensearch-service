@@ -1,11 +1,12 @@
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.schema import AgentAction, AgentFinish, LLMResult
 
 
 def import_aim() -> Any:
+    """Import the aim python package and raise an error if it is not installed."""
     try:
         import aim
     except ImportError:
@@ -29,6 +30,7 @@ class BaseMetadataCallbackHandler:
         ignore_llm_ (bool): Whether to ignore llm callbacks.
         ignore_chain_ (bool): Whether to ignore chain callbacks.
         ignore_agent_ (bool): Whether to ignore agent callbacks.
+        ignore_retriever_ (bool): Whether to ignore retriever callbacks.
         always_verbose_ (bool): Whether to always be verbose.
         chain_starts (int): The number of times the chain start method has been called.
         chain_ends (int): The number of times the chain end method has been called.
@@ -51,6 +53,7 @@ class BaseMetadataCallbackHandler:
         self.ignore_llm_ = False
         self.ignore_chain_ = False
         self.ignore_agent_ = False
+        self.ignore_retriever_ = False
         self.always_verbose_ = False
 
         self.chain_starts = 0
@@ -84,6 +87,11 @@ class BaseMetadataCallbackHandler:
     def ignore_agent(self) -> bool:
         """Whether to ignore agent callbacks."""
         return self.ignore_agent_
+
+    @property
+    def ignore_retriever(self) -> bool:
+        """Whether to ignore retriever callbacks."""
+        return self.ignore_retriever_
 
     def get_custom_callback_meta(self) -> Dict[str, Any]:
         return {
@@ -247,9 +255,7 @@ class AimCallbackHandler(BaseMetadataCallbackHandler, BaseCallbackHandler):
         self.step += 1
         self.llm_streams += 1
 
-    def on_llm_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> None:
+    def on_llm_error(self, error: BaseException, **kwargs: Any) -> None:
         """Run when LLM errors."""
         self.step += 1
         self.errors += 1
@@ -288,9 +294,7 @@ class AimCallbackHandler(BaseMetadataCallbackHandler, BaseCallbackHandler):
             aim.Text(outputs_res["output"]), name="on_chain_end", context=resp
         )
 
-    def on_chain_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> None:
+    def on_chain_error(self, error: BaseException, **kwargs: Any) -> None:
         """Run when chain errors."""
         self.step += 1
         self.errors += 1
@@ -321,9 +325,7 @@ class AimCallbackHandler(BaseMetadataCallbackHandler, BaseCallbackHandler):
 
         self._run.track(aim.Text(output), name="on_tool_end", context=resp)
 
-    def on_tool_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> None:
+    def on_tool_error(self, error: BaseException, **kwargs: Any) -> None:
         """Run when tool errors."""
         self.step += 1
         self.errors += 1

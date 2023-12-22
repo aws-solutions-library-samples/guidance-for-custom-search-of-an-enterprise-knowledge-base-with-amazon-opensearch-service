@@ -31,26 +31,29 @@ __author_email__ = "biziqe@mathieu.fenniak.net"
 
 import functools
 import logging
+import re
 import warnings
-from codecs import getencoder
 from dataclasses import dataclass
-from io import DEFAULT_BUFFER_SIZE
+from datetime import datetime, timezone
+from io import DEFAULT_BUFFER_SIZE, BytesIO
 from os import SEEK_CUR
 from typing import (
     IO,
     Any,
     Callable,
     Dict,
+    List,
     Optional,
     Pattern,
     Tuple,
     Union,
+    cast,
     overload,
 )
 
 try:
     # Python 3.10+: https://www.python.org/dev/peps/pep-0484/
-    from typing import TypeAlias  # type: ignore[attr-defined]
+    from typing import TypeAlias
 except ImportError:
     from typing_extensions import TypeAlias
 
@@ -74,6 +77,38 @@ DEPR_MSG_NO_REPLACEMENT = "{} is deprecated and will be removed in pypdf {}."
 DEPR_MSG_NO_REPLACEMENT_HAPPENED = "{} is deprecated and was removed in pypdf {}."
 DEPR_MSG = "{} is deprecated and will be removed in pypdf {}. Use {} instead."
 DEPR_MSG_HAPPENED = "{} is deprecated and was removed in pypdf {}. Use {} instead."
+
+
+def parse_iso8824_date(text: Optional[str]) -> Optional[datetime]:
+    orgtext = text
+    if text is None:
+        return None
+    if text[0].isdigit():
+        text = "D:" + text
+    if text.endswith(("Z", "z")):
+        text += "0000"
+    text = text.replace("z", "+").replace("Z", "+").replace("'", "")
+    i = max(text.find("+"), text.find("-"))
+    if i > 0 and i != len(text) - 5:
+        text += "00"
+    for f in (
+        "D:%Y",
+        "D:%Y%m",
+        "D:%Y%m%d",
+        "D:%Y%m%d%H",
+        "D:%Y%m%d%H%M",
+        "D:%Y%m%d%H%M%S",
+        "D:%Y%m%d%H%M%S%z",
+    ):
+        try:
+            d = datetime.strptime(text, f)  # noqa: DTZ007
+        except ValueError:
+            continue
+        else:
+            if text[-5:] == "+0000":
+                d = d.replace(tzinfo=timezone.utc)
+            return d
+    raise ValueError(f"Can not convert date: {orgtext}")
 
 
 def _get_max_pdf_version_header(header1: bytes, header2: bytes) -> bytes:
@@ -293,11 +328,11 @@ B_CACHE: Dict[Union[str, bytes], bytes] = {}
 
 
 def b_(s: Union[str, bytes]) -> bytes:
+    if isinstance(s, bytes):
+        return s
     bc = B_CACHE
     if s in bc:
         return bc[s]
-    if isinstance(s, bytes):
-        return s
     try:
         r = s.encode("latin-1")
         if len(s) < 2:
@@ -348,17 +383,8 @@ def ord_(b: Union[int, str, bytes]) -> Union[int, bytes]:
     return b
 
 
-def hexencode(b: bytes) -> bytes:
-    coder = getencoder("hex_codec")
-    coded = coder(b)  # type: ignore
-    return coded[0]
-
-
-def hex_str(num: int) -> str:
-    return hex(num).replace("L", "")
-
-
 WHITESPACES = (b" ", b"\n", b"\r", b"\t", b"\x00")
+WHITESPACES_AS_REGEXP = b"[ \n\r\t\x00]"
 
 
 def paeth_predictor(left: int, up: int, up_left: int) -> int:
@@ -435,9 +461,9 @@ def deprecation_bookmark(**aliases: str) -> Callable:
         outline = a collection of outline items.
     """
 
-    def decoration(func: Callable) -> Any:  # type: ignore
+    def decoration(func: Callable) -> Any:
         @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:  # type: ignore
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             rename_kwargs(func.__name__, kwargs, aliases, fail=True)
             return func(*args, **kwargs)
 
@@ -446,7 +472,7 @@ def deprecation_bookmark(**aliases: str) -> Callable:
     return decoration
 
 
-def rename_kwargs(  # type: ignore
+def rename_kwargs(
     func_name: str, kwargs: Dict[str, Any], aliases: Dict[str, str], fail: bool = False
 ) -> None:
     """
@@ -492,11 +518,124 @@ def _human_readable_bytes(bytes: int) -> str:
 
 @dataclass
 class File:
+    from .generic import IndirectObject
+
     name: str
     data: bytes
+    image: Optional[Any] = None  # optional ; direct image access
+    indirect_reference: Optional[IndirectObject] = None  # optional ; link to PdfObject
 
     def __str__(self) -> str:
-        return f"File(name={self.name}, data: {_human_readable_bytes(len(self.data))})"
+        return f"{self.__class__.__name__}(name={self.name}, data: {_human_readable_bytes(len(self.data))})"
 
     def __repr__(self) -> str:
-        return f"File(name={self.name}, data: {_human_readable_bytes(len(self.data))}, hash: {hash(self.data)})"
+        return self.__str__()[:-1] + f", hash: {hash(self.data)})"
+
+
+@dataclass
+class ImageFile(File):
+    from .generic import IndirectObject
+
+    image: Optional[Any] = None  # optional ; direct PIL image access
+    indirect_reference: Optional[IndirectObject] = None  # optional ; link to PdfObject
+
+    def replace(self, new_image: Any, **kwargs: Any) -> None:
+        """
+        Replace the Image with a new PIL image.
+
+        Args:
+            new_image (Image.Image): The new PIL image to replace the existing image.
+            **kwargs: Additional keyword arguments to pass to `Image.Image.save()`.
+
+        Raises:
+            TypeError: If the image is inline or in a PdfReader.
+            TypeError: If the image does not belong to a PdfWriter.
+            TypeError: If `new_image` is not a PIL Image.
+
+        Note:
+            This method replaces the existing image with a new image.
+            It is not allowed for inline images or images within a PdfReader.
+            The `kwargs` parameter allows passing additional parameters
+            to `Image.Image.save()`, such as quality.
+        """
+        from PIL import Image
+
+        from ._reader import PdfReader
+
+        # to prevent circular import
+        from .filters import _xobj_to_image
+        from .generic import DictionaryObject, PdfObject
+
+        if self.indirect_reference is None:
+            raise TypeError("Can not update an inline image")
+        if not hasattr(self.indirect_reference.pdf, "_id_translated"):
+            raise TypeError("Can not update an image not belonging to a PdfWriter")
+        if not isinstance(new_image, Image.Image):
+            raise TypeError("new_image shall be a PIL Image")
+        b = BytesIO()
+        new_image.save(b, "PDF", **kwargs)
+        reader = PdfReader(b)
+        assert reader.pages[0].images[0].indirect_reference is not None
+        self.indirect_reference.pdf._objects[self.indirect_reference.idnum - 1] = (
+            reader.pages[0].images[0].indirect_reference.get_object()
+        )
+        cast(
+            PdfObject, self.indirect_reference.get_object()
+        ).indirect_reference = self.indirect_reference
+        # change the object attributes
+        extension, byte_stream, img = _xobj_to_image(
+            cast(DictionaryObject, self.indirect_reference.get_object())
+        )
+        assert extension is not None
+        self.name = self.name[: self.name.rfind(".")] + extension
+        self.data = byte_stream
+        self.image = img
+
+
+@functools.total_ordering
+class Version:
+    COMPONENT_PATTERN = re.compile(r"^(\d+)(.*)$")
+
+    def __init__(self, version_str: str) -> None:
+        self.version_str = version_str
+        self.components = self._parse_version(version_str)
+
+    def _parse_version(self, version_str: str) -> List[Tuple[int, str]]:
+        components = version_str.split(".")
+        parsed_components = []
+        for component in components:
+            match = Version.COMPONENT_PATTERN.match(component)
+            if not match:
+                parsed_components.append((0, component))
+                continue
+            integer_prefix = match.group(1)
+            suffix = match.group(2)
+            if integer_prefix is None:
+                integer_prefix = 0
+            parsed_components.append((int(integer_prefix), suffix))
+        return parsed_components
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Version):
+            return False
+        return self.components == other.components
+
+    def __lt__(self, other: Any) -> bool:
+        if not isinstance(other, Version):
+            raise ValueError(f"Version cannot be compared against {type(other)}")
+        min_len = min(len(self.components), len(other.components))
+        for i in range(min_len):
+            self_value, self_suffix = self.components[i]
+            other_value, other_suffix = other.components[i]
+
+            if self_value < other_value:
+                return True
+            elif self_value > other_value:
+                return False
+
+            if self_suffix < other_suffix:
+                return True
+            elif self_suffix > other_suffix:
+                return False
+
+        return len(self.components) < len(other.components)

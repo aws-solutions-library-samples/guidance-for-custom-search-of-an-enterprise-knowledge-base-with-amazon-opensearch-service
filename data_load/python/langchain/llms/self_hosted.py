@@ -1,14 +1,12 @@
-"""Run model inference on self-hosted remote hardware."""
 import importlib.util
 import logging
 import pickle
 from typing import Any, Callable, List, Mapping, Optional
 
-from pydantic import Extra
-
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.llms.utils import enforce_stop_tokens
+from langchain.pydantic_v1 import Extra
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +61,7 @@ def _send_pipeline_to_device(pipeline: Any, device: int) -> Any:
 
 
 class SelfHostedPipeline(LLM):
-    """Run model inference on self-hosted remote hardware.
+    """Model inference on self-hosted remote hardware.
 
     Supported hardware includes auto-launched instances on AWS, GCP, Azure,
     and Lambda, as well as servers specified
@@ -134,7 +132,7 @@ class SelfHostedPipeline(LLM):
     model_load_fn: Callable
     """Function to load the model remotely on the server."""
     load_fn_kwargs: Optional[dict] = None
-    """Key word arguments to pass to the model load function."""
+    """Keyword arguments to pass to the model load function."""
     model_reqs: List[str] = ["./", "torch"]
     """Requirements to install on hardware to inference the model."""
 
@@ -155,7 +153,7 @@ class SelfHostedPipeline(LLM):
             import runhouse as rh
 
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import runhouse python package. "
                 "Please install it with `pip install runhouse`."
             )
@@ -214,5 +212,8 @@ class SelfHostedPipeline(LLM):
         prompt: str,
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> str:
-        return self.client(pipeline=self.pipeline_ref, prompt=prompt, stop=stop)
+        return self.client(
+            pipeline=self.pipeline_ref, prompt=prompt, stop=stop, **kwargs
+        )

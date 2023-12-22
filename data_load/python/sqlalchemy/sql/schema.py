@@ -43,6 +43,7 @@ from typing import Dict
 from typing import Iterable
 from typing import Iterator
 from typing import List
+from typing import Mapping
 from typing import NoReturn
 from typing import Optional
 from typing import overload
@@ -85,6 +86,7 @@ from ..util.typing import Final
 from ..util.typing import Literal
 from ..util.typing import Protocol
 from ..util.typing import Self
+from ..util.typing import TypedDict
 from ..util.typing import TypeGuard
 
 if typing.TYPE_CHECKING:
@@ -124,7 +126,6 @@ _ServerDefaultArgument = Union[
 
 
 class SchemaConst(Enum):
-
     RETAIN_SCHEMA = 1
     """Symbol indicating that a :class:`_schema.Table`, :class:`.Sequence`
     or in some cases a :class:`_schema.ForeignKey` object, in situations
@@ -1058,7 +1059,6 @@ class Table(
         if the_sentinel:
             the_sentinel_zero = the_sentinel[0]
             if the_sentinel_zero.identity:
-
                 if the_sentinel_zero.identity._increment_is_negative:
                     if sentinel_is_explicit:
                         raise exc.InvalidRequestError(
@@ -1095,7 +1095,6 @@ class Table(
                         _SentinelDefaultCharacterization.SENTINEL_DEFAULT
                     )
                 elif default_is_sequence(the_sentinel_zero.default):
-
                     if the_sentinel_zero.default._increment_is_negative:
                         if sentinel_is_explicit:
                             raise exc.InvalidRequestError(
@@ -1433,7 +1432,7 @@ class Table(
         elif schema is None:
             actual_schema = metadata.schema
         else:
-            actual_schema = schema  # type: ignore
+            actual_schema = schema
         key = _get_table_key(name, actual_schema)
         if key in metadata.tables:
             util.warn(
@@ -2126,7 +2125,7 @@ class Column(DialectKWArgs, SchemaItem, ColumnClause[_T]):
             self.onupdate = onupdate
             l_args.append(onupdate)
         else:
-            self.onpudate = None
+            self.onupdate = None
 
         if server_default is not None:
             if isinstance(server_default, FetchedValue):
@@ -2452,14 +2451,8 @@ class Column(DialectKWArgs, SchemaItem, ColumnClause[_T]):
 
         # Constraint objects plus non-constraint-bound ForeignKey objects
         args: List[SchemaItem] = [
-            c._copy(**kw)
-            for c in self.constraints
-            if not c._type_bound  # type: ignore
-        ] + [
-            c._copy(**kw)  # type: ignore
-            for c in self.foreign_keys
-            if not c.constraint
-        ]
+            c._copy(**kw) for c in self.constraints if not c._type_bound
+        ] + [c._copy(**kw) for c in self.foreign_keys if not c.constraint]
 
         # ticket #5276
         column_kwargs = {}
@@ -2529,6 +2522,15 @@ class Column(DialectKWArgs, SchemaItem, ColumnClause[_T]):
         if self.primary_key:
             other.primary_key = True
 
+        if self.autoincrement != "auto" and other.autoincrement == "auto":
+            other.autoincrement = self.autoincrement
+
+        if self.system:
+            other.system = self.system
+
+        if self.info:
+            other.info.update(self.info)
+
         type_ = self.type
         if not type_._isnull and other.type._isnull:
             if isinstance(type_, SchemaEventTarget):
@@ -2573,6 +2575,12 @@ class Column(DialectKWArgs, SchemaItem, ColumnClause[_T]):
 
         if self.index and not other.index:
             other.index = True
+
+        if self.doc and other.doc is None:
+            other.doc = self.doc
+
+        if self.comment and other.comment is None:
+            other.comment = self.comment
 
         if self.unique and not other.unique:
             other.unique = True
@@ -3166,7 +3174,6 @@ class ForeignKey(DialectKWArgs, SchemaItem):
         _column: Column[Any]
 
         if isinstance(self._colspec, str):
-
             parenttable, tablekey, colname = self._resolve_col_tokens()
 
             if self._unresolvable or tablekey not in parenttable.metadata:
@@ -3974,7 +3981,7 @@ class FetchedValue(SchemaEventTarget):
         if for_update == self.for_update:
             return self
         else:
-            return self._clone(for_update)  # type: ignore
+            return self._clone(for_update)
 
     def _copy(self) -> FetchedValue:
         return FetchedValue(self.for_update)
@@ -4152,7 +4159,7 @@ class Constraint(DialectKWArgs, HasConditionalDDL, SchemaItem):
         "and will be removed in a future release.",
     )
     def copy(self, **kw: Any) -> Self:
-        return self._copy(**kw)  # type: ignore
+        return self._copy(**kw)
 
     def _copy(self, **kw: Any) -> Self:
         raise NotImplementedError()
@@ -5287,7 +5294,30 @@ class Index(
         )
 
 
-DEFAULT_NAMING_CONVENTION: util.immutabledict[str, str] = util.immutabledict(
+_NamingSchemaCallable = Callable[[Constraint, Table], str]
+_NamingSchemaDirective = Union[str, _NamingSchemaCallable]
+
+
+class _NamingSchemaTD(TypedDict, total=False):
+    fk: _NamingSchemaDirective
+    pk: _NamingSchemaDirective
+    ix: _NamingSchemaDirective
+    ck: _NamingSchemaDirective
+    uq: _NamingSchemaDirective
+
+
+_NamingSchemaParameter = Union[
+    # it seems like the TypedDict here is useful for pylance typeahead,
+    # and not much else
+    _NamingSchemaTD,
+    # there is no form that allows Union[Type[Any], str] to work in all
+    # cases, including breaking out Mapping[] entries for each combination
+    # even, therefore keys must be `Any` (see #10264)
+    Mapping[Any, _NamingSchemaDirective],
+]
+
+
+DEFAULT_NAMING_CONVENTION: _NamingSchemaParameter = util.immutabledict(
     {"ix": "ix_%(column_0_label)s"}
 )
 
@@ -5323,7 +5353,7 @@ class MetaData(HasSchemaAttr):
         self,
         schema: Optional[str] = None,
         quote_schema: Optional[bool] = None,
-        naming_convention: Optional[Dict[str, str]] = None,
+        naming_convention: Optional[_NamingSchemaParameter] = None,
         info: Optional[_InfoType] = None,
     ) -> None:
         """Create a new MetaData object.
@@ -5496,7 +5526,7 @@ class MetaData(HasSchemaAttr):
 
     def _remove_table(self, name: str, schema: Optional[str]) -> None:
         key = _get_table_key(name, schema)
-        removed = dict.pop(self.tables, key, None)  # type: ignore
+        removed = dict.pop(self.tables, key, None)
         if removed is not None:
             for fk in removed.foreign_keys:
                 fk._remove_from_metadata(self)
@@ -5596,7 +5626,9 @@ class MetaData(HasSchemaAttr):
         bind: Union[Engine, Connection],
         schema: Optional[str] = None,
         views: bool = False,
-        only: Optional[_typing_Sequence[str]] = None,
+        only: Union[
+            _typing_Sequence[str], Callable[[str, MetaData], bool], None
+        ] = None,
         extend_existing: bool = False,
         autoload_replace: bool = True,
         resolve_fks: bool = True,

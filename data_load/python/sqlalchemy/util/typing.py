@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import builtins
 import re
 import sys
 import typing
@@ -162,7 +163,6 @@ def de_stringify_annotation(
         and is_generic(annotation)
         and not is_literal(annotation)
     ):
-
         if _already_seen is None:
             _already_seen = set()
 
@@ -250,6 +250,12 @@ def eval_name_only(
     try:
         return base_globals[name]
     except KeyError as ke:
+        # check in builtins as well to handle `list`, `set` or `dict`, etc.
+        try:
+            return builtins.__dict__[name]
+        except KeyError:
+            pass
+
         raise NameError(
             f"Could not locate name {name} in module {module_name}"
         ) from ke

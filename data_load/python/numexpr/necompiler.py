@@ -8,14 +8,10 @@
 #  rights to use.
 ####################################################################
 
-from typing import Optional, Dict
 import __future__
 import sys
-import os
-import threading
-import re
-
 import numpy
+import threading
 
 is_cpu_amd_intel = False # DEPRECATION WARNING: WILL BE REMOVED IN FUTURE RELEASE
 from numexpr import interpreter, expressions, use_vml
@@ -72,7 +68,7 @@ vml_functions = [
     ]
 
 
-class ASTNode():
+class ASTNode(object):
     """Abstract Syntax Tree node.
 
     Members:
@@ -87,6 +83,7 @@ class ASTNode():
     cmpnames = ['astType', 'astKind', 'value', 'children']
 
     def __init__(self, astType='generic', astKind='unknown', value=None, children=()):
+        object.__init__(self)
         self.astType = astType
         self.astKind = astKind
         self.value = value
@@ -221,7 +218,7 @@ def typeCompileAst(ast):
                    [typeCompileAst(c) for c in children])
 
 
-class Register():
+class Register(object):
     """Abstraction for a register in the VM.
 
     Members:
@@ -263,23 +260,9 @@ class Immediate(Register):
         return 'Immediate(%d)' % (self.node.value,)
 
 
-_flow_pat = r'[\;\[\:]'
-_dunder_pat = r'(^|[^\w])__[\w]+__($|[^\w])'
-_attr_pat = r'\.\b(?!(real|imag|\d*[eE]?[+-]?\d+)\b)'
-_blacklist_re = re.compile(f'{_flow_pat}|{_dunder_pat}|{_attr_pat}')
-
-def stringToExpression(s, types, context, sanitize: bool=True):
+def stringToExpression(s, types, context):
     """Given a string, convert it to a tree of ExpressionNode's.
     """
-    # sanitize the string for obvious attack vectors that NumExpr cannot 
-    # parse into its homebrew AST. This is to protect the call to `eval` below.
-    # We forbid `;`, `:`. `[` and `__`, and attribute access via '.'.
-    # We cannot ban `.real` or `.imag` however...
-    if sanitize:
-        no_whitespace = re.sub(r'\s+', '', s)
-        if _blacklist_re.search(no_whitespace) is not None:
-            raise ValueError(f'Expression {s} has forbidden control characters.')
-    
     old_ctx = expressions._context.get_current_context()
     try:
         expressions._context.set_new_context(context)
@@ -302,10 +285,8 @@ def stringToExpression(s, types, context, sanitize: bool=True):
                 t = types.get(name, default_type)
                 names[name] = expressions.VariableNode(name, type_to_kind[t])
         names.update(expressions.functions)
-
         # now build the expression
         ex = eval(c, names)
-        
         if expressions.isConstant(ex):
             ex = expressions.ConstantNode(ex, expressions.getKind(ex))
         elif not isinstance(ex, expressions.ExpressionNode):
@@ -546,7 +527,7 @@ context_info = [
 ]
 
 
-def getContext(kwargs, _frame_depth=1):
+def getContext(kwargs, frame_depth=1):
     d = kwargs.copy()
     context = {}
     for name, allowed, default in context_info:
@@ -555,17 +536,17 @@ def getContext(kwargs, _frame_depth=1):
             context[name] = value
         else:
             raise ValueError("'%s' must be one of %s" % (name, allowed))
-    
+
     if d:
         raise ValueError("Unknown keyword argument '%s'" % d.popitem()[0])
     if context['truediv'] == 'auto':
-        caller_globals = sys._getframe(_frame_depth + 1).f_globals
+        caller_globals = sys._getframe(frame_depth + 1).f_globals
         context['truediv'] = caller_globals.get('division', None) == __future__.division
 
     return context
 
 
-def precompile(ex, signature=(), context={}, sanitize: bool=True):
+def precompile(ex, signature=(), context={}):
     """
     Compile the expression to an intermediate form.
     """
@@ -573,7 +554,7 @@ def precompile(ex, signature=(), context={}, sanitize: bool=True):
     input_order = [name for (name, type_) in signature]
 
     if isinstance(ex, str):
-        ex = stringToExpression(ex, types, context, sanitize)
+        ex = stringToExpression(ex, types, context)
 
     # the AST is like the expression, but the node objects don't have
     # any odd interpretations
@@ -619,7 +600,7 @@ def precompile(ex, signature=(), context={}, sanitize: bool=True):
     return threeAddrProgram, signature, tempsig, constants, input_names
 
 
-def NumExpr(ex,  signature=(), sanitize: bool=True, **kwargs):
+def NumExpr(ex, signature=(), **kwargs):
     """
     Compile an expression built using E.<variable> variables to a function.
 
@@ -630,13 +611,15 @@ def NumExpr(ex,  signature=(), sanitize: bool=True, **kwargs):
 
     Returns a `NumExpr` object containing the compiled function.
     """
-
-    # In that case _frame_depth is wrong (it should be 2) but it doesn't matter
+    # NumExpr can be called either directly by the end-user, in which case
+    # kwargs need to be sanitized by getContext, or by evaluate,
+    # in which case kwargs are in already sanitized.
+    # In that case frame_depth is wrong (it should be 2) but it doesn't matter
     # since it will not be used (because truediv='auto' has already been
     # translated to either True or False).
-    _frame_depth = 1
-    context = getContext(kwargs, _frame_depth=_frame_depth)
-    threeAddrProgram, inputsig, tempsig, constants, input_names = precompile(ex, signature, context, sanitize=sanitize)
+
+    context = getContext(kwargs, frame_depth=1)
+    threeAddrProgram, inputsig, tempsig, constants, input_names = precompile(ex, signature, context)
     program = compileThreeAddrForm(threeAddrProgram)
     return interpreter.NumExpr(inputsig.encode('ascii'),
                                tempsig.encode('ascii'),
@@ -717,8 +700,8 @@ def getType(a):
     raise ValueError("unknown type %s" % a.dtype.name)
 
 
-def getExprNames(text, context, sanitize: bool=True):
-    ex = stringToExpression(text, {}, context, sanitize)
+def getExprNames(text, context):
+    ex = stringToExpression(text, {}, context)
     ast = expressionToAST(ex)
     input_order = getInputOrder(ast, None)
     #try to figure out if vml operations are used by expression
@@ -735,11 +718,11 @@ def getExprNames(text, context, sanitize: bool=True):
     return [a.value for a in input_order], ex_uses_vml
 
 
-def getArguments(names, local_dict=None, global_dict=None, _frame_depth: int=2):
+def getArguments(names, local_dict=None, global_dict=None):
     """
     Get the arguments based on the names.
     """
-    call_frame = sys._getframe(_frame_depth)
+    call_frame = sys._getframe(2)
 
     clear_local_dict = False
     if local_dict is None:
@@ -775,46 +758,35 @@ def getArguments(names, local_dict=None, global_dict=None, _frame_depth: int=2):
 _names_cache = CacheDict(256)
 _numexpr_cache = CacheDict(256)
 _numexpr_last = {}
+
 evaluate_lock = threading.Lock()
 
-# MAYBE: decorate this function to add attributes instead of having the 
-# _numexpr_last dictionary?
-def validate(ex: str, 
-             local_dict: Optional[Dict] = None, 
-             global_dict: Optional[Dict] = None,
-             out: numpy.ndarray = None, 
-             order: str = 'K', 
-             casting: str = 'safe', 
-             _frame_depth: int = 2,
-             sanitize: Optional[bool] = None,
-             **kwargs) -> Optional[Exception]:
-    r"""
-    Validate a NumExpr expression with the given `local_dict` or `locals()`.
-    Returns `None` on success and the Exception object if one occurs. Note that 
-    you can proceed directly to call `re_evaluate()` if you use `validate()`
-    to sanitize your expressions and variables in advance.
+def evaluate(ex, local_dict=None, global_dict=None,
+             out=None, order='K', casting='safe', **kwargs):
+    """
+    Evaluate a simple array expression element-wise, using the new iterator.
+
+    ex is a string forming an expression, like "2*a+3*b". The values for "a"
+    and "b" will by default be taken from the calling function's frame
+    (through use of sys._getframe()). Alternatively, they can be specifed
+    using the 'local_dict' or 'global_dict' arguments.
 
     Parameters
     ----------
-    ex: str
-        a string forming an expression, like "2*a+3*b". The values for "a"
-        and "b" will by default be taken from the calling function's frame
-        (through use of sys._getframe()). Alternatively, they can be specified
-        using the 'local_dict' or 'global_dict' arguments.
 
-    local_dict: dictionary, optional
+    local_dict : dictionary, optional
         A dictionary that replaces the local operands in current frame.
 
-    global_dict: dictionary, optional
+    global_dict : dictionary, optional
         A dictionary that replaces the global operands in current frame.
 
-    out: NumPy array, optional
+    out : NumPy array, optional
         An existing array where the outcome is going to be stored.  Care is
         required so that this array has the same shape and type than the
         actual outcome of the computation.  Useful for avoiding unnecessary
         new array allocations.
 
-    order: {'C', 'F', 'A', or 'K'}, optional
+    order : {'C', 'F', 'A', or 'K'}, optional
         Controls the iteration order for operands. 'C' means C order, 'F'
         means Fortran order, 'A' means 'F' order if all the arrays are
         Fortran contiguous, 'C' order otherwise, and 'K' means as close to
@@ -822,7 +794,7 @@ def validate(ex: str,
         efficient computations, typically 'K'eep order (the default) is
         desired.
 
-    casting: {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
+    casting : {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
         Controls what kind of data casting may occur when making a copy or
         buffering.  Setting this to 'unsafe' is not recommended, as it can
         adversely affect accumulations.
@@ -833,149 +805,37 @@ def validate(ex: str,
           * 'same_kind' means only safe casts or casts within a kind,
             like float64 to float32, are allowed.
           * 'unsafe' means any data conversions may be done.
-
-    sanitize: Optional[bool]
-        Both `validate` and by extension `evaluate` call `eval(ex)`, which is 
-        potentially dangerous on unsanitized inputs. As such, NumExpr by default 
-        performs simple sanitization, banning the character ':;[', the 
-        dunder '__[\w+]__', and attribute access to all but '.real' and '.imag'.
-        
-        Using `None` defaults to `True` unless the environment variable 
-        `NUMEXPR_SANITIZE=0` is set, in which case the default is `False`. 
-        Nominally this can be set via `os.environ` before `import numexpr`.
-
-    _frame_depth: int
-        The calling frame depth. Unless you are a NumExpr developer you should 
-        not set this value.
-
-    Note
-    ----
-    
     """
     global _numexpr_last
-
-    try:
-        
-        if not isinstance(ex, str):
-            raise ValueError("must specify expression as a string")
-        
-        if sanitize is None:
-            if 'NUMEXPR_SANITIZE' in os.environ:
-                sanitize = bool(int(os.environ['NUMEXPR_SANITIZE']))
-            else:
-                sanitize = True
-
-        # Get the names for this expression
-        context = getContext(kwargs)
-        expr_key = (ex, tuple(sorted(context.items())))
-        if expr_key not in _names_cache:
-            _names_cache[expr_key] = getExprNames(ex, context, sanitize=sanitize)
-        names, ex_uses_vml = _names_cache[expr_key]
-        arguments = getArguments(names, local_dict, global_dict, _frame_depth=_frame_depth)
-
-        # Create a signature
-        signature = [(name, getType(arg)) for (name, arg) in
-                    zip(names, arguments)]
-
-        # Look up numexpr if possible.
-        numexpr_key = expr_key + (tuple(signature),)
-        try:
-            compiled_ex = _numexpr_cache[numexpr_key]
-        except KeyError:
-            compiled_ex = _numexpr_cache[numexpr_key] = NumExpr(ex, signature, sanitize=sanitize, **context)
-        kwargs = {'out': out, 'order': order, 'casting': casting,
-                'ex_uses_vml': ex_uses_vml}
-        _numexpr_last = dict(ex=compiled_ex, argnames=names, kwargs=kwargs)
-    except Exception as e:
-        return e
-    return None
-
-def evaluate(ex: str, 
-             local_dict: Optional[Dict] = None, 
-             global_dict: Optional[Dict] = None,
-             out: numpy.ndarray = None, 
-             order: str = 'K', 
-             casting: str = 'safe', 
-             sanitize: Optional[bool] = None,
-             _frame_depth: int = 3,
-             **kwargs) -> numpy.ndarray:
-    r"""
-    Evaluate a simple array expression element-wise using the virtual machine.
-
-    Parameters
-    ----------
-    ex: str
-        a string forming an expression, like "2*a+3*b". The values for "a"
-        and "b" will by default be taken from the calling function's frame
-        (through use of sys._getframe()). Alternatively, they can be specified
-        using the 'local_dict' or 'global_dict' arguments.
-
-    local_dict: dictionary, optional
-        A dictionary that replaces the local operands in current frame.
-
-    global_dict: dictionary, optional
-        A dictionary that replaces the global operands in current frame.
-
-    out: NumPy array, optional
-        An existing array where the outcome is going to be stored.  Care is
-        required so that this array has the same shape and type than the
-        actual outcome of the computation.  Useful for avoiding unnecessary
-        new array allocations.
-
-    order: {'C', 'F', 'A', or 'K'}, optional
-        Controls the iteration order for operands. 'C' means C order, 'F'
-        means Fortran order, 'A' means 'F' order if all the arrays are
-        Fortran contiguous, 'C' order otherwise, and 'K' means as close to
-        the order the array elements appear in memory as possible.  For
-        efficient computations, typically 'K'eep order (the default) is
-        desired.
-
-    casting: {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
-        Controls what kind of data casting may occur when making a copy or
-        buffering.  Setting this to 'unsafe' is not recommended, as it can
-        adversely affect accumulations.
-
-          * 'no' means the data types should not be cast at all.
-          * 'equiv' means only byte-order changes are allowed.
-          * 'safe' means only casts which can preserve values are allowed.
-          * 'same_kind' means only safe casts or casts within a kind,
-            like float64 to float32, are allowed.
-          * 'unsafe' means any data conversions may be done.
-
-    sanitize: bool
-        Both `validate` and by extension `evaluate` call `eval(ex)`, which is 
-        potentially dangerous on unsanitized inputs. As such, NumExpr by default 
-        performs simple sanitization, banning the character ':;[', the 
-        dunder '__[\w+]__', and attribute access to all but '.real' and '.imag'.
-
-        Using `None` defaults to `True` unless the environment variable 
-        `NUMEXPR_SANITIZE=0` is set, in which case the default is `False`. 
-        Nominally this can be set via `os.environ` before `import numexpr`.
-
-    _frame_depth: int
-        The calling frame depth. Unless you are a NumExpr developer you should 
-        not set this value.
-
-    Note
-    ----
-    Both `validate` and by extension `evaluate` call `eval(ex)`, which is 
-    potentially dangerous on unsanitized inputs. As such, NumExpr does some 
-    sanitization, banning the character ':;[', the dunder '__', and attribute
-    access to all but '.r' for real and '.i' for imag access to complex numbers.
-    """
-    # We could avoid code duplication if we called validate and then re_evaluate 
-    # here, but they we have difficulties with the `sys.getframe(2)` call in
-    # `getArguments`
-    e = validate(ex, local_dict=local_dict, global_dict=global_dict, 
-                 out=out, order=order, casting=casting, 
-                 _frame_depth=_frame_depth, sanitize=sanitize, **kwargs)
-    if e is None:
-        return re_evaluate(local_dict=local_dict, _frame_depth=_frame_depth)
-    else:
-        raise e
+    if not isinstance(ex, str):
+        raise ValueError("must specify expression as a string")
     
-def re_evaluate(local_dict: Optional[Dict] = None, 
-                _frame_depth: int=2) -> numpy.ndarray:
+    # Get the names for this expression
+    context = getContext(kwargs, frame_depth=1)
+    expr_key = (ex, tuple(sorted(context.items())))
+    if expr_key not in _names_cache:
+        _names_cache[expr_key] = getExprNames(ex, context)
+    names, ex_uses_vml = _names_cache[expr_key]
+    arguments = getArguments(names, local_dict, global_dict)
+
+    # Create a signature
+    signature = [(name, getType(arg)) for (name, arg) in
+                 zip(names, arguments)]
+
+    # Look up numexpr if possible.
+    numexpr_key = expr_key + (tuple(signature),)
+    try:
+        compiled_ex = _numexpr_cache[numexpr_key]
+    except KeyError:
+        compiled_ex = _numexpr_cache[numexpr_key] = NumExpr(ex, signature, **context)
+    kwargs = {'out': out, 'order': order, 'casting': casting,
+              'ex_uses_vml': ex_uses_vml}
+    _numexpr_last = dict(ex=compiled_ex, argnames=names, kwargs=kwargs)
+    with evaluate_lock:
+        return compiled_ex(*arguments, **kwargs)
+
+
+def re_evaluate(local_dict=None):
     """
     Re-evaluate the previous executed array expression without any check.
 
@@ -985,20 +845,17 @@ def re_evaluate(local_dict: Optional[Dict] = None,
 
     Parameters
     ----------
-    local_dict: dictionary, optional
-        A dictionary that replaces the local operands in current frame.
-    _frame_depth: int
-        The calling frame depth. Unless you are a NumExpr developer you should 
-        not set this value.
-    """
-    global _numexpr_last
 
+    local_dict : dictionary, optional
+        A dictionary that replaces the local operands in current frame.
+
+    """
     try:
         compiled_ex = _numexpr_last['ex']
     except KeyError:
-        raise RuntimeError("A previous evaluate() execution was not found, please call `validate` or `evaluate` once before `re_evaluate`")
+        raise RuntimeError("not a previous evaluate() execution found")
     argnames = _numexpr_last['argnames']
-    args = getArguments(argnames, local_dict, _frame_depth=_frame_depth)
+    args = getArguments(argnames, local_dict)
     kwargs = _numexpr_last['kwargs']
     with evaluate_lock:
         return compiled_ex(*args, **kwargs)

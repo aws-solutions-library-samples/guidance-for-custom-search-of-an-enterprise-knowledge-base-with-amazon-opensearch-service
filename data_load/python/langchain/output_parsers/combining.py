@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from pydantic import root_validator
-
+from langchain.pydantic_v1 import root_validator
 from langchain.schema import BaseOutputParser
 
 
 class CombiningOutputParser(BaseOutputParser):
-    """Class to combine multiple output parsers into one."""
+    """Combine multiple output parsers into one."""
+
+    @classmethod
+    def is_lc_serializable(cls) -> bool:
+        return True
 
     parsers: List[BaseOutputParser]
 
@@ -22,7 +25,7 @@ class CombiningOutputParser(BaseOutputParser):
             if parser._type == "combining":
                 raise ValueError("Cannot nest combining parsers")
             if parser._type == "list":
-                raise ValueError("Cannot comine list parsers")
+                raise ValueError("Cannot combine list parsers")
         return values
 
     @property
@@ -35,10 +38,8 @@ class CombiningOutputParser(BaseOutputParser):
 
         initial = f"For your first output: {self.parsers[0].get_format_instructions()}"
         subsequent = "\n".join(
-            [
-                f"Complete that output fully. Then produce another output, separated by two newline characters: {p.get_format_instructions()}"  # noqa: E501
-                for p in self.parsers[1:]
-            ]
+            f"Complete that output fully. Then produce another output, separated by two newline characters: {p.get_format_instructions()}"  # noqa: E501
+            for p in self.parsers[1:]
         )
         return f"{initial}\n{subsequent}"
 
@@ -46,6 +47,6 @@ class CombiningOutputParser(BaseOutputParser):
         """Parse the output of an LLM call."""
         texts = text.split("\n\n")
         output = dict()
-        for i, parser in enumerate(self.parsers):
-            output.update(parser.parse(texts[i].strip()))
+        for txt, parser in zip(texts, self.parsers):
+            output.update(parser.parse(txt.strip()))
         return output

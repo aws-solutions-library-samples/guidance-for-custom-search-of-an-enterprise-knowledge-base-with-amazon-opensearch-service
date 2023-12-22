@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+from argparse import Namespace
 import collections
 import inspect
 import typing
@@ -21,10 +22,15 @@ from typing import Tuple
 from typing import TypeVar
 from typing import Union
 
+from . import mock
+from . import requirements as _requirements
 from .util import fail
 from .. import util
 
-requirements = None
+# default requirements; this is replaced by plugin_base when pytest
+# is run
+requirements = _requirements.SuiteRequirements()
+
 db = None
 db_url = None
 db_opts = None
@@ -34,13 +40,49 @@ test_schema_2 = None
 any_async = False
 _current = None
 ident = "main"
+options: Namespace = None  # type: ignore
 
 if typing.TYPE_CHECKING:
     from .plugin.plugin_base import FixtureFunctions
 
     _fixture_functions: FixtureFunctions
 else:
-    _fixture_functions = None  # installed by plugin_base
+
+    class _NullFixtureFunctions:
+        def _null_decorator(self):
+            def go(fn):
+                return fn
+
+            return go
+
+        def skip_test_exception(self, *arg, **kw):
+            return Exception()
+
+        @property
+        def add_to_marker(self):
+            return mock.Mock()
+
+        def mark_base_test_class(self):
+            return self._null_decorator()
+
+        def combinations(self, *arg_sets, **kw):
+            return self._null_decorator()
+
+        def param_ident(self, *parameters):
+            return self._null_decorator()
+
+        def fixture(self, *arg, **kw):
+            return self._null_decorator()
+
+        def get_current_test_name(self):
+            return None
+
+        def async_test(self, fn):
+            return fn
+
+    # default fixture functions; these are replaced by plugin_base when
+    # pytest runs
+    _fixture_functions = _NullFixtureFunctions()
 
 
 _FN = TypeVar("_FN", bound=Callable[..., Any])
@@ -119,14 +161,7 @@ def combinations(
     )
 
 
-def combinations_list(
-    arg_iterable: Iterable[
-        Tuple[
-            Any,
-        ]
-    ],
-    **kw,
-):
+def combinations_list(arg_iterable: Iterable[Tuple[Any, ...]], **kw):
     "As combination, but takes a single iterable"
     return combinations(*arg_iterable, **kw)
 

@@ -42,6 +42,7 @@ from botocore.compat import HAS_CRT, MutableMapping
 from botocore.configprovider import (
     BOTOCORE_DEFAUT_SESSION_VARIABLES,
     ConfigChainFactory,
+    ConfiguredEndpointProvider,
     ConfigValueStore,
     DefaultConfigResolver,
     SmartDefaultsConfigStoreFactory,
@@ -64,11 +65,15 @@ from botocore.loaders import create_loader
 from botocore.model import ServiceModel
 from botocore.parsers import ResponseParserFactory
 from botocore.regions import EndpointResolver
+from botocore.useragent import UserAgentString
 from botocore.utils import (
     EVENT_ALIASES,
     IMDSRegionProvider,
     validate_region_name,
 )
+
+from botocore.compat import HAS_CRT  # noqa
+
 
 logger = logging.getLogger(__name__)
 
@@ -165,6 +170,7 @@ class Session:
         self._register_monitor()
         self._register_default_config_resolver()
         self._register_smart_defaults_factory()
+        self._register_user_agent_creator()
 
     def _register_event_emitter(self):
         self._components.register_component('event_emitter', self._events)
@@ -263,6 +269,10 @@ class Session:
             'monitor', self._create_csm_monitor
         )
 
+    def _register_user_agent_creator(self):
+        uas = UserAgentString.from_environment()
+        self._components.register_component('user_agent_creator', uas)
+
     def _create_csm_monitor(self):
         if self.get_config_variable('csm_enabled'):
             client_id = self.get_config_variable('csm_client_id')
@@ -283,12 +293,8 @@ class Session:
         return None
 
     def _get_crt_version(self):
-        try:
-            import awscrt
-
-            return awscrt.__version__
-        except AttributeError:
-            return "Unknown"
+        user_agent_creator = self.get_component('user_agent_creator')
+        return user_agent_creator._crt_version or 'Unknown'
 
     @property
     def available_profiles(self):
@@ -952,16 +958,30 @@ class Session:
         auth_token = self.get_auth_token()
         endpoint_resolver = self._get_internal_component('endpoint_resolver')
         exceptions_factory = self._get_internal_component('exceptions_factory')
-        config_store = self.get_component('config_store')
+        config_store = copy.copy(self.get_component('config_store'))
+        user_agent_creator = self.get_component('user_agent_creator')
+        # Session configuration values for the user agent string are applied
+        # just before each client creation because they may have been modified
+        # at any time between session creation and client creation.
+        user_agent_creator.set_session_config(
+            session_user_agent_name=self.user_agent_name,
+            session_user_agent_version=self.user_agent_version,
+            session_user_agent_extra=self.user_agent_extra,
+        )
         defaults_mode = self._resolve_defaults_mode(config, config_store)
         if defaults_mode != 'legacy':
             smart_defaults_factory = self._get_internal_component(
                 'smart_defaults_factory'
             )
-            config_store = copy.deepcopy(config_store)
             smart_defaults_factory.merge_smart_defaults(
                 config_store, defaults_mode, region_name
             )
+
+        self._add_configured_endpoint_provider(
+            client_name=service_name,
+            config_store=config_store,
+        )
+
         client_creator = botocore.client.ClientCreator(
             loader,
             endpoint_resolver,
@@ -972,6 +992,7 @@ class Session:
             response_parser_factory,
             exceptions_factory,
             config_store,
+            user_agent_creator=user_agent_creator,
         )
         client = client_creator.create_client(
             service_name=service_name,
@@ -1029,6 +1050,17 @@ class Session:
             )
 
         return lmode
+
+    def _add_configured_endpoint_provider(self, client_name, config_store):
+        chain = ConfiguredEndpointProvider(
+            full_config=self.full_config,
+            scoped_config=self.get_scoped_config(),
+            client_name=client_name,
+        )
+        config_store.set_config_provider(
+            logical_name='endpoint_url',
+            provider=chain,
+        )
 
     def _missing_cred_vars(self, access_key, secret_key):
         if access_key is not None and secret_key is None:
@@ -1109,7 +1141,15 @@ class ComponentLocator:
             # Only delete the component from the deferred dict after
             # successfully creating the object from the factory as well as
             # injecting the instantiated value into the _components dict.
-            del self._deferred[name]
+            try:
+                del self._deferred[name]
+            except KeyError:
+                # If we get here, it's likely that get_component was called
+                # concurrently from multiple threads, and another thread
+                # already deleted the entry. This means the factory was
+                # probably called twice, but cleaning up the deferred entry
+                # should not crash outright.
+                pass
         try:
             return self._components[name]
         except KeyError:

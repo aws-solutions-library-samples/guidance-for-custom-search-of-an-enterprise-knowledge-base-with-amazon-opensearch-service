@@ -284,9 +284,6 @@ def test_array_astype():
     a = np.array(1000, dtype='i4')
     assert_raises(TypeError, a.astype, 'U1', casting='safe')
 
-    # gh-24023
-    assert_raises(TypeError, a.astype)
-
 @pytest.mark.parametrize("dt", ["S", "U"])
 def test_array_astype_to_string_discovery_empty(dt):
     # See also gh-19085

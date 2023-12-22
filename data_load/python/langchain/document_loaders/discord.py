@@ -1,4 +1,3 @@
-"""Load from Discord chat dump"""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, List
@@ -11,10 +10,15 @@ if TYPE_CHECKING:
 
 
 class DiscordChatLoader(BaseLoader):
-    """Load Discord chat logs."""
+    """Load `Discord` chat logs."""
 
     def __init__(self, chat_log: pd.DataFrame, user_id_col: str = "ID"):
-        """Initialize with a Pandas DataFrame containing chat logs."""
+        """Initialize with a Pandas DataFrame containing chat logs.
+
+        Args:
+            chat_log: Pandas DataFrame containing chat logs.
+            user_id_col: Name of the column containing the user ID. Defaults to "ID".
+        """
         if not isinstance(chat_log, pd.DataFrame):
             raise ValueError(
                 f"Expected chat_log to be a pd.DataFrame, got {type(chat_log)}"

@@ -1,4 +1,3 @@
-"""Wrapper around the Milvus vector database."""
 from __future__ import annotations
 
 import logging
@@ -8,8 +7,8 @@ from uuid import uuid4
 import numpy as np
 
 from langchain.docstore.document import Document
-from langchain.embeddings.base import Embeddings
-from langchain.vectorstores.base import VectorStore
+from langchain.schema.embeddings import Embeddings
+from langchain.schema.vectorstore import VectorStore
 from langchain.vectorstores.utils import maximal_marginal_relevance
 
 logger = logging.getLogger(__name__)
@@ -24,7 +23,81 @@ DEFAULT_MILVUS_CONNECTION = {
 
 
 class Milvus(VectorStore):
-    """Wrapper around the Milvus vector database."""
+    """`Milvus` vector store.
+
+    You need to install `pymilvus` and run Milvus.
+
+    See the following documentation for how to run a Milvus instance:
+    https://milvus.io/docs/install_standalone-docker.md
+
+    If looking for a hosted Milvus, take a look at this documentation:
+    https://zilliz.com/cloud and make use of the Zilliz vectorstore found in
+    this project.
+
+    IF USING L2/IP metric, IT IS HIGHLY SUGGESTED TO NORMALIZE YOUR DATA.
+
+    Args:
+        embedding_function (Embeddings): Function used to embed the text.
+        collection_name (str): Which Milvus collection to use. Defaults to
+            "LangChainCollection".
+        connection_args (Optional[dict[str, any]]): The connection args used for
+            this class comes in the form of a dict.
+        consistency_level (str): The consistency level to use for a collection.
+            Defaults to "Session".
+        index_params (Optional[dict]): Which index params to use. Defaults to
+            HNSW/AUTOINDEX depending on service.
+        search_params (Optional[dict]): Which search params to use. Defaults to
+            default of index.
+        drop_old (Optional[bool]): Whether to drop the current collection. Defaults
+            to False.
+        primary_field (str): Name of the primary key field. Defaults to "pk".
+        text_field (str): Name of the text field. Defaults to "text".
+        vector_field (str): Name of the vector field. Defaults to "vector".
+
+    The connection args used for this class comes in the form of a dict,
+    here are a few of the options:
+        address (str): The actual address of Milvus
+            instance. Example address: "localhost:19530"
+        uri (str): The uri of Milvus instance. Example uri:
+            "http://randomwebsite:19530",
+            "tcp:foobarsite:19530",
+            "https://ok.s3.south.com:19530".
+        host (str): The host of Milvus instance. Default at "localhost",
+            PyMilvus will fill in the default host if only port is provided.
+        port (str/int): The port of Milvus instance. Default at 19530, PyMilvus
+            will fill in the default port if only host is provided.
+        user (str): Use which user to connect to Milvus instance. If user and
+            password are provided, we will add related header in every RPC call.
+        password (str): Required when user is provided. The password
+            corresponding to the user.
+        secure (bool): Default is false. If set to true, tls will be enabled.
+        client_key_path (str): If use tls two-way authentication, need to
+            write the client.key path.
+        client_pem_path (str): If use tls two-way authentication, need to
+            write the client.pem path.
+        ca_pem_path (str): If use tls two-way authentication, need to write
+            the ca.pem path.
+        server_pem_path (str): If use tls one-way authentication, need to
+            write the server.pem path.
+        server_name (str): If use tls, need to write the common name.
+
+    Example:
+        .. code-block:: python
+
+        from langchain.vectorstores import Milvus
+        from langchain.embeddings import OpenAIEmbeddings
+
+        embedding = OpenAIEmbeddings()
+        # Connect to a milvus instance on localhost
+        milvus_store = Milvus(
+            embedding_function = Embeddings,
+            collection_name = "LangChainCollection",
+            drop_old = True,
+        )
+
+    Raises:
+        ValueError: If the pymilvus python package is not installed.
+    """
 
     def __init__(
         self,
@@ -35,62 +108,12 @@ class Milvus(VectorStore):
         index_params: Optional[dict] = None,
         search_params: Optional[dict] = None,
         drop_old: Optional[bool] = False,
+        *,
+        primary_field: str = "pk",
+        text_field: str = "text",
+        vector_field: str = "vector",
     ):
-        """Initialize wrapper around the milvus vector database.
-
-        In order to use this you need to have `pymilvus` installed and a
-        running Milvus/Zilliz Cloud instance.
-
-        See the following documentation for how to run a Milvus instance:
-        https://milvus.io/docs/install_standalone-docker.md
-
-        If looking for a hosted Milvus, take a looka this documentation:
-        https://zilliz.com/cloud
-
-        IF USING L2/IP metric IT IS HIGHLY SUGGESTED TO NORMALIZE YOUR DATA.
-
-        The connection args used for this class comes in the form of a dict,
-        here are a few of the options:
-            address (str): The actual address of Milvus
-                instance. Example address: "localhost:19530"
-            uri (str): The uri of Milvus instance. Example uri:
-                "http://randomwebsite:19530",
-                "tcp:foobarsite:19530",
-                "https://ok.s3.south.com:19530".
-            host (str): The host of Milvus instance. Default at "localhost",
-                PyMilvus will fill in the default host if only port is provided.
-            port (str/int): The port of Milvus instance. Default at 19530, PyMilvus
-                will fill in the default port if only host is provided.
-            user (str): Use which user to connect to Milvus instance. If user and
-                password are provided, we will add related header in every RPC call.
-            password (str): Required when user is provided. The password
-                corresponding to the user.
-            secure (bool): Default is false. If set to true, tls will be enabled.
-            client_key_path (str): If use tls two-way authentication, need to
-                write the client.key path.
-            client_pem_path (str): If use tls two-way authentication, need to
-                write the client.pem path.
-            ca_pem_path (str): If use tls two-way authentication, need to write
-                the ca.pem path.
-            server_pem_path (str): If use tls one-way authentication, need to
-                write the server.pem path.
-            server_name (str): If use tls, need to write the common name.
-
-        Args:
-            embedding_function (Embeddings): Function used to embed the text.
-            collection_name (str): Which Milvus collection to use. Defaults to
-                "LangChainCollection".
-            connection_args (Optional[dict[str, any]]): The arguments for connection to
-                Milvus/Zilliz instance. Defaults to DEFAULT_MILVUS_CONNECTION.
-            consistency_level (str): The consistency level to use for a collection.
-                Defaults to "Session".
-            index_params (Optional[dict]): Which index params to use. Defaults to
-                HNSW/AUTOINDEX depending on service.
-            search_params (Optional[dict]): Which search params to use. Defaults to
-                default of index.
-            drop_old (Optional[bool]): Whether to drop the current collection. Defaults
-                to False.
-        """
+        """Initialize the Milvus vector store."""
         try:
             from pymilvus import Collection, utility
         except ImportError:
@@ -120,11 +143,11 @@ class Milvus(VectorStore):
         self.consistency_level = consistency_level
 
         # In order for a collection to be compatible, pk needs to be auto'id and int
-        self._primary_field = "pk"
-        # In order for compatiblility, the text field will need to be called "text"
-        self._text_field = "text"
-        # In order for compatbility, the vector field needs to be called "vector"
-        self._vector_field = "vector"
+        self._primary_field = primary_field
+        # In order for compatibility, the text field will need to be called "text"
+        self._text_field = text_field
+        # In order for compatibility, the vector field needs to be called "vector"
+        self._vector_field = vector_field
         self.fields: list[str] = []
         # Create the connection to the server
         if connection_args is None:
@@ -132,7 +155,7 @@ class Milvus(VectorStore):
         self.alias = self._create_connection_alias(connection_args)
         self.col: Optional[Collection] = None
 
-        # Grab the existing colection if it exists
+        # Grab the existing collection if it exists
         if utility.has_collection(self.collection_name, using=self.alias):
             self.col = Collection(
                 self.collection_name,
@@ -145,6 +168,10 @@ class Milvus(VectorStore):
 
         # Initialize the vector store
         self._init()
+
+    @property
+    def embeddings(self) -> Embeddings:
+        return self.embedding_func
 
     def _create_connection_alias(self, connection_args: dict) -> str:
         """Create the connection to the Milvus server."""
@@ -166,7 +193,7 @@ class Milvus(VectorStore):
             given_address = address
         else:
             given_address = None
-            logger.debug("Missing standard address type for reuse atttempt")
+            logger.debug("Missing standard address type for reuse attempt")
 
         # User defaults to empty string when getting connection info
         if user is not None:
@@ -188,7 +215,7 @@ class Milvus(VectorStore):
                     logger.debug("Using previous connection: %s", con[0])
                     return con[0]
 
-        # Generate a new connection if one doesnt exist
+        # Generate a new connection if one doesn't exist
         alias = uuid4().hex
         try:
             connections.connect(alias=alias, **connection_args)
@@ -221,7 +248,7 @@ class Milvus(VectorStore):
         from pymilvus.orm.types import infer_dtype_bydata
 
         # Determine embedding dim
-        dim = len(embeddings[0])
+        dim = len(embeddings[0][0])
         fields = []
         # Determine metadata schema
         if metadatas:
@@ -229,7 +256,7 @@ class Milvus(VectorStore):
             for key, value in metadatas[0].items():
                 # Infer the corresponding datatype of the metadata
                 dtype = infer_dtype_bydata(value)
-                # Datatype isnt compatible
+                # Datatype isn't compatible
                 if dtype == DataType.UNKNOWN or dtype == DataType.NONE:
                     logger.error(
                         "Failure to create collection, unrecognized dtype for key: %s",
@@ -254,7 +281,7 @@ class Milvus(VectorStore):
         )
         # Create the vector field, supports binary or float vectors
         fields.append(
-            FieldSchema(self._vector_field, infer_dtype_bydata(embeddings[0]), dim=dim)
+            FieldSchema(self._vector_field, infer_dtype_bydata(embeddings[0][0]), dim=dim)
         )
 
         # Create the schema for the collection
@@ -395,9 +422,14 @@ class Milvus(VectorStore):
         from pymilvus import Collection, MilvusException
 
         texts = list(texts)
+        logger.debug(texts)
 
         try:
-            embeddings = self.embedding_func.embed_documents(texts)
+            embeddings = self.embedding_func.embed_documents(texts, metadatas)
+            logger.debug("embedding size is: %d"% len(embeddings))
+            logger.debug("milvus embedding vector list size is: %d" % len(embeddings[0]))
+            logger.debug("milvus embedding vector size is: %d" % len(embeddings[0][0]))
+            logger.debug(metadatas)
         except NotImplementedError:
             embeddings = [self.embedding_func.embed_query(x) for x in texts]
 
@@ -405,14 +437,14 @@ class Milvus(VectorStore):
             logger.debug("Nothing to insert, skipping.")
             return []
 
-        # If the collection hasnt been initialized yet, perform all steps to do so
+        # If the collection hasn't been initialized yet, perform all steps to do so
         if not isinstance(self.col, Collection):
             self._init(embeddings, metadatas)
 
         # Dict to hold all insert columns
         insert_dict: dict[str, list] = {
             self._text_field: texts,
-            self._vector_field: embeddings,
+            self._vector_field: embeddings[0],
         }
 
         # Collect the metadata into the insert dict.
@@ -425,6 +457,7 @@ class Milvus(VectorStore):
         # Total insert count
         vectors: list = insert_dict[self._vector_field]
         total_count = len(vectors)
+        logger.debug("Total insert count %d" % total_count)
 
         pks: list[str] = []
 
@@ -439,6 +472,7 @@ class Milvus(VectorStore):
                 res: Collection
                 res = self.col.insert(insert_list, timeout=timeout, **kwargs)
                 pks.extend(res.primary_keys)
+                logger.info("Success to insert batch starting at entity: %s/%s" % (i, total_count))
             except MilvusException as e:
                 logger.error(
                     "Failed to insert batch starting at entity: %s/%s", i, total_count
@@ -476,7 +510,8 @@ class Milvus(VectorStore):
         res = self.similarity_search_with_score(
             query=query, k=k, param=param, expr=expr, timeout=timeout, **kwargs
         )
-        return [doc for doc, _ in res]
+
+        return res
 
     def similarity_search_by_vector(
         self,
@@ -508,7 +543,8 @@ class Milvus(VectorStore):
         res = self.similarity_search_with_score_by_vector(
             embedding=embedding, k=k, param=param, expr=expr, timeout=timeout, **kwargs
         )
-        return [doc for doc, _ in res]
+
+        return res
 
     def similarity_search_with_score(
         self,
@@ -527,7 +563,7 @@ class Milvus(VectorStore):
 
         Args:
             query (str): The text being searched.
-            k (int, optional): The amount of results ot return. Defaults to 4.
+            k (int, optional): The amount of results to return. Defaults to 4.
             param (dict): The search params for the specified index.
                 Defaults to None.
             expr (str, optional): Filtering expression. Defaults to None.
@@ -545,13 +581,10 @@ class Milvus(VectorStore):
         # Embed the query text.
         embedding = self.embedding_func.embed_query(query)
 
-        # Determine result metadata fields.
-        output_fields = self.fields[:]
-        output_fields.remove(self._vector_field)
-
         res = self.similarity_search_with_score_by_vector(
             embedding=embedding, k=k, param=param, expr=expr, timeout=timeout, **kwargs
         )
+
         return res
 
     def similarity_search_with_score_by_vector(
@@ -571,7 +604,7 @@ class Milvus(VectorStore):
 
         Args:
             embedding (List[float]): The embedding vector being searched.
-            k (int, optional): The amount of results ot return. Defaults to 4.
+            k (int, optional): The amount of results to return. Defaults to 4.
             param (dict): The search params for the specified index.
                 Defaults to None.
             expr (str, optional): Filtering expression. Defaults to None.
@@ -608,8 +641,9 @@ class Milvus(VectorStore):
         ret = []
         for result in res[0]:
             meta = {x: result.entity.get(x) for x in output_fields}
-            doc = Document(page_content=meta.pop(self._text_field), metadata=meta)
-            pair = (doc, result.score)
+            text = meta.pop(self._text_field)
+            doc = Document(page_content=text, metadata=meta)
+            pair = (doc, result.score, text)
             ret.append(pair)
 
         return ret

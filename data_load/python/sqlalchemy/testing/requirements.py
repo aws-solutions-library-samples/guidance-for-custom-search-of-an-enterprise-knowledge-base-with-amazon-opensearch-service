@@ -22,9 +22,8 @@ from __future__ import annotations
 import platform
 
 from . import asyncio as _test_asyncio
-from . import config
 from . import exclusions
-from . import only_on
+from .exclusions import only_on
 from .. import create_engine
 from .. import util
 from ..pool import QueuePool
@@ -56,6 +55,12 @@ class SuiteRequirements(Requirements):
     @property
     def index_ddl_if_exists(self):
         """target platform supports IF NOT EXISTS / IF EXISTS for indexes."""
+
+        return exclusions.closed()
+
+    @property
+    def uuid_data_type(self):
+        """Return databases that support the UUID datatype."""
 
         return exclusions.closed()
 
@@ -549,7 +554,7 @@ class SuiteRequirements(Requirements):
 
     @property
     def foreign_key_constraint_name_reflection(self):
-        """Target supports refleciton of FOREIGN KEY constraints and
+        """Target supports reflection of FOREIGN KEY constraints and
         will return the name of the constraint that was used in the
         "CONSTRAINT <name> FOREIGN KEY" DDL.
 
@@ -664,7 +669,7 @@ class SuiteRequirements(Requirements):
 
     @property
     def constraint_comment_reflection(self):
-        """indicates if the database support constraint on constraints
+        """indicates if the database support comments on constraints
         and their reflection"""
         return exclusions.closed()
 
@@ -1028,7 +1033,6 @@ class SuiteRequirements(Requirements):
             }
         """
         with config.db.connect() as conn:
-
             try:
                 supported = conn.dialect.get_isolation_level_values(
                     conn.connection.dbapi_connection
@@ -1411,6 +1415,15 @@ class SuiteRequirements(Requirements):
         return exclusions.open()
 
     @property
+    def independent_readonly_connections(self):
+        """
+        Target must support simultaneous, independent database connections
+        that will be used in a readonly fashion.
+
+        """
+        return exclusions.open()
+
+    @property
     def skip_mysql_on_windows(self):
         """Catchall for a large variety of MySQL on Windows failures"""
         return exclusions.open()
@@ -1440,10 +1453,14 @@ class SuiteRequirements(Requirements):
 
     @property
     def timing_intensive(self):
+        from . import config
+
         return config.add_to_marker.timing_intensive
 
     @property
     def memory_intensive(self):
+        from . import config
+
         return config.add_to_marker.memory_intensive
 
     @property

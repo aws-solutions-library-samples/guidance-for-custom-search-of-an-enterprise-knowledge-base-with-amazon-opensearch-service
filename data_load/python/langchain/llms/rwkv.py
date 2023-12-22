@@ -1,19 +1,18 @@
-"""Wrapper for the RWKV model.
+"""RWKV models.
 
 Based on https://github.com/saharNooby/rwkv.cpp/blob/master/rwkv/chat_with_bot.py
          https://github.com/BlinkDL/ChatRWKV/blob/main/v2/chat.py
 """
 from typing import Any, Dict, List, Mapping, Optional, Set
 
-from pydantic import BaseModel, Extra, root_validator
-
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.llms.utils import enforce_stop_tokens
+from langchain.pydantic_v1 import BaseModel, Extra, root_validator
 
 
 class RWKV(LLM, BaseModel):
-    r"""Wrapper around RWKV language models.
+    """RWKV language models.
 
     To use, you should have the ``rwkv`` python package installed, the
     pre-trained model file, and the model's config information.
@@ -103,7 +102,7 @@ class RWKV(LLM, BaseModel):
         try:
             import tokenizers
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import tokenizers python package. "
                 "Please install it with `pip install tokenizers`."
             )
@@ -122,7 +121,7 @@ class RWKV(LLM, BaseModel):
             values["pipeline"] = PIPELINE(values["client"], values["tokens_path"])
 
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import rwkv python package. "
                 "Please install it with `pip install rwkv`."
             )
@@ -140,7 +139,7 @@ class RWKV(LLM, BaseModel):
     @property
     def _llm_type(self) -> str:
         """Return the type of llm."""
-        return "rwkv-4"
+        return "rwkv"
 
     def run_rnn(self, _tokens: List[str], newline_adj: int = 0) -> Any:
         AVOID_REPEAT_TOKENS = []
@@ -210,6 +209,7 @@ class RWKV(LLM, BaseModel):
         prompt: str,
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> str:
         r"""RWKV generation
 

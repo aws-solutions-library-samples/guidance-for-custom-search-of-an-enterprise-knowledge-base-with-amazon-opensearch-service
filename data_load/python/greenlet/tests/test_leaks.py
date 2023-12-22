@@ -11,27 +11,21 @@ import time
 import weakref
 import threading
 
-import psutil
 
 import greenlet
 from . import TestCase
 from .leakcheck import fails_leakcheck
 from .leakcheck import ignores_leakcheck
-from .leakcheck import RUNNING_ON_GITHUB_ACTIONS
 from .leakcheck import RUNNING_ON_MANYLINUX
 
-try:
-    from sys import intern
-except ImportError:
-    # Python 2
-    pass
+# pylint:disable=protected-access
 
 assert greenlet.GREENLET_USE_GC # Option to disable this was removed in 1.0
 
 class HasFinalizerTracksInstances(object):
     EXTANT_INSTANCES = set()
     def __init__(self, msg):
-        self.msg = intern(msg)
+        self.msg = sys.intern(msg)
         self.EXTANT_INSTANCES.add(id(self))
     def __del__(self):
         self.EXTANT_INSTANCES.remove(id(self))
@@ -231,7 +225,8 @@ class TestLeaks(TestCase):
         # the ``greenlet.switch`` method still on the stack that we
         # can't reach to clean up. The C code goes through terrific
         # lengths to clean that up.
-        if not explicit_reference_to_switch and greenlet._greenlet.get_clocks_used_doing_optional_cleanup() is not None:
+        if not explicit_reference_to_switch \
+           and greenlet._greenlet.get_clocks_used_doing_optional_cleanup() is not None:
             # If cleanup was disabled, though, we may not find it.
             self.assertEqual(greenlets_after, greenlets_before)
             if manually_collect_background:
@@ -309,11 +304,11 @@ class TestLeaks(TestCase):
         # and this set of tests is relatively fragile, depending on
         # OS and memory management details. So we want to run it on 3.11+
         # (obviously) but not every older 3.x version in order to reduce
-        # false negatives.
-        if sys.version_info[0] >= 3 and sys.version_info[:2] < (3, 8):
+        # false negatives. At the moment, those false results seem to have
+        # resolved, so we are actually running this on 3.8+
+        assert sys.version_info[0] >= 3
+        if sys.version_info[:2] < (3, 8):
             self.skipTest('Only observed on 3.11')
-        if sys.version_info[0] == 2 and RUNNING_ON_GITHUB_ACTIONS:
-            self.skipTest('Hard to get a stable pattern here')
         if RUNNING_ON_MANYLINUX:
             self.skipTest("Slow and not worth repeating here")
 
@@ -339,13 +334,13 @@ class TestLeaks(TestCase):
         # uss: (Linux, macOS, Windows): aka "Unique Set Size", this is
         # the memory which is unique to a process and which would be
         # freed if the process was terminated right now.
-        uss_before = psutil.Process().memory_full_info().uss
+        uss_before = self.get_process_uss()
 
         for count in range(self.UNTRACK_ATTEMPTS):
-            uss_before = max(uss_before, psutil.Process().memory_full_info().uss)
+            uss_before = max(uss_before, self.get_process_uss())
             run_it()
 
-            uss_after = psutil.Process().memory_full_info().uss
+            uss_after = self.get_process_uss()
             if uss_after <= uss_before and count > 1:
                 break
 
@@ -386,7 +381,7 @@ class TestLeaks(TestCase):
             glets = ()
             ITER = 2
             def __call__(self):
-                self.uss_before = psutil.Process().memory_full_info().uss
+                self.uss_before = test.get_process_uss()
 
                 for _ in range(self.ITER):
                     self.glets += tuple(run_it())
@@ -396,7 +391,7 @@ class TestLeaks(TestCase):
                 # Drop them.
                 if deallocate_in_thread:
                     self.glets = ()
-                self.uss_after = psutil.Process().memory_full_info().uss
+                self.uss_after = test.get_process_uss()
 
         # Establish baseline
         uss_before = uss_after = None
@@ -423,13 +418,13 @@ class TestLeaks(TestCase):
             if deallocate_in_thread:
                 self.wait_for_pending_cleanups()
 
-            uss_after = psutil.Process().memory_full_info().uss
+            uss_after = self.get_process_uss()
             # See if we achieve a non-growth state at some point. Break when we do.
             if uss_after <= uss_before and count > 1:
                 break
 
         self.wait_for_pending_cleanups()
-        uss_after = psutil.Process().memory_full_info().uss
+        uss_after = self.get_process_uss()
         self.assertLessEqual(uss_after, uss_before, "after attempts %d" % (count,))
 
     @ignores_leakcheck

@@ -10,6 +10,7 @@ import asyncio
 from typing import Any
 from typing import Awaitable
 from typing import Callable
+from typing import cast
 from typing import Dict
 from typing import Generic
 from typing import Iterable
@@ -41,13 +42,14 @@ if TYPE_CHECKING:
     from .engine import AsyncConnection
     from .engine import AsyncEngine
     from ...engine import Connection
+    from ...engine import CursorResult
     from ...engine import Engine
     from ...engine import Result
     from ...engine import Row
     from ...engine import RowMapping
     from ...engine import ScalarResult
     from ...engine.interfaces import _CoreAnyExecuteParams
-    from ...engine.interfaces import _CoreSingleExecuteParams
+    from ...engine.interfaces import CoreExecuteOptionsParameter
     from ...event import dispatcher
     from ...orm._typing import _IdentityKeyType
     from ...orm._typing import _O
@@ -61,6 +63,7 @@ if TYPE_CHECKING:
     from ...orm.session import _SessionBindKey
     from ...sql._typing import _InfoType
     from ...sql.base import Executable
+    from ...sql.dml import UpdateBase
     from ...sql.elements import ClauseElement
     from ...sql.selectable import ForUpdateParameter
     from ...sql.selectable import TypedReturnsRows
@@ -120,9 +123,9 @@ class AsyncAttrs:
 
         a1 = (await async_session.scalars(select(A).where(A.id == 5))).one()
 
-        # use the lazy loader on ``a1.bs`` via the ``.async_attrs``
+        # use the lazy loader on ``a1.bs`` via the ``.awaitable_attrs``
         # interface, so that it may be awaited
-        for b1 in await a1.async_attrs.bs:
+        for b1 in await a1.awaitable_attrs.bs:
             print(b1)
 
     The :attr:`_asyncio.AsyncAttrs.awaitable_attrs` performs a call against the
@@ -159,8 +162,8 @@ class AsyncAttrs:
 
             a1 = (await async_session.scalars(select(A).where(A.id == 5))).one()
 
-            some_attribute = await a1.async_attrs.some_deferred_attribute
-            some_collection = await a1.async_attrs.some_collection
+            some_attribute = await a1.awaitable_attrs.some_deferred_attribute
+            some_collection = await a1.awaitable_attrs.some_collection
 
         """  # noqa: E501
 
@@ -201,6 +204,9 @@ class AsyncSession(ReversibleProxy[Session]):
 
     The :class:`_asyncio.AsyncSession` is a proxy for a traditional
     :class:`_orm.Session` instance.
+
+    The :class:`_asyncio.AsyncSession` is **not safe for use in concurrent
+    tasks.**.  See :ref:`session_faq_threadsafe` for background.
 
     .. versionadded:: 1.4
 
@@ -325,8 +331,8 @@ class AsyncSession(ReversibleProxy[Session]):
         )
 
     async def run_sync(
-        self, fn: Callable[..., Any], *arg: Any, **kw: Any
-    ) -> Any:
+        self, fn: Callable[..., _T], *arg: Any, **kw: Any
+    ) -> _T:
         """Invoke the given synchronous (i.e. not async) callable,
         passing a synchronous-style :class:`_orm.Session` as the first
         argument.
@@ -397,6 +403,19 @@ class AsyncSession(ReversibleProxy[Session]):
     @overload
     async def execute(
         self,
+        statement: UpdateBase,
+        params: Optional[_CoreAnyExecuteParams] = None,
+        *,
+        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
+        bind_arguments: Optional[_BindArguments] = None,
+        _parent_execute_state: Optional[Any] = None,
+        _add_event: Optional[Any] = None,
+    ) -> CursorResult[Any]:
+        ...
+
+    @overload
+    async def execute(
+        self,
         statement: Executable,
         params: Optional[_CoreAnyExecuteParams] = None,
         *,
@@ -446,7 +465,7 @@ class AsyncSession(ReversibleProxy[Session]):
     async def scalar(
         self,
         statement: TypedReturnsRows[Tuple[_T]],
-        params: Optional[_CoreSingleExecuteParams] = None,
+        params: Optional[_CoreAnyExecuteParams] = None,
         *,
         execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
         bind_arguments: Optional[_BindArguments] = None,
@@ -458,7 +477,7 @@ class AsyncSession(ReversibleProxy[Session]):
     async def scalar(
         self,
         statement: Executable,
-        params: Optional[_CoreSingleExecuteParams] = None,
+        params: Optional[_CoreAnyExecuteParams] = None,
         *,
         execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
         bind_arguments: Optional[_BindArguments] = None,
@@ -469,7 +488,7 @@ class AsyncSession(ReversibleProxy[Session]):
     async def scalar(
         self,
         statement: Executable,
-        params: Optional[_CoreSingleExecuteParams] = None,
+        params: Optional[_CoreAnyExecuteParams] = None,
         *,
         execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
         bind_arguments: Optional[_BindArguments] = None,
@@ -490,7 +509,7 @@ class AsyncSession(ReversibleProxy[Session]):
         else:
             execution_options = _EXECUTE_OPTIONS
 
-        result = await greenlet_spawn(
+        return await greenlet_spawn(
             self.sync_session.scalar,
             statement,
             params=params,
@@ -498,13 +517,12 @@ class AsyncSession(ReversibleProxy[Session]):
             bind_arguments=bind_arguments,
             **kw,
         )
-        return result
 
     @overload
     async def scalars(
         self,
         statement: TypedReturnsRows[Tuple[_T]],
-        params: Optional[_CoreSingleExecuteParams] = None,
+        params: Optional[_CoreAnyExecuteParams] = None,
         *,
         execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
         bind_arguments: Optional[_BindArguments] = None,
@@ -516,7 +534,7 @@ class AsyncSession(ReversibleProxy[Session]):
     async def scalars(
         self,
         statement: Executable,
-        params: Optional[_CoreSingleExecuteParams] = None,
+        params: Optional[_CoreAnyExecuteParams] = None,
         *,
         execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
         bind_arguments: Optional[_BindArguments] = None,
@@ -527,7 +545,7 @@ class AsyncSession(ReversibleProxy[Session]):
     async def scalars(
         self,
         statement: Executable,
-        params: Optional[_CoreSingleExecuteParams] = None,
+        params: Optional[_CoreAnyExecuteParams] = None,
         *,
         execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
         bind_arguments: Optional[_BindArguments] = None,
@@ -569,8 +587,7 @@ class AsyncSession(ReversibleProxy[Session]):
         with_for_update: ForUpdateParameter = None,
         identity_token: Optional[Any] = None,
         execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
-    ) -> Optional[_O]:
-
+    ) -> Union[_O, None]:
         """Return an instance based on the given primary key identifier,
         or ``None`` if not found.
 
@@ -581,16 +598,52 @@ class AsyncSession(ReversibleProxy[Session]):
 
         """
 
-        result_obj = await greenlet_spawn(
-            self.sync_session.get,
+        return await greenlet_spawn(
+            cast("Callable[..., _O]", self.sync_session.get),
             entity,
             ident,
             options=options,
             populate_existing=populate_existing,
             with_for_update=with_for_update,
             identity_token=identity_token,
+            execution_options=execution_options,
         )
-        return result_obj
+
+    async def get_one(
+        self,
+        entity: _EntityBindKey[_O],
+        ident: _PKIdentityArgument,
+        *,
+        options: Optional[Sequence[ORMOption]] = None,
+        populate_existing: bool = False,
+        with_for_update: ForUpdateParameter = None,
+        identity_token: Optional[Any] = None,
+        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
+    ) -> _O:
+        """Return an instance based on the given primary key identifier,
+        or raise an exception if not found.
+
+        Raises ``sqlalchemy.orm.exc.NoResultFound`` if the query selects
+        no rows.
+
+        ..versionadded: 2.0.22
+
+        .. seealso::
+
+            :meth:`_orm.Session.get_one` - main documentation for get_one
+
+        """
+
+        return await greenlet_spawn(
+            cast("Callable[..., _O]", self.sync_session.get_one),
+            entity,
+            ident,
+            options=options,
+            populate_existing=populate_existing,
+            with_for_update=with_for_update,
+            identity_token=identity_token,
+            execution_options=execution_options,
+        )
 
     @overload
     async def stream(
@@ -625,7 +678,6 @@ class AsyncSession(ReversibleProxy[Session]):
         bind_arguments: Optional[_BindArguments] = None,
         **kw: Any,
     ) -> AsyncResult[Any]:
-
         """Execute a statement and return a streaming
         :class:`_asyncio.AsyncResult` object.
 
@@ -652,7 +704,7 @@ class AsyncSession(ReversibleProxy[Session]):
     async def stream_scalars(
         self,
         statement: TypedReturnsRows[Tuple[_T]],
-        params: Optional[_CoreSingleExecuteParams] = None,
+        params: Optional[_CoreAnyExecuteParams] = None,
         *,
         execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
         bind_arguments: Optional[_BindArguments] = None,
@@ -664,7 +716,7 @@ class AsyncSession(ReversibleProxy[Session]):
     async def stream_scalars(
         self,
         statement: Executable,
-        params: Optional[_CoreSingleExecuteParams] = None,
+        params: Optional[_CoreAnyExecuteParams] = None,
         *,
         execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
         bind_arguments: Optional[_BindArguments] = None,
@@ -675,7 +727,7 @@ class AsyncSession(ReversibleProxy[Session]):
     async def stream_scalars(
         self,
         statement: Executable,
-        params: Optional[_CoreSingleExecuteParams] = None,
+        params: Optional[_CoreAnyExecuteParams] = None,
         *,
         execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
         bind_arguments: Optional[_BindArguments] = None,
@@ -863,7 +915,12 @@ class AsyncSession(ReversibleProxy[Session]):
             mapper=mapper, clause=clause, bind=bind, **kw
         )
 
-    async def connection(self, **kw: Any) -> AsyncConnection:
+    async def connection(
+        self,
+        bind_arguments: Optional[_BindArguments] = None,
+        execution_options: Optional[CoreExecuteOptionsParameter] = None,
+        **kw: Any,
+    ) -> AsyncConnection:
         r"""Return a :class:`_asyncio.AsyncConnection` object corresponding to
         this :class:`.Session` object's transactional state.
 
@@ -881,7 +938,10 @@ class AsyncSession(ReversibleProxy[Session]):
         """
 
         sync_connection = await greenlet_spawn(
-            self.sync_session.connection, **kw
+            self.sync_session.connection,
+            bind_arguments=bind_arguments,
+            execution_options=execution_options,
+            **kw,
         )
         return engine.AsyncConnection._retrieve_proxy_for_target(
             sync_connection
@@ -924,42 +984,70 @@ class AsyncSession(ReversibleProxy[Session]):
         return AsyncSessionTransaction(self, nested=True)
 
     async def rollback(self) -> None:
-        """Rollback the current transaction in progress."""
+        """Rollback the current transaction in progress.
+
+        .. seealso::
+
+            :meth:`_orm.Session.rollback` - main documentation for
+            "rollback"
+        """
         await greenlet_spawn(self.sync_session.rollback)
 
     async def commit(self) -> None:
-        """Commit the current transaction in progress."""
+        """Commit the current transaction in progress.
+
+        .. seealso::
+
+            :meth:`_orm.Session.commit` - main documentation for
+            "commit"
+        """
         await greenlet_spawn(self.sync_session.commit)
 
     async def close(self) -> None:
         """Close out the transactional resources and ORM objects used by this
         :class:`_asyncio.AsyncSession`.
 
-        This expunges all ORM objects associated with this
-        :class:`_asyncio.AsyncSession`, ends any transaction in progress and
-        :term:`releases` any :class:`_asyncio.AsyncConnection` objects which
-        this :class:`_asyncio.AsyncSession` itself has checked out from
-        associated :class:`_asyncio.AsyncEngine` objects. The operation then
-        leaves the :class:`_asyncio.AsyncSession` in a state which it may be
-        used again.
-
-        .. tip::
-
-            The :meth:`_asyncio.AsyncSession.close` method **does not prevent
-            the Session from being used again**. The
-            :class:`_asyncio.AsyncSession` itself does not actually have a
-            distinct "closed" state; it merely means the
-            :class:`_asyncio.AsyncSession` will release all database
-            connections and ORM objects.
-
-
         .. seealso::
 
+            :meth:`_orm.Session.close` - main documentation for
+            "close"
+
             :ref:`session_closing` - detail on the semantics of
-            :meth:`_asyncio.AsyncSession.close`
+            :meth:`_asyncio.AsyncSession.close` and
+            :meth:`_asyncio.AsyncSession.reset`.
 
         """
         await greenlet_spawn(self.sync_session.close)
+
+    async def reset(self) -> None:
+        """Close out the transactional resources and ORM objects used by this
+        :class:`_orm.Session`, resetting the session to its initial state.
+
+        .. versionadded:: 2.0.22
+
+        .. seealso::
+
+            :meth:`_orm.Session.reset` - main documentation for
+            "reset"
+
+            :ref:`session_closing` - detail on the semantics of
+            :meth:`_asyncio.AsyncSession.close` and
+            :meth:`_asyncio.AsyncSession.reset`.
+
+        """
+        await greenlet_spawn(self.sync_session.reset)
+
+    async def aclose(self) -> None:
+        """A synonym for :meth:`_asyncio.AsyncSession.close`.
+
+        The :meth:`_asyncio.AsyncSession.aclose` name is specifically
+        to support the Python standard library ``@contextlib.aclosing``
+        context manager function.
+
+        .. versionadded:: 2.0.20
+
+        """
+        await self.close()
 
     async def invalidate(self) -> None:
         """Close this Session, using connection invalidation.

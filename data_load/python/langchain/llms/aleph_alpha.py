@@ -1,16 +1,21 @@
-"""Wrapper around Aleph Alpha APIs."""
-from typing import Any, Dict, List, Optional, Sequence
-
-from pydantic import Extra, root_validator
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.llms.utils import enforce_stop_tokens
+from langchain.pydantic_v1 import Extra, SecretStr, root_validator
 from langchain.utils import get_from_dict_or_env
 
 
+def _to_secret(value: Union[SecretStr, str]) -> SecretStr:
+    """Convert a string to a SecretStr if needed."""
+    if isinstance(value, SecretStr):
+        return value
+    return SecretStr(value)
+
+
 class AlephAlpha(LLM):
-    """Wrapper around Aleph Alpha large language models.
+    """Aleph Alpha large language models.
 
     To use, you should have the ``aleph_alpha_client`` python package installed, and the
     environment variable ``ALEPH_ALPHA_API_KEY`` set with your API key, or pass
@@ -23,7 +28,7 @@ class AlephAlpha(LLM):
         .. code-block:: python
 
             from langchain.llms import AlephAlpha
-            alpeh_alpha = AlephAlpha(aleph_alpha_api_key="my-api-key")
+            aleph_alpha = AlephAlpha(aleph_alpha_api_key="my-api-key")
     """
 
     client: Any  #: :meta private:
@@ -126,11 +131,42 @@ class AlephAlpha(LLM):
     raw_completion: bool = False
     """Force the raw completion of the model to be returned."""
 
-    aleph_alpha_api_key: Optional[str] = None
-    """API key for Aleph Alpha API."""
-
     stop_sequences: Optional[List[str]] = None
     """Stop sequences to use."""
+
+    # Client params
+    aleph_alpha_api_key: Optional[str] = None
+    """API key for Aleph Alpha API."""
+    host: str = "https://api.aleph-alpha.com"
+    """The hostname of the API host. 
+    The default one is "https://api.aleph-alpha.com")"""
+    hosting: Optional[str] = None
+    """Determines in which datacenters the request may be processed.
+    You can either set the parameter to "aleph-alpha" or omit it (defaulting to None).
+    Not setting this value, or setting it to None, gives us maximal 
+    flexibility in processing your request in our
+    own datacenters and on servers hosted with other providers. 
+    Choose this option for maximal availability.
+    Setting it to "aleph-alpha" allows us to only process the 
+    request in our own datacenters.
+    Choose this option for maximal data privacy."""
+    request_timeout_seconds: int = 305
+    """Client timeout that will be set for HTTP requests in the 
+    `requests` library's API calls.
+    Server will close all requests after 300 seconds with an internal server error."""
+    total_retries: int = 8
+    """The number of retries made in case requests fail with certain retryable 
+    status codes. If the last
+    retry fails a corresponding exception is raised. Note, that between retries
+    an exponential backoff
+    is applied, starting with 0.5 s after the first retry and doubling for
+    each retry made. So with the
+    default setting of 8 retries a total wait time of 63.5 s is added 
+    between the retries."""
+    nice: bool = False
+    """Setting this to True, will signal to the API that you intend to be 
+    nice to other users
+    by de-prioritizing your request below concurrent ones."""
 
     class Config:
         """Configuration for this pydantic object."""
@@ -140,15 +176,22 @@ class AlephAlpha(LLM):
     @root_validator()
     def validate_environment(cls, values: Dict) -> Dict:
         """Validate that api key and python package exists in environment."""
-        aleph_alpha_api_key = get_from_dict_or_env(
-            values, "aleph_alpha_api_key", "ALEPH_ALPHA_API_KEY"
+        values["aleph_alpha_api_key"] = _to_secret(
+            get_from_dict_or_env(values, "aleph_alpha_api_key", "ALEPH_ALPHA_API_KEY")
         )
         try:
-            import aleph_alpha_client
+            from aleph_alpha_client import Client
 
-            values["client"] = aleph_alpha_client.Client(token=aleph_alpha_api_key)
+            values["client"] = Client(
+                token=values["aleph_alpha_api_key"].get_secret_value(),
+                host=values["host"],
+                hosting=values["hosting"],
+                request_timeout_seconds=values["request_timeout_seconds"],
+                total_retries=values["total_retries"],
+                nice=values["nice"],
+            )
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import aleph_alpha_client python package. "
                 "Please install it with `pip install aleph_alpha_client`."
             )
@@ -199,13 +242,14 @@ class AlephAlpha(LLM):
     @property
     def _llm_type(self) -> str:
         """Return type of llm."""
-        return "alpeh_alpha"
+        return "aleph_alpha"
 
     def _call(
         self,
         prompt: str,
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> str:
         """Call out to Aleph Alpha's completion endpoint.
 
@@ -219,7 +263,7 @@ class AlephAlpha(LLM):
         Example:
             .. code-block:: python
 
-                response = alpeh_alpha("Tell me a joke.")
+                response = aleph_alpha("Tell me a joke.")
         """
         from aleph_alpha_client import CompletionRequest, Prompt
 
@@ -232,6 +276,7 @@ class AlephAlpha(LLM):
             params["stop_sequences"] = self.stop_sequences
         else:
             params["stop_sequences"] = stop
+        params = {**params, **kwargs}
         request = CompletionRequest(prompt=Prompt.from_text(prompt), **params)
         response = self.client.complete(model=self.model, request=request)
         text = response.completions[0].completion
@@ -240,3 +285,9 @@ class AlephAlpha(LLM):
         if stop is not None or self.stop_sequences is not None:
             text = enforce_stop_tokens(text, params["stop_sequences"])
         return text
+
+
+if __name__ == "__main__":
+    aa = AlephAlpha()
+
+    print(aa("How are you?"))

@@ -11,13 +11,15 @@ import operator
 import os
 import re
 import sys
+from typing import TYPE_CHECKING
 import uuid
 
 import pytest
 
 try:
     # installed by bootstrap.py
-    import sqla_plugin_base as plugin_base
+    if not TYPE_CHECKING:
+        import sqla_plugin_base as plugin_base
 except ImportError:
     # assume we're a package, use traditional import
     from . import plugin_base
@@ -220,7 +222,6 @@ class XDistHooks:
 
 
 def pytest_collection_modifyitems(session, config, items):
-
     # look for all those classes that specify __backend__ and
     # expand them out into per-database test cases.
 
@@ -255,7 +256,6 @@ def pytest_collection_modifyitems(session, config, items):
 
     def setup_test_classes():
         for test_class in test_classes:
-
             # transfer legacy __backend__ and __sparse_backend__ symbols
             # to be markers
             add_markers = set()
@@ -611,7 +611,6 @@ def _pytest_fn_decorator(target):
         return env[fn_name]
 
     def decorate(fn, add_positional_parameters=()):
-
         spec = inspect_getfullargspec(fn)
         if add_positional_parameters:
             spec.args.extend(add_positional_parameters)
@@ -742,7 +741,6 @@ class PytestFixtureFunctions(plugin_base.FixtureFunctions):
                 )
 
         else:
-
             for arg in arg_sets:
                 if not isinstance(arg, tuple):
                     arg = (arg,)

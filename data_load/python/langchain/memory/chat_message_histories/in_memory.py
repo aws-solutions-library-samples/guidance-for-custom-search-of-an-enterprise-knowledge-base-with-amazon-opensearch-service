@@ -1,23 +1,23 @@
 from typing import List
 
-from pydantic import BaseModel
-
+from langchain.pydantic_v1 import BaseModel, Field
 from langchain.schema import (
-    AIMessage,
     BaseChatMessageHistory,
-    BaseMessage,
-    HumanMessage,
 )
+from langchain.schema.messages import BaseMessage
 
 
 class ChatMessageHistory(BaseChatMessageHistory, BaseModel):
-    messages: List[BaseMessage] = []
+    """In memory implementation of chat message history.
 
-    def add_user_message(self, message: str) -> None:
-        self.messages.append(HumanMessage(content=message))
+    Stores messages in an in memory list.
+    """
 
-    def add_ai_message(self, message: str) -> None:
-        self.messages.append(AIMessage(content=message))
+    messages: List[BaseMessage] = Field(default_factory=list)
+
+    def add_message(self, message: BaseMessage) -> None:
+        """Add a self-created message to the store"""
+        self.messages.append(message)
 
     def clear(self) -> None:
         self.messages = []

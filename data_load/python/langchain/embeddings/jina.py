@@ -1,16 +1,16 @@
-"""Wrapper around Jina embedding models."""
-
 import os
 from typing import Any, Dict, List, Optional
 
 import requests
-from pydantic import BaseModel, root_validator
 
-from langchain.embeddings.base import Embeddings
+from langchain.pydantic_v1 import BaseModel, root_validator
+from langchain.schema.embeddings import Embeddings
 from langchain.utils import get_from_dict_or_env
 
 
 class JinaEmbeddings(BaseModel, Embeddings):
+    """Jina embedding models."""
+
     client: Any  #: :meta private:
 
     model_name: str = "ViT-B-32::openai"
@@ -34,7 +34,7 @@ class JinaEmbeddings(BaseModel, Embeddings):
         try:
             import jina
         except ImportError:
-            raise ValueError(
+            raise ImportError(
                 "Could not import `jina` python package. "
                 "Please install it with `pip install jina`."
             )
