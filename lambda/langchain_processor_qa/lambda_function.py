@@ -167,7 +167,7 @@ def lambda_handler(event, context):
             name = evt_body['name']
     
         # add para: streaming output
-        streaming = False
+        streaming = True
         if "streaming" in evt_body.keys():
             streaming = ast.literal_eval(str(evt_body['streaming']).title())
         print('streaming:',streaming)
