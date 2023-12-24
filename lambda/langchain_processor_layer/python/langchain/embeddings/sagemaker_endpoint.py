@@ -176,30 +176,8 @@ class SagemakerEndpointEmbeddings(BaseModel, Embeddings):
 
         return self.content_handler.transform_output(response["Body"])
 
-#     def embed_documents(
-#         self, texts: List[str], chunk_size: int = 64
-#     ) -> List[List[float]]:
-#         """Compute doc embeddings using a SageMaker Inference Endpoint.
-
-#         Args:
-#             texts: The list of texts to embed.
-#             chunk_size: The chunk size defines how many input texts will
-#                 be grouped together as request. If None, will use the
-#                 chunk size specified by the class.
-
-
-#         Returns:
-#             List of embeddings, one for each text.
-#         """
-#         results = []
-#         _chunk_size = len(texts) if chunk_size > len(texts) else chunk_size
-#         for i in range(0, len(texts), _chunk_size):
-#             response = self._embedding_func(texts[i : i + _chunk_size])
-#             results.extend(response)
-#         return results
-    
     def embed_documents(
-        self, texts: List[str], metadatas: List[dict], chunk_size: int = 64, language: str = "chinese"
+        self, texts: List[str], chunk_size: int = 64
     ) -> List[List[float]]:
         """Compute doc embeddings using a SageMaker Inference Endpoint.
 
@@ -213,53 +191,75 @@ class SagemakerEndpointEmbeddings(BaseModel, Embeddings):
         Returns:
             List of embeddings, one for each text.
         """
-
         results = []
-        text_result = []
-        metadatas_result = []
-        _chunk_size = 1
-        append_num = 3
-        texts_length = len(texts)
-        emb_texts = []
-        phase_texts = []
-        sentences = []
-        titles = []
+        _chunk_size = len(texts) if chunk_size > len(texts) else chunk_size
+        for i in range(0, len(texts), _chunk_size):
+            response = self._embedding_func(texts[i : i + _chunk_size])
+            results.extend(response)
+        return results
+    
+    # def embed_documents(
+    #     self, texts: List[str], metadatas: List[dict], chunk_size: int = 64, language: str = "chinese"
+    # ) -> List[List[float]]:
+    #     """Compute doc embeddings using a SageMaker Inference Endpoint.
+
+    #     Args:
+    #         texts: The list of texts to embed.
+    #         chunk_size: The chunk size defines how many input texts will
+    #             be grouped together as request. If None, will use the
+    #             chunk size specified by the class.
+
+
+    #     Returns:
+    #         List of embeddings, one for each text.
+    #     """
+
+    #     results = []
+    #     text_result = []
+    #     metadatas_result = []
+    #     _chunk_size = 1
+    #     append_num = 3
+    #     texts_length = len(texts)
+    #     emb_texts = []
+    #     phase_texts = []
+    #     sentences = []
+    #     titles = []
         
-        for text in texts:
-            text_list = text.split('@@@')
-            if len(text_list) == 2:
-                emb_texts.append(text_list[0])
-                phase_texts.append(text_list[1])
+    #     for text in texts:
+    #         text_list = text.split('@@@')
+    #         if len(text_list) == 2:
+    #             emb_texts.append(text_list[0])
+    #             phase_texts.append(text_list[1])
                 
 
-        for i in range(0, texts_length, _chunk_size):
-            try:
-                #print('ind ',i,',len:',len(texts[i: i+_chunk_size][0]),'text:',texts[i: i+_chunk_size])
+    #     for i in range(0, texts_length, _chunk_size):
+    #         try:
+    #             #print('ind ',i,',len:',len(texts[i: i+_chunk_size][0]),'text:',texts[i: i+_chunk_size])
                 
-                if len(phase_texts) > 0 and len(emb_texts) > 0:
-                    response = self._embedding_func(list(emb_texts[i: i+_chunk_size]))
-                    text_result.append(phase_texts[i: i+_chunk_size])
-                    sentences.append(emb_texts[i: i+_chunk_size])
+    #             if len(phase_texts) > 0 and len(emb_texts) > 0:
+    #                 response = self._embedding_func(list(emb_texts[i: i+_chunk_size]))
+    #                 text_result.append(phase_texts[i: i+_chunk_size])
+    #                 sentences.append(emb_texts[i: i+_chunk_size])
                 
-                else:
-                    response = self._embedding_func(list(texts[i: i+_chunk_size]))
-                    sentences.append(texts[i: i+_chunk_size])
-                    if language == 'english':
-                        text_result.append(texts[i: i+_chunk_size])
+    #             else:
+    #                 response = self._embedding_func(list(texts[i: i+_chunk_size]))
+    #                 sentences.append(texts[i: i+_chunk_size])
+    #                 if language == 'english':
+    #                     text_result.append(texts[i: i+_chunk_size])
 
-                    elif language.find("chinese")>=0:
-                        append_num = (texts_length - i) if i + append_num > texts_length else append_num
-                        text_append = ",".join([t for t in texts[i: i + append_num]])
-                        text_result.append(text_append)
+    #                 elif language.find("chinese")>=0:
+    #                     append_num = (texts_length - i) if i + append_num > texts_length else append_num
+    #                     text_append = ",".join([t for t in texts[i: i + append_num]])
+    #                     text_result.append(text_append)
                 
-                results.extend(response)
+    #             results.extend(response)
 
-                metadatas_result.append(metadatas[i: i+_chunk_size][0])
+    #             metadatas_result.append(metadatas[i: i+_chunk_size][0])
                                 
-            except Exception as e:
-                print("Embedding Error:",e)
+    #         except Exception as e:
+    #             print("Embedding Error:",e)
 
-        return results,text_result,metadatas_result,sentences
+    #     return results,text_result,metadatas_result,sentences
    
 
     def embed_query(self, text: str) -> List[float]:
