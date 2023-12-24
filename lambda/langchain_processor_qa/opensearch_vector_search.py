@@ -641,7 +641,7 @@ class OpenSearchVectorSearch(VectorStore):
         documents_with_scores = [
             (
                 Document(
-                    page_content=hit["_source"][text_field][0] if text_field == 'paragraph' else hit["_source"][text_field],
+                    page_content=hit["_source"][text_field][0] if isinstance(hit["_source"][text_field],list)  else hit["_source"][text_field],
                     metadata=hit["_source"]
                     if metadata_field == "*" or metadata_field not in hit["_source"]
                     else hit["_source"][metadata_field],

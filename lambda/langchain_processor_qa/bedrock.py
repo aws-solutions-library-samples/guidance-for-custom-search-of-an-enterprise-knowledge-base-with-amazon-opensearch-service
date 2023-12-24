@@ -73,6 +73,7 @@ class LLMInputOutputAdapter:
         "anthropic": "completion",
         "amazon": "outputText",
         "cohere": "text",
+        "meta":"generation"
     }
 
     @classmethod
@@ -290,6 +291,7 @@ class BedrockBase(BaseModel, ABC):
             _model_kwargs["stream"] = True
 
         params = {**_model_kwargs, **kwargs}
+        params["modelId"]=self.model_id
         input_body = BedrockAdapter.prepare_input(provider, prompt, params)
         body = json.dumps(input_body)
 
@@ -297,7 +299,7 @@ class BedrockBase(BaseModel, ABC):
             response = self.client.invoke_model_with_response_stream(
                 body=body,
                 modelId=self.model_id,
-                accept="application/json",
+                accept="*/*",
                 contentType="application/json",
             )
         except Exception as e:
