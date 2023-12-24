@@ -42,45 +42,45 @@ response = {
 
 def lambda_handler(event, context):
     contentCheckLabel = "Pass"
-    contentCheckSuggestion = "Pass"    
-    
+    contentCheckSuggestion = "Pass"
+
     try:
         print("event:",event)
         # print("region:",region)
         # print('table name:',table_name)
-        
+
         evt_para = {}
         if 'queryStringParameters' in event.keys():
             evt_para = event['queryStringParameters']
-    
+
         requestType = 'websocket'
         if isinstance(evt_para, dict) and "requestType" in evt_para.keys():
             requestType = evt_para['requestType']
-    
+
         evt_body = {}
         if 'body' in event.keys() and requestType == 'websocket':
             if event['body'] != 'None':
                 evt_body = json.loads(event['body'])
         else:
             evt_body = evt_para
-    
+
         query = "hello"
         if "query" in evt_body.keys():
             query = evt_body['query'].strip()
         elif "q" in evt_body.keys():
             query = evt_body['q'].strip()
         print('query:', query)
-    
+
         task = "search"
         if "task" in evt_body.keys():
             task = evt_body['task']
         elif "action" in evt_body.keys():
             task = evt_body['action']
         print('task:', task)
-    
+
         if 'body' in event.keys() and requestType == 'websocket':
             evt_body = evt_body['configs']
-    
+
         index = INDEX
         if "index" in evt_body.keys():
             index = evt_body['index']
@@ -89,89 +89,89 @@ def lambda_handler(event, context):
         elif "indexName" in evt_body.keys():
             index = evt_body['indexName']
         print('index:', index)
-    
+
         isCheckedContext = False
         if "isCheckedContext" in evt_body.keys():
             isCheckedContext = ast.literal_eval(str(evt_body['isCheckedContext']).title())
-    
+
         isCheckedGenerateReport = False
         if "isCheckedGenerateReport" in evt_body.keys():
             isCheckedGenerateReport = ast.literal_eval(str(evt_body['isCheckedGenerateReport']).title())
-    
+
         isCheckedKnowledgeBase = True
         if "isCheckedKnowledgeBase" in evt_body.keys():
             isCheckedKnowledgeBase = ast.literal_eval(str(evt_body['isCheckedKnowledgeBase']).title())
         print('isCheckedKnowledgeBase:', isCheckedKnowledgeBase)
-    
+
         isCheckedMapReduce = False
         if "isCheckedMapReduce" in evt_body.keys():
             isCheckedMapReduce = ast.literal_eval(str(evt_body['isCheckedMapReduce']).title())
-    
+
         language = LANGUAGE
         if "language" in evt_body.keys():
             language = evt_body['language']
-    
+
         sessionId = ""
         if "sessionId" in evt_body.keys():
             sessionId = str(evt_body['sessionId'])
         print('sessionId:', sessionId)
-    
+
         sessionTemplateId = ""
         if "sessionTemplateId" in evt_body.keys():
             sessionTemplateId = str(evt_body['sessionTemplateId'])
         print('sessionTemplateId:', sessionTemplateId)
-    
+
         taskDefinition = ""
         if "taskDefinition" in evt_body.keys():
             taskDefinition = str(evt_body['taskDefinition'])
         print('taskDefinition:', taskDefinition)
-    
+
         temperature = 0.01
         if "temperature" in evt_body.keys():
             temperature = float(evt_body['temperature'])
-    
+
         embeddingEndpoint = EMBEDDING_ENDPOINT_NAME
         sagemakerEndpoint = LLM_ENDPOINT_NAME
         if "embeddingEndpoint" in evt_body.keys():
             embeddingEndpoint = evt_body['embeddingEndpoint']
-    
+
         if "sagemakerEndpoint" in evt_body.keys():
             sagemakerEndpoint = evt_body['sagemakerEndpoint']
-    
+
         modelType = 'normal'
         if "modelType" in evt_body.keys():
             modelType = evt_body['modelType']
-    
+
         apiUrl = ''
         if "apiUrl" in evt_body.keys():
             apiUrl = evt_body['apiUrl']
-            
+
         apiKey = ''
         if "apiKey" in evt_body.keys():
             apiKey = evt_body['apiKey']
-    
+
         secretKey = ''
         if "secretKey" in evt_body.keys():
             secretKey = evt_body['secretKey']
-    
+
         modelName = 'anthropic.claude-v2'
         if "modelName" in evt_body.keys():
             modelName = evt_body['modelName']
-    
+
         maxTokens = 512
         if "maxTokens" in evt_body.keys():
             maxTokens = int(evt_body['maxTokens'])
-    
+
         name = ''
         if "name" in evt_body.keys():
             name = evt_body['name']
-    
+
         # add para: streaming output
         streaming = True
         if "streaming" in evt_body.keys():
             streaming = ast.literal_eval(str(evt_body['streaming']).title())
         print('streaming:',streaming)
-    
+
         if "llmData" in evt_body.keys():
             llmData = dict(evt_body['llmData'])
             if "embeddingEndpoint" in llmData.keys():
@@ -191,7 +191,7 @@ def lambda_handler(event, context):
                 apiKey = llmData['apiKey']
             if "secretKey" in llmData.keys():
                 secretKey = llmData['secretKey']
-    
+
         searchEngine = "opensearch"
         if not search_engine_opensearch and search_engine_kendra:
             searchEngine = "kendra"
@@ -199,21 +199,21 @@ def lambda_handler(event, context):
             searchEngine = "zilliz"
         if "searchEngine" in evt_body.keys():
             searchEngine = evt_body['searchEngine']
-    
+
         print('searchEngine:', searchEngine)
-    
+
         # Acquire Secret/Token for Content Moderation
         content_moderation_access_token = ""
         if "tokenContentCheck" in evt_body.keys():
             content_moderation_access_token = evt_body['tokenContentCheck']
         _enable_content_moderation = True if content_moderation_access_token != "" else False
         print(f"_enable_content_moderation: {_enable_content_moderation}")
-    
+
         username = None
         password = None
         host = HOST
         if searchEngine == "opensearch":
-            # retrieve secret manager value by key using boto3                                             
+            # retrieve secret manager value by key using boto3
             sm_client = boto3.client('secretsmanager')
             master_user = sm_client.get_secret_value(SecretId='opensearch-master-user')['SecretString']
             data = json.loads(master_user)
@@ -223,7 +223,7 @@ def lambda_handler(event, context):
             if "kendraIndexId" in evt_body.keys():
                 host = evt_body['kendraIndexId']
         print("host:", host)
-        
+
         connectionId = str(event.get('requestContext', {}).get('connectionId'))
         search_qa = SmartSearchQA()
         search_qa.init_cfg(index,
@@ -374,17 +374,17 @@ def lambda_handler(event, context):
                 if "txtDocsScoreThresholds" in evt_body.keys() and evt_body['txtDocsScoreThresholds'] is not None:
                     txtDocsScoreThresholds = float(evt_body['txtDocsScoreThresholds'])
                 print('txtDocsScoreThresholds:', txtDocsScoreThresholds)
-                
+
                 contextRounds = 3
                 if "contextRounds" in evt_body.keys():
                     contextRounds = int(evt_body['contextRounds'])
                 print('contextRounds:', contextRounds)
-                
+
                 textField = "paragraph"
                 if "textField" in evt_body.keys():
                     textField = evt_body['textField']
                 print('textField:', textField)
-                
+
                 vectorField = "sentence_vector"
                 if "vectorField" in evt_body.keys():
                     vectorField = evt_body['vectorField']
@@ -442,6 +442,23 @@ def lambda_handler(event, context):
                     query_docs_scores = [doc[1] for doc in source_documents]
                     # sentences = [doc[2] for doc in source_documents]
 
+                #if enable streaming， return the souce docs before caculating the scores
+                if streaming and requestType == 'websocket':
+                    source_list=buildSourceList(searchEngine, source_docs, [], [])
+                    response['body'] = json.dumps(
+                        {
+                            'message': 'streaming',
+                            'timestamp': time.time() * 1000,
+                            'sourceData': source_list,
+                            'text': answer,
+                            'scoreQueryAnswer': '',
+                            'contentCheckLabel': '',
+                            'contentCheckSuggestion': ''
+
+                        })
+                    #print(f"if streaming and requestType == 'websocket'==={len(source_list)}")
+                    sendWebSocket(response['body'],event)
+
                 # cal query_answer_score
                 isCheckedScoreQA = False
                 query_answer_score = -1
@@ -472,32 +489,9 @@ def lambda_handler(event, context):
                         answer_docs_scores.append(answer_docs_score)
                 print('2.answer_docs_scores:', answer_docs_scores)
 
-                source_list = []
-                for i in range(len(source_docs)):
-                    source = {}
-                    source["id"] = i
-                    source["title"] = ''
-                    if searchEngine == "opensearch" or searchEngine == "zilliz":
-                        if 'source' in source_docs[i].metadata.keys():
-                            source["title"] = os.path.split(source_docs[i].metadata['source'])[-1]
-                        elif 'title' in source_docs[i].metadata.keys():
-                            source["title"] = source_docs[i].metadata['title']
-                    source["titleLink"] = "http://#"
-                    source["paragraph"] = source_docs[i].page_content.replace("\n", "")
-                    source["sentence"] = source_docs[i].metadata['sentence'] if (searchEngine == "opensearch" or searchEngine == "zilliz") and 'sentence' in source_docs[i].metadata.keys() \
-                        else source_docs[i].page_content.replace("\n", "")
-                    if (searchEngine == "opensearch" or searchEngine == "zilliz") and len(query_docs_scores) > 0:
-                        source["scoreQueryDoc"] = round(float(query_docs_scores[i]),3)
-                    else:
-                        source["scoreQueryDoc"] = -1
-                        
-                    if (searchEngine == "opensearch" or searchEngine == "zilliz") and len(answer_docs_scores) > 0:
-                        source["scoreAnswerDoc"] = round(float(answer_docs_scores[i]),3)
-                    else:
-                        source["scoreAnswerDoc"] = -1
-                    
-                    source_list.append(source)
-                
+                #update the source list according the query_docs_scores and answer_docs_scores
+                source_list = buildSourceList(searchEngine, source_docs, query_docs_scores, answer_docs_scores)
+
                 response['body'] = json.dumps(
                     {
                         'message': 'streaming_end',
@@ -538,28 +532,19 @@ def lambda_handler(event, context):
     except Exception as e:
         traceback.print_exc()
         response['body'] = json.dumps(
-        {
-            'timestamp': time.time() * 1000,
-            'text': str(e),
-            'sourceData': [],
-            'message':'error',
-            'contentCheckLabel': contentCheckLabel,
-            'contentCheckSuggestion': contentCheckSuggestion,
-        })
-        
+            {
+                'timestamp': time.time() * 1000,
+                'text': str(e),
+                'sourceData': [],
+                'message':'error',
+                'contentCheckLabel': contentCheckLabel,
+                'contentCheckSuggestion': contentCheckSuggestion,
+            })
+
     print('response body',response['body'])
 
     if requestType == 'websocket':
-        connectionId = str(event.get('requestContext', {}).get('connectionId'))
-        if region.find('cn') >=0 :
-            endpoint_url = F"https://{domain_name}.execute-api.{region}.amazonaws.com.cn/{stage}"
-        else:
-            endpoint_url = F"https://{domain_name}.execute-api.{region}.amazonaws.com/{stage}"
-        apigw_management = boto3.client('apigatewaymanagementapi',
-                                        endpoint_url=endpoint_url)
-        api_res = apigw_management.post_to_connection(ConnectionId=connectionId,
-                                                      Data=response['body'])
-        print('api_res', api_res)
+        sendWebSocket(response['body'],event)
     else:
         return response
 
@@ -585,3 +570,45 @@ def moderate_content(function_name, access_token, content):
     print(f"result : {result}")
 
     return result
+
+def sendWebSocket(msgbody,event):
+    connectionId = str(event.get('requestContext', {}).get('connectionId'))
+    if region.find('cn') >=0 :
+        endpoint_url = F"https://{domain_name}.execute-api.{region}.amazonaws.com.cn/{stage}"
+    else:
+        endpoint_url = F"https://{domain_name}.execute-api.{region}.amazonaws.com/{stage}"
+    apigw_management = boto3.client('apigatewaymanagementapi', endpoint_url=endpoint_url)
+    api_res = apigw_management.post_to_connection(ConnectionId=connectionId, Data=msgbody)
+    print('api_res', api_res)
+
+def buildSourceList(searchEngine, source_docs, query_docs_scores, answer_docs_scores):
+    source_list=[]
+    if not query_docs_scores or len(query_docs_scores) == 0:
+        query_docs_scores = [-1] * len(source_docs)
+    if not answer_docs_scores or len(answer_docs_scores) == 0:
+        answer_docs_scores = [-1] * len(answer_docs_scores)
+    for i in range(len(source_docs)):
+        source = {}
+        source["id"] = i
+        source["title"] = ''
+        if searchEngine == "opensearch" or searchEngine == "zilliz":
+            if 'source' in source_docs[i].metadata.keys():
+                source["title"] = os.path.split(source_docs[i].metadata['source'])[-1]
+            elif 'title' in source_docs[i].metadata.keys():
+                source["title"] = source_docs[i].metadata['title']
+        source["titleLink"] = "http://#"
+        source["paragraph"] = source_docs[i].page_content.replace("\n", "")
+        source["sentence"] = source_docs[i].metadata['sentence'] if (searchEngine == "opensearch" or searchEngine == "zilliz") and 'sentence' in source_docs[i].metadata.keys() \
+            else source_docs[i].page_content.replace("\n", "")
+        if (searchEngine == "opensearch" or searchEngine == "zilliz") and len(query_docs_scores) > 0:
+            source["scoreQueryDoc"] = round(float(query_docs_scores[i]),3)
+        else:
+            source["scoreQueryDoc"] = -1
+
+        if (searchEngine == "opensearch" or searchEngine == "zilliz") and len(answer_docs_scores) > 0:
+            source["scoreAnswerDoc"] = round(float(answer_docs_scores[i]),3)
+        else:
+            source["scoreAnswerDoc"] = -1
+
+        source_list.append(source)
+    return source_list
