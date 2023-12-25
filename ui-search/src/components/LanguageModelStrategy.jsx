@@ -23,8 +23,8 @@ const SIZE = 'l';
 
 const TYPE = { sagemaker: 'sagemaker_endpoint', thirdParty: 'third_party_api' };
 const SAGEMAKER_MODEL_TYPE = [
-  { label: 'llama2', value: 'llama2' },
   { label: 'non-llama2', value: 'non_llama2' },
+  { label: 'llama2', value: 'llama2' },
 ];
 const THIRD_PARTY_API_MODEL_TYPES = [
   { label: 'Bedrock', value: 'bedrock' },
@@ -110,6 +110,17 @@ const LanguageModelStrategy = () => {
     resetTitanEmbedding,
   ] = useToggle(false);
 
+  const [isCheckedLlama2Switch, bindLlama2Switch, resetLlama2Switch] =
+    useToggle(false);
+
+  useEffect(() => {
+    if (isCheckedLlama2Switch) {
+      setSagemakerModelType('llama2');
+    } else {
+      setSagemakerModelType('non_llama2');
+    }
+  }, [isCheckedLlama2Switch]);
+
   const resetForm = useCallback(() => {
     resetStrategyName();
     resetTitanEmbedding();
@@ -117,6 +128,7 @@ const LanguageModelStrategy = () => {
     resetEmbeddingEndpoint();
     resetThirdPartyEmbeddingEmbeddingEndpoint();
     setThirdPartyModelType(THIRD_PARTY_API_MODEL_TYPES[0].value);
+    resetLlama2Switch();
     setSagemakerModelType(SAGEMAKER_MODEL_TYPE[0].value);
     resetThirdPartyApiUrl();
     resetThirdPartyApiKey();
@@ -191,7 +203,9 @@ const LanguageModelStrategy = () => {
                   cell: (item) =>
                     item.embeddingEndpoint ||
                     item.thirdPartyEmbeddingEndpoint ||
-                    'n/a',
+                    item.isCheckedTitanEmbedding
+                      ? 'Titan Embedding'
+                      : 'n/a',
                 },
                 {
                   id: 'apiUrl',
@@ -271,9 +285,9 @@ const LanguageModelStrategy = () => {
                           embeddingEndpoint,
                           modelType: sagemakerModelType,
                           recordId: `${sagemakerEndpoint}-${genRandomNum()}`,
+                          isCheckedTitanEmbedding,
                           // *** different items
                           sagemakerEndpoint,
-                          isCheckedTitanEmbedding,
                         };
                       } else {
                         // Third Party APIs
@@ -284,6 +298,7 @@ const LanguageModelStrategy = () => {
                           modelType: thirdPartyModelType,
                           modelName: thirdPartyModelName,
                           recordId: `${thirdPartyModelName}-${genRandomNum()}`,
+                          isCheckedTitanEmbedding,
                           // *** different items
                           apiUrl: thirdPartyApiUrl,
                           apiKey: thirdPartyApiKey,
@@ -339,7 +354,12 @@ const LanguageModelStrategy = () => {
 
               {type === TYPE.sagemaker ? (
                 <>
-                  <FormField label="Model Type">
+                  <FormField>
+                    <Toggle {...bindLlama2Switch}>
+                      LLama2 model deployed through Jumpstart
+                    </Toggle>
+                  </FormField>
+                  {/* <FormField label="Model Type">
                     <Tiles
                       columns={4}
                       onChange={({ detail }) =>
@@ -348,14 +368,7 @@ const LanguageModelStrategy = () => {
                       value={sagemakerModelType}
                       items={SAGEMAKER_MODEL_TYPE}
                     />
-                    {/* <Select
-                      selectedOption={{ value: sagemakerModelType }}
-                      onChange={({ detail }) =>
-                        setSagemakerModelType(detail.selectedOption.value)
-                      }
-                      options={SAGEMAKER_MODEL_TYPE}
-                    /> */}
-                  </FormField>
+                  </FormField> */}
                   <FormField label="SageMaker Endpoint">
                     <Input
                       {...bindSagemakerEndpoint}
@@ -387,13 +400,6 @@ const LanguageModelStrategy = () => {
                       value={thirdPartyModelType}
                       items={THIRD_PARTY_API_MODEL_TYPES}
                     />
-                    {/* <Select
-                      selectedOption={{ value: thirdPartyModelType }}
-                      onChange={({ detail }) =>
-                        setThirdPartyModelType(detail.selectedOption.value)
-                      }
-                      options={THIRD_PARTY_API_MODEL_TYPES}
-                    /> */}
                   </FormField>
                   <FormField label="Model Name" stretch>
                     <Tiles
@@ -404,20 +410,20 @@ const LanguageModelStrategy = () => {
                       value={thirdPartyModelName}
                       items={thirdPartyModelNameOpts}
                     />
-                    {/* <Select
-                      selectedOption={{ value: thirdPartyModelName }}
-                      onChange={({ detail }) =>
-                        setThirdPartyModelName(detail.selectedOption.value)
-                      }
-                      options={thirdPartyModelNameOpts}
-                    /> */}
                   </FormField>
-                  <FormField label="Embedding Endpoint">
-                    <Input
-                      {...bindThirdPartyEmbeddingEndpoint}
-                      placeholder="Please provide embedding endpoint"
-                    />
+                  <FormField>
+                    <Toggle {...bindIsCheckedTitanEmbedding}>
+                      Use Titan Embedding
+                    </Toggle>
                   </FormField>
+                  {isCheckedTitanEmbedding ? null : (
+                    <FormField label="Embedding Endpoint">
+                      <Input
+                        {...bindThirdPartyEmbeddingEndpoint}
+                        placeholder="Please provide embedding endpoint"
+                      />
+                    </FormField>
+                  )}
                   {thirdPartyModelType ===
                   'bedrock' ? null : thirdPartyModelType === 'bedrock_api' ? (
                     <>
