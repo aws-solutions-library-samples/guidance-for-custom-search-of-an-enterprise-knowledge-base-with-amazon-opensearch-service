@@ -131,7 +131,7 @@ def assemble_paragraph(texts,i,paragraph_include_sentence_num):
     paragraph = ",".join([t for t in texts[i: i + append_num]])
     return paragraph
 
-def insert_data(pre_title,sen_texts,phase_text,metadata,new_texts,new_metadatas,embedding_type: str='sagemaker'):
+def insert_data(pre_title,sen_texts,phase_text,metadata,new_texts,new_metadatas,embedding_type: str='sagemaker',text_max_length: int=350):
     if len(pre_title) > 0:
         new_texts.append(phase_text)
         metadata['sentence'] = truncate_text(pre_title,text_max_length) if embedding_type=='sagemaker' else pre_title
@@ -144,7 +144,7 @@ def insert_data(pre_title,sen_texts,phase_text,metadata,new_texts,new_metadatas,
     return new_texts,new_metadatas
 
 #定义CSV格式文件，在split_to_sentence_paragraph=Ture模式下的处理逻辑
-def csv_processor(texts,metadatas,language: str='chinese',qa_title_name: str='',sep_word_len: int=2000,embedding_type: str='sagemaker'):
+def csv_processor(texts,metadatas,language: str='chinese',qa_title_name: str='',sep_word_len: int=2000,embedding_type: str='sagemaker',text_max_length: int=350):
     new_texts = []
     new_metadatas = []
     sep = '。'
@@ -172,11 +172,11 @@ def csv_processor(texts,metadatas,language: str='chinese',qa_title_name: str='',
             for sen in sen_texts:
                 word_len += len(sen)
             if word_len > sep_word_len:
-                new_texts,new_metadatas = insert_data(pre_title,sen_texts,phase_text,pre_metadata,new_texts,new_metadatas,embedding_type)
+                new_texts,new_metadatas = insert_data(pre_title,sen_texts,phase_text,pre_metadata,new_texts,new_metadatas,embedding_type,text_max_length)
                 sen_texts = []
                 phase_text = ''
         else:
-            new_texts,new_metadatas = insert_data(pre_title,sen_texts,phase_text,pre_metadata,new_texts,new_metadatas,embedding_type)
+            new_texts,new_metadatas = insert_data(pre_title,sen_texts,phase_text,pre_metadata,new_texts,new_metadatas,embedding_type,text_max_length)
             phase_text = text
             pre_row = row
             pre_metadata = metadata
@@ -184,13 +184,13 @@ def csv_processor(texts,metadatas,language: str='chinese',qa_title_name: str='',
             sen_texts = []
             sen_texts.append(text)
     if(len(sen_texts)>0):
-        new_texts,new_metadatas = insert_data(pre_title,sen_texts,phase_text,pre_metadata,new_texts,new_metadatas,embedding_type)
+        new_texts,new_metadatas = insert_data(pre_title,sen_texts,phase_text,pre_metadata,new_texts,new_metadatas,embedding_type,text_max_length)
         
     return new_texts,new_metadatas
 
 
 #定义HTML文件的逻辑段落拆分方式，默认使用字体大小的信息进行拆分
-def html_file_processor(document,language,embedding_type):
+def html_file_processor(document,language,embedding_type,text_max_length: int=350):
     from bs4 import BeautifulSoup
     soup = BeautifulSoup(document.page_content,'html.parser')
     content = soup.find_all('div')
@@ -281,7 +281,7 @@ def html_file_processor(document,language,embedding_type):
                     if len(texts[i]) > 0:
                         html_texts.append(metadatas[i]['heading'].strip() + ':' + texts[i].replace('\n',' ').strip())
                         html_metadatas.append({'source':metadatas[i]['source'],'row':i})
-        new_texts,new_metadatas = csv_processor(html_texts,html_metadatas,language,embedding_type=embedding_type)        
+        new_texts,new_metadatas = csv_processor(html_texts,html_metadatas,language,embedding_type=embedding_type,text_max_length=text_max_length)        
         return new_texts,new_metadatas
     else:
         return html_texts,html_metadatas
@@ -393,7 +393,7 @@ class SmartSearchDataload:
                     if len(metadatas) > 0 and 'row' in metadatas[0].keys():
                         new_texts,new_metadatas = csv_processor(texts,metadatas,self.language,qa_title_name,sep_word_len,self.embedding_type)
                     elif len(texts) > 0 and texts[0].find('<html>') >=0:
-                        new_texts,new_metadatas = html_file_processor(docs[0],self.language,self.embedding_type)
+                        new_texts,new_metadatas = html_file_processor(docs[0],self.language,self.embedding_type,text_max_length)
                         print('new_texts:',new_texts)
                         print('new_metadatas:',new_metadatas)
                     else:
