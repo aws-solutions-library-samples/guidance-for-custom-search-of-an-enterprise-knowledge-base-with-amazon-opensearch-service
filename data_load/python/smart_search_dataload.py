@@ -391,7 +391,7 @@ class SmartSearchDataload:
                     new_texts = []
                     new_metadatas = []
                     if len(metadatas) > 0 and 'row' in metadatas[0].keys():
-                        new_texts,new_metadatas = csv_processor(texts,metadatas,self.language,qa_title_name,sep_word_len,self.embedding_type)
+                        new_texts,new_metadatas = csv_processor(texts,metadatas,self.language,qa_title_name,sep_word_len,self.embedding_type,text_max_length=text_max_length)
                     elif len(texts) > 0 and texts[0].find('<html>') >=0:
                         new_texts,new_metadatas = html_file_processor(docs[0],self.language,self.embedding_type,text_max_length)
                         print('new_texts:',new_texts)
