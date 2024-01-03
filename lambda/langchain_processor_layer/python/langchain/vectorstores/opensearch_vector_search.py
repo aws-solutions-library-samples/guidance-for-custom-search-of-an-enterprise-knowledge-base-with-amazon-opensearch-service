@@ -580,10 +580,7 @@ class OpenSearchVectorSearch(VectorStore):
                     if metadata_field == "*" or metadata_field not in hit["_source"]
                     else hit["_source"][metadata_field],
                 ),
-                hit["_score"],
-                hit["_source"]["sentence"][0] 
-                if isinstance(hit["_source"]["sentence"],list) 
-                else hit["_source"]["sentence"],
+                hit["_score"]
             )
             for hit in hits
         ]

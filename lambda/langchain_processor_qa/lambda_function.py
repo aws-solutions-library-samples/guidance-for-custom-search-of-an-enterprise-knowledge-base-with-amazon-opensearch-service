@@ -388,13 +388,11 @@ def lambda_handler(event, context):
                 if searchEngine == "opensearch":
                     source_docs = [doc[0] for doc in source_documents]
                     query_docs_scores = [doc[1] for doc in source_documents]
-                    sentences = [doc[2] for doc in source_documents]
                 elif searchEngine == "kendra":
                     source_docs = source_documents
                 elif searchEngine == "zilliz":
                     source_docs = [doc[0] for doc in source_documents]
                     query_docs_scores = [doc[1] for doc in source_documents]
-                    sentences = [doc[2] for doc in source_documents]
 
                 # cal query_answer_score
                 isCheckedScoreQA = False
@@ -446,8 +444,7 @@ def lambda_handler(event, context):
                         except KeyError:
                             print("KeyError,Source not found")
                             source["title"] = ''
-                        source["sentence"] = sentences[i] if searchEngine == "opensearch" or searchEngine == "zilliz" \
-                            else source_docs[i].page_content.replace("\n", "")
+                            
                         source["paragraph"] = source_docs[i].page_content.replace("\n", "")
                         source["sentence_id"] = i
                         if 'row' in source_docs[i].metadata.keys():
@@ -478,8 +475,7 @@ def lambda_handler(event, context):
                         except KeyError:
                             print("KeyError found")
                         source["paragraph"] = source_docs[i].page_content.replace("\n", "")
-                        source["sentence"] = sentences[i] if searchEngine == "opensearch" or searchEngine == "zilliz" \
-                            else source_docs[i].page_content.replace("\n", "")
+                        
                         if (searchEngine == "opensearch" or searchEngine == "zilliz") and len(query_docs_scores) > 0:
                             source["scoreQueryDoc"] = round(float(query_docs_scores[i]),3)
                         else:
