@@ -9,7 +9,8 @@ from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.prompts.prompt import PromptTemplate
 from langchain.embeddings import SagemakerEndpointEmbeddings
 from langchain.embeddings.sagemaker_endpoint import EmbeddingsContentHandler
-from langchain.vectorstores import OpenSearchVectorSearch
+# from langchain.vectorstores import OpenSearchVectorSearch
+from opensearch_vector_search import OpenSearchVectorSearch
 from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.text_splitter import CharacterTextSplitter
