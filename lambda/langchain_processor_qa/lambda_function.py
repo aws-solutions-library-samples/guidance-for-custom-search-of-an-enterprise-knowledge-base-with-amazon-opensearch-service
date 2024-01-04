@@ -137,6 +137,15 @@ def lambda_handler(event, context):
 
         if "sagemakerEndpoint" in evt_body.keys():
             sagemakerEndpoint = evt_body['sagemakerEndpoint']
+        
+        isCheckedTitanEmbedding = False
+        if "isCheckedTitanEmbedding" in evt_body.keys():
+            isCheckedTitanEmbedding = ast.literal_eval(str(evt_body['isCheckedTitanEmbedding']).title())
+        print('isCheckedTitanEmbedding:', isCheckedTitanEmbedding)
+        
+        if isCheckedTitanEmbedding:
+            embeddingEndpoint = "bedrock-titan-embed"
+        print('embeddingEndpoint:', embeddingEndpoint)
 
         modelType = 'normal'
         if "modelType" in evt_body.keys():
