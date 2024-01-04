@@ -394,8 +394,8 @@ class SmartSearchDataload:
                         new_texts,new_metadatas = csv_processor(texts,metadatas,self.language,qa_title_name,sep_word_len,self.embedding_type,text_max_length=text_max_length)
                     elif len(texts) > 0 and texts[0].find('<html>') >=0:
                         new_texts,new_metadatas = html_file_processor(docs[0],self.language,self.embedding_type,text_max_length)
-                        print('new_texts:',new_texts)
-                        print('new_metadatas:',new_metadatas)
+                        # print('new_texts:',new_texts)
+                        # print('new_metadatas:',new_metadatas)
                     else:
                         texts_length = len(texts)
                         for i in range(0, texts_length):
@@ -404,10 +404,10 @@ class SmartSearchDataload:
                             metadata = metadatas[i]
                             metadata['sentence'] = truncate_text(texts[i],text_max_length) if self.embedding_type=='sagemaker' else texts[i]
                             new_metadatas.append(metadata)
-                    ids = self.vector_store.add_texts_sentence_in_metadata(new_texts, new_metadatas, bulk_size=bulk_size, text_field=text_field,vector_field=vector_field)
+                    ids = self.vector_store.add_texts_sentence_in_metadata(new_texts, new_metadatas, bulk_size=bulk_size, text_field=text_field,vector_field=vector_field,embedding_type=self.embedding_type)
                 else:
                     new_texts = [truncate_text(text,text_max_length) for text in texts] if self.embedding_type=='sagemaker' else texts
-                    ids = self.vector_store.add_texts(texts, metadatas, bulk_size=bulk_size,text_field=text_field,vector_field=vector_field)
+                    ids = self.vector_store.add_texts(texts, metadatas, bulk_size=bulk_size,text_field=text_field,vector_field=vector_field,embedding_type=self.embedding_type)
                 return loaded_files
             else:
                 print("Vector library is not specified, please specify the vector database")

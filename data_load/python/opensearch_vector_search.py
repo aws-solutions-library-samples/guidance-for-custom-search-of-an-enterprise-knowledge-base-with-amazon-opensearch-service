@@ -462,7 +462,11 @@ class OpenSearchVectorSearch(VectorStore):
             text_field: Document field the text of the document is stored in. Defaults
             to "text".
         """
-        embeddings = self.embedding_function.embed_documents(list(texts))
+        embedding_type = kwargs.get("embedding_type", "sagemaker")
+        if embedding_type == 'bedrock':
+            embeddings = self.embedding_function.embed_documents(list(texts))
+        else:
+            embeddings = self.embedding_function.embed_documents(list(texts),chunk_size=10)
         return self.__add(
             texts,
             embeddings,
@@ -498,7 +502,11 @@ class OpenSearchVectorSearch(VectorStore):
             text_field: Document field the text of the document is stored in. Defaults
             to "text".
         """
-        embeddings = self.embedding_function.embed_documents(list([metadata["sentence"] for metadata in metadatas]),chunk_size=10)
+        embedding_type = kwargs.get("embedding_type", "sagemaker")
+        if embedding_type == 'bedrock':
+            embeddings = self.embedding_function.embed_documents(list([metadata["sentence"] for metadata in metadatas]))
+        else:
+            embeddings = self.embedding_function.embed_documents(list([metadata["sentence"] for metadata in metadatas]),chunk_size=10)
         return self.__add(
             texts,
             embeddings,
