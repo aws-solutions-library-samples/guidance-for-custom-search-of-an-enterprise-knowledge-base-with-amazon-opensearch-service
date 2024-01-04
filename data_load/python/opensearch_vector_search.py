@@ -498,7 +498,7 @@ class OpenSearchVectorSearch(VectorStore):
             text_field: Document field the text of the document is stored in. Defaults
             to "text".
         """
-        embeddings = self.embedding_function.embed_documents(list([metadata["sentence"] for metadata in metadatas]))
+        embeddings = self.embedding_function.embed_documents(list([metadata["sentence"] for metadata in metadatas]),chunk_size=10)
         return self.__add(
             texts,
             embeddings,
