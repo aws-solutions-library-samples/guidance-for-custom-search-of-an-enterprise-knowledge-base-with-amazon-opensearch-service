@@ -475,7 +475,8 @@ class OpenSearchVectorSearch(VectorStore):
             bulk_size=bulk_size,
             **kwargs,
         )
-
+    
+    
     def add_texts_sentence_in_metadata(
         self,
         texts: Iterable[str],
@@ -516,6 +517,7 @@ class OpenSearchVectorSearch(VectorStore):
             **kwargs,
         )        
    
+
     def add_embeddings(
         self,
         text_embeddings: Iterable[Tuple[str, List[float]]],

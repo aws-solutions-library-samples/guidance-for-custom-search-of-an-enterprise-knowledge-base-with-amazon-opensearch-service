@@ -97,8 +97,8 @@ def lambda_handler(event, context):
                          password,
                          host,
                          port,
-                         EMBEDDING_ENDPOINT_NAME,
                          region,
+                         EMBEDDING_ENDPOINT_NAME,
                          searchEngine,
                          zilliz_endpoint,
                          zilliz_token,
@@ -113,9 +113,42 @@ def lambda_handler(event, context):
                              Filename=local_file
                              )
             print("finish download file")
+            
+            
+            #目前主要在英语文档拆分时用到，拆分后文档的最大token数量
+            chunk_size = 1500
+            #目前主要在英语文档拆分时用到，拆分后相邻文档的头尾最大重合token数量
+            chunk_overlap = 10 
+            #目前主要在拆分csv文档时用到，一行的内容如果token数超过该参数，就会对一行内容进行拆分
+            sep_word_len = 2000  
+            #目前主要在拆分QA格式的csv文档时用到，如果指定了title_name，在拆分时会确保单独对title列的文本进行向量化，在split_to_sentence_paragraph=True时使用
+            qa_title_name = ''     
+            #文档是否拆分为sentence、paragraph的格式，使用sentence文本进行向量化，使用多条sentence组合为paragraph，给到大模型推理
+            split_to_sentence_paragraph = True    
+            #使用多少条sentence组装为paragraph
+            paragraph_include_sentence_num = 3  
+            #需要向量化文本的最大字数，使用SageMaker部署的向量模型时使用
+            text_max_length = 350   
+            #PDF格式的文件使用，设置为true时会先将PDF文件转换为HTML文件进行逻辑段落的拆分,在split_to_sentence_paragraph=True时使用
+            pdf_to_html = False  
+            #写入AOS的文本字段名称，langchain默认为text
+            text_field = 'paragraph' 
+            #写入AOS的向量字段名称，langchain默认为vector_field
+            vector_field = 'sentence_vector'
         
             now1 = datetime.now()#begin time
-            loaded_files = dataload.init_knowledge_vector(local_file,bulk_size)
+            loaded_files = dataload.init_knowledge_vector(local_file,
+                                                           chunk_size,
+                                                           chunk_overlap,
+                                                           sep_word_len,
+                                                           qa_title_name,
+                                                           split_to_sentence_paragraph,
+                                                           paragraph_include_sentence_num,
+                                                           text_max_length,
+                                                           pdf_to_html,
+                                                           text_field,
+                                                           vector_field
+                                                         )
             now2 = datetime.now()#endtime
             print("File import takes time:",now2-now1)
             print("Complete the import of the following documents:", str(loaded_files))
