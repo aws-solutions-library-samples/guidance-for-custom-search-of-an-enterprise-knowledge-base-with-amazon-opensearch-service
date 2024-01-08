@@ -89,7 +89,7 @@ const SessionInput = ({ data }) => {
             return;
           case 'streaming_end':
             // do this when streaming ends
-            onStreaming(data);
+            onStreaming(data, firstStream);
             setLoading(false);
             firstStream = true;
             resetQuery();
