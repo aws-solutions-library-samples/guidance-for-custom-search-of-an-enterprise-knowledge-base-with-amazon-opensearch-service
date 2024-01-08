@@ -618,7 +618,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                 )
               ) : null}
               {isKendra ? null : (
-                <FormField stretch label="Display Scores">
+                <FormField stretch label="Confidence Scores">
                   <SpaceBetween direction="horizontal" size="xxl">
                     <Checkbox {...bindScoreQA}>Query-Answer score</Checkbox>
                     <Checkbox {...bindScoreQD}>Query-Doc scores</Checkbox>
