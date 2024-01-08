@@ -200,12 +200,11 @@ const LanguageModelStrategy = () => {
                   id: 'embeddingEndpoint',
                   header: 'EmbeddingEndpoint',
                   width: 200,
-                  cell: (item) =>
-                    item.embeddingEndpoint ||
-                    item.thirdPartyEmbeddingEndpoint ||
-                    item.isCheckedTitanEmbedding
-                      ? 'Titan Embedding'
-                      : 'n/a',
+                  cell: (item) => {
+                    if (item.isCheckedTitanEmbedding)
+                      return 'Use Titan Embedding';
+                    return item.embeddingEndpoint || 'n/a';
+                  },
                 },
                 {
                   id: 'apiUrl',
