@@ -15,10 +15,44 @@ import {
   applyDensity,
   applyMode,
 } from '@cloudscape-design/global-styles';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import useLsAppConfigs, { INIT_APP_CONFIGS } from 'src/hooks/useLsAppConfigs';
 import useLsSessionList from 'src/hooks/useLsSessionList';
 import genDefaultSessions from 'src/utils/genDefaultSessions';
+
+function FormInputWithDebounceAndToast({
+  label,
+  description,
+  placeholder,
+  initValue,
+  handleChange,
+}) {
+  const [v, setV] = useState(initValue);
+
+  useEffect(() => {
+    let timer = null;
+    if (v !== initValue) {
+      timer = setTimeout(() => {
+        handleChange(v);
+        toast.success(`${label} updated`);
+      }, 500);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [v, initValue]);
+
+  return (
+    <FormField stretch label={label} description={description}>
+      <Input
+        value={v}
+        onChange={({ detail }) => setV(detail.value)}
+        placeholder={placeholder}
+      />
+    </FormField>
+  );
+}
 
 const AppConfigs = () => {
   const { setLsSessionList, lsAddSessionItem } = useLsSessionList();
@@ -33,73 +67,49 @@ const AppConfigs = () => {
           <Header variant="h2">Essential Variables</Header>
           <hr />
           <SpaceBetween size="l">
-            <FormField
-              stretch
+            <FormInputWithDebounceAndToast
               label="WebSocket URL"
               description="For basic chat bot functions"
-            >
-              <Input
-                placeholder="Please provide WSS URL (You can find this in your API Gateway console"
-                value={appConfigs.urlWss}
-                onChange={({ detail }) => {
-                  setAConfig('urlWss', detail.value);
-                }}
-              />
-            </FormField>
-            <FormField
-              stretch
+              placeholder="Please provide WSS URL (You can find this in your API Gateway console"
+              initValue={appConfigs.urlWss}
+              handleChange={(v) => setAConfig('urlWss', v)}
+            />
+
+            <FormInputWithDebounceAndToast
               label="API Gateway URL"
               description="For upload files functions"
-            >
-              <Input
-                placeholder="Please provide API Gateway URL (You can find this in your API Gateway console"
-                value={appConfigs.urlApiGateway}
-                onChange={({ detail }) => {
-                  setAConfig('urlApiGateway', detail.value);
-                }}
-              />
-            </FormField>
-            <FormField
-              stretch
+              placeholder="Please provide API Gateway URL (You can find this in your API Gateway console"
+              initValue={appConfigs.urlApiGateway}
+              handleChange={(v) => setAConfig('urlApiGateway', v)}
+            />
+
+            <FormInputWithDebounceAndToast
               label="S3 Bucket Name"
               description="Where files can be uploaded to"
-            >
-              <Input
-                placeholder="Please provide S3 bucket name"
-                value={appConfigs.s3FileUpload}
-                onChange={({ detail }) => {
-                  setAConfig('s3FileUpload', detail.value);
-                }}
-              />
-            </FormField>
-            <FormField
-              stretch
+              placeholder="Please provide S3 bucket name"
+              initValue={appConfigs.s3FileUpload}
+              handleChange={(v) => setAConfig('s3FileUpload', v)}
+            />
+
+            <FormInputWithDebounceAndToast
               label="Token for Content Check"
               description="Set to enable the ability to check content"
-            >
-              <Input
-                placeholder="Please provide access token if content check is required"
-                value={appConfigs.tokenContentCheck}
-                onChange={({ detail }) => {
-                  setAConfig('tokenContentCheck', detail.value);
-                }}
-              />
-            </FormField>
-            <FormField
-              stretch
+              placeholder="Please provide access token if content check is required"
+              initValue={appConfigs.tokenContentCheck}
+              handleChange={(v) => setAConfig('tokenContentCheck', v)}
+            />
+
+            <FormInputWithDebounceAndToast
               label="Response text when no doc is found"
               description="Please provide a sample text"
-            >
-              <Input
-                placeholder="Please provide a sample text"
-                value={appConfigs.responseIfNoDocsFound}
-                onChange={({ detail }) => {
-                  setAConfig('responseIfNoDocsFound', detail.value);
-                }}
-              />
-            </FormField>
+              placeholder="Please provide a sample text"
+              initValue={appConfigs.responseIfNoDocsFound}
+              handleChange={(v) => setAConfig('responseIfNoDocsFound', v)}
+            />
           </SpaceBetween>
+
           <div style={{ marginTop: '28px' }} />
+
           <Header variant="h2">Style Settings</Header>
           <hr />
           <SpaceBetween size="l">
