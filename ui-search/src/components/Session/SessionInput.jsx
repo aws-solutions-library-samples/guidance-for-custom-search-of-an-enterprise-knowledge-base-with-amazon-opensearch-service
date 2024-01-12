@@ -16,8 +16,8 @@ import AutoScrollToDiv from '../AutoScrollToDiv';
 import { StyledBoxVerticalCenter } from '../StyledComponents';
 import ChatIcon from './ChatIcon';
 
-const GENERAL_WSS_ERROR_MSG = 'Error on receiving message from Websocket';
-let firstStream = true;
+const GENERAL_WSS_ERROR_MSG = 'Error on receiving Websocket data';
+let flagFirstStream = true;
 
 const SessionInput = ({ data }) => {
   const [query, bindQuery, resetQuery] = useInput();
@@ -84,14 +84,14 @@ const SessionInput = ({ data }) => {
         switch (data.message) {
           case 'streaming':
             // do this when streaming text/answer
-            onStreaming(data, firstStream);
-            firstStream = false;
+            onStreaming(data, flagFirstStream);
+            flagFirstStream = false;
             return;
           case 'streaming_end':
             // do this when streaming ends
-            onStreaming(data, firstStream);
+            onStreaming(data, flagFirstStream);
             setLoading(false);
-            firstStream = true;
+            flagFirstStream = true;
             resetQuery();
             return;
           case 'success':
@@ -99,7 +99,13 @@ const SessionInput = ({ data }) => {
             return;
           case 'error':
             // do something when errors occur
-            toast.error(data.errorMessage || GENERAL_WSS_ERROR_MSG);
+            toast.error(
+              data.errorMessage || data.text || GENERAL_WSS_ERROR_MSG
+            );
+            lsAddContentToSessionItem(sessionId, lsSessionList, {
+              type: 'robot',
+              content: data,
+            });
             setLoading(false);
             return;
           case 'others':
@@ -109,9 +115,12 @@ const SessionInput = ({ data }) => {
           default:
             // same as 'success' with warning toast
             onSuccess(data);
-            toast('WARNING: WSS message is not following the standard', {
-              icon: '⚠️',
-            });
+            toast(
+              'WARNING: WSS data message is not following the api contract',
+              {
+                icon: '⚠️',
+              }
+            );
             return;
         }
       } catch (error) {
@@ -125,12 +134,12 @@ const SessionInput = ({ data }) => {
         setLoading(false);
         resetQuery();
       }
-      function onStreaming(data, firstStream) {
+      function onStreaming(data, flagFirstStream) {
         lsUpdateContentOfLastConvoInOneSessionItem(
           sessionId,
           lsSessionList,
           data,
-          firstStream
+          flagFirstStream
         );
       }
     },
