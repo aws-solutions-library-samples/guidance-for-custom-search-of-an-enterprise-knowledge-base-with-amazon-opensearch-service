@@ -22,7 +22,7 @@ let flagFirstStream = true;
 const SessionInput = ({ data }) => {
   const [query, bindQuery, resetQuery] = useInput();
   const [loading, setLoading] = useState(false);
-  const [percentage, setPercentage] = useState(0);
+  // const [percentage, setPercentage] = useState(0);
   const { sessionId } = useParams();
 
   // NOTE: to automatically scroll down to the user input
@@ -33,23 +33,23 @@ const SessionInput = ({ data }) => {
   }, [data, resetQuery]);
 
   // NOTE: fake loading mechanism after user send query
-  useEffect(() => {
-    let interval;
-    if (loading) {
-      interval = setInterval(() => {
-        setPercentage((prev) => {
-          if (prev > 98) {
-            clearInterval(interval);
-            return prev;
-          }
-          return prev + 1;
-        });
-      }, 150);
-    } else {
-      setPercentage(0);
-    }
-    return () => clearInterval(interval);
-  }, [loading]);
+  // useEffect(() => {
+  //   let interval;
+  //   if (loading) {
+  //     interval = setInterval(() => {
+  //       setPercentage((prev) => {
+  //         if (prev > 98) {
+  //           clearInterval(interval);
+  //           return prev;
+  //         }
+  //         return prev + 1;
+  //       });
+  //     }, 150);
+  //   } else {
+  //     setPercentage(0);
+  //   }
+  //   return () => clearInterval(interval);
+  // }, [loading]);
 
   const { urlWss } = useLsAppConfigs();
   const socket = useRef(null);
@@ -230,25 +230,27 @@ const SessionInput = ({ data }) => {
       >
         <ChatIcon />
         <StyledBoxVerticalCenter>
-          {loading ? (
-            <ProgressBar
-              variant="key-value"
-              // label="Status"
-              value={percentage}
-              // description="Searching"
-            />
-          ) : (
-            <Input
-              disabled={!isConnected}
-              autoFocus
-              {...bindQuery}
-              // onKeyUp={(e) =>
-              //   e.detail.key === 'Enter' ? handleOnEnterSearch() : null
-              // }
-              data-corner-style="rounded"
-              placeholder="Search Input"
-            />
-          )}
+          {/* <ProgressBar
+            variant="key-value"
+            // label="Status"
+            value={percentage}
+            // description="Searching"
+          /> */}
+
+          {/* <div>
+            <span>Searching for answer...</span>
+          </div> */}
+
+          <Input
+            disabled={!isConnected || loading}
+            autoFocus
+            {...bindQuery}
+            // onKeyUp={(e) =>
+            //   e.detail.key === 'Enter' ? handleOnEnterSearch() : null
+            // }
+            data-corner-style="rounded"
+            placeholder="Search Input"
+          />
         </StyledBoxVerticalCenter>
         <StyledBoxVerticalCenter>
           <Button
@@ -257,14 +259,16 @@ const SessionInput = ({ data }) => {
             loading={loading}
             onClick={handleOnEnterSearch}
           >
-            Search
+            {loading ? 'Searching' : 'Search'}
           </Button>
         </StyledBoxVerticalCenter>
-        <StyledBoxVerticalCenter>
-          <StatusIndicator type={isConnected ? 'success' : 'stopped'}>
-            WSS
-          </StatusIndicator>
-        </StyledBoxVerticalCenter>
+        {loading ? null : (
+          <StyledBoxVerticalCenter>
+            <StatusIndicator type={isConnected ? 'success' : 'stopped'}>
+              WSS
+            </StatusIndicator>
+          </StyledBoxVerticalCenter>
+        )}
       </Grid>
     </Container>
   );
