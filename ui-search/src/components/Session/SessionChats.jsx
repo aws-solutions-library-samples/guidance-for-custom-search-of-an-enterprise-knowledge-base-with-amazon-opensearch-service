@@ -13,7 +13,7 @@ const SessionChats = ({ conversations }) => {
     <Container>
       <SpaceBetween size="l">
         {conversations.length === 0 ? (
-          <ConverstationPlaceholder />
+          <ConversationPlaceholder />
         ) : (
           conversations.map(({ type, content }, i) =>
             type === 'customer' ? (
@@ -38,6 +38,6 @@ const SessionChats = ({ conversations }) => {
 
 export default SessionChats;
 
-function ConverstationPlaceholder() {
+function ConversationPlaceholder() {
   return <Box></Box>;
 }
