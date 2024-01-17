@@ -301,7 +301,6 @@ class BaseConversationalRetrievalChain(Chain):
                 if len(docs) > 0 and isinstance (docs[0],tuple):
                     ori_only_docs = [doc[0] for doc in docs]
                     scores = [doc[1] for doc in docs]
-                    sentences = [doc[2] for doc in docs]
                     new_docs_with_scores = []
                     page_contents = []
                     for i in range(len(ori_only_docs)):
@@ -314,10 +313,10 @@ class BaseConversationalRetrievalChain(Chain):
                                     break
                             if not find_flag:
                                 page_contents.append(page_content)
-                                new_docs_with_scores.append((ori_only_docs[i],scores[i],sentences[i]))
+                                new_docs_with_scores.append((ori_only_docs[i],scores[i]))
                         else:
                             page_contents.append(page_content)
-                            new_docs_with_scores.append((ori_only_docs[i],scores[i],sentences[i]))
+                            new_docs_with_scores.append((ori_only_docs[i],scores[i]))
                     deduplication_docs = [doc[0] for doc in new_docs_with_scores]
                     docs = new_docs_with_scores
                     # print('deduplication docs:',docs)
