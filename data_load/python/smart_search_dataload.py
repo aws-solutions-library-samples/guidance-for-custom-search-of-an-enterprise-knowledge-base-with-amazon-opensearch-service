@@ -134,13 +134,16 @@ def assemble_paragraph(texts,i,paragraph_include_sentence_num):
 def insert_data(pre_title,sen_texts,phase_text,metadata,new_texts,new_metadatas,embedding_type: str='sagemaker',text_max_length: int=350):
     if len(pre_title) > 0:
         new_texts.append(phase_text)
-        metadata['sentence'] = truncate_text(pre_title,text_max_length) if embedding_type=='sagemaker' else pre_title
-        new_metadatas.append(metadata)
+        new_metadata = metadata.copy()
+        new_metadata['sentence'] = truncate_text(pre_title,text_max_length) if embedding_type=='sagemaker' else pre_title
+        new_metadatas.append(new_metadata)
     for sen_text in sen_texts:
-        if len(sen_text.strip()) > 0:
+        new_metadata = metadata.copy()
+        sen_text = sen_text.strip()
+        if len(sen_text) > 0:
             new_texts.append(phase_text)
-            metadata['sentence'] = truncate_text(sen_text,text_max_length) if embedding_type=='sagemaker' else sen_text
-            new_metadatas.append(metadata)
+            new_metadata['sentence'] = truncate_text(sen_text,text_max_length) if embedding_type=='sagemaker' else sen_text
+            new_metadatas.append(new_metadata)
     return new_texts,new_metadatas
 
 #定义CSV格式文件，在split_to_sentence_paragraph=Ture模式下的处理逻辑
@@ -159,7 +162,7 @@ def csv_processor(texts,metadatas,language: str='chinese',qa_title_name: str='',
         text = texts[i]
         metadata = dict(metadatas[i])
         row = int(metadata['row'])
-        title= qa_title_name if text.find(qa_title_name) >= 0 else ''
+        title= text.split(':')[1] if text.find(qa_title_name) >= 0 else ''
 
         if i == 0:
             pre_metadata = metadata
@@ -386,6 +389,12 @@ class SmartSearchDataload:
             if self.vector_store is not None:
                 texts = [d.page_content for d in docs]
                 metadatas = [d.metadata for d in docs]
+                
+                filter_texts = []
+                for text in texts:
+                    text = text.replace('\ufeff','').strip().replace('\n','。')
+                    filter_texts.append(text)
+                texts = filter_texts
 
                 if split_to_sentence_paragraph:
                     new_texts = []
