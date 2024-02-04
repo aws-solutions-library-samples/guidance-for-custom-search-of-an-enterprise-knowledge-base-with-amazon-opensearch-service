@@ -614,18 +614,22 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                         />
                       </FormField>
                     </ColumnLayout>
+                    {isKendra ? null : (
+                      <FormField stretch label="Calculate Confidence Scores">
+                        <SpaceBetween direction="horizontal" size="xxl">
+                          <Checkbox {...bindScoreQA}>
+                            Query-Answer score
+                          </Checkbox>
+                          <Checkbox {...bindScoreQD}>Query-Doc scores</Checkbox>
+                          <Checkbox {...bindScoreAD}>
+                            Answer-Doc scores
+                          </Checkbox>
+                        </SpaceBetween>
+                      </FormField>
+                    )}
                   </SpaceBetween>
                 )
               ) : null}
-              {isKendra ? null : (
-                <FormField stretch label="Confidence Scores">
-                  <SpaceBetween direction="horizontal" size="xxl">
-                    <Checkbox {...bindScoreQA}>Query-Answer score</Checkbox>
-                    <Checkbox {...bindScoreQD}>Query-Doc scores</Checkbox>
-                    <Checkbox {...bindScoreAD}>Answer-Doc scores</Checkbox>
-                  </SpaceBetween>
-                </FormField>
-              )}
 
               <Divider />
 
