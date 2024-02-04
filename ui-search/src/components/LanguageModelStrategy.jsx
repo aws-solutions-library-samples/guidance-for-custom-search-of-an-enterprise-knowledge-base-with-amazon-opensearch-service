@@ -10,6 +10,7 @@ import {
   SpaceBetween,
   Table,
   Tiles,
+  Grid,
   Toggle,
 } from '@cloudscape-design/components';
 import { useCallback, useEffect, useState } from 'react';
@@ -61,6 +62,11 @@ const LanguageModelStrategy = () => {
   const [type, setType] = useState(TYPE.sagemaker);
   const [sagemakerEndpoint, bindSagemakerEndpoint, resetSagemakerEndpoint] =
     useInput('');
+  const [
+    isSagemakerStreaming,
+    bindIsSagemakerStreaming,
+    resetIsSagemakerStreaming,
+  ] = useToggle(false);
   const [embeddingEndpoint, bindEmbeddingEndpoint, resetEmbeddingEndpoint] =
     useInput('');
   const [
@@ -125,6 +131,7 @@ const LanguageModelStrategy = () => {
     resetStrategyName();
     resetTitanEmbedding();
     resetSagemakerEndpoint();
+    resetIsSagemakerStreaming();
     resetEmbeddingEndpoint();
     resetThirdPartyEmbeddingEmbeddingEndpoint();
     setThirdPartyModelType(THIRD_PARTY_API_MODEL_TYPES[0].value);
@@ -287,6 +294,7 @@ const LanguageModelStrategy = () => {
                           isCheckedTitanEmbedding,
                           // *** different items
                           sagemakerEndpoint,
+                          isSagemakerStreaming,
                         };
                       } else {
                         // Third Party APIs
@@ -368,12 +376,17 @@ const LanguageModelStrategy = () => {
                       items={SAGEMAKER_MODEL_TYPE}
                     />
                   </FormField> */}
-                  <FormField label="SageMaker Endpoint">
-                    <Input
-                      {...bindSagemakerEndpoint}
-                      placeholder="Please provide SageMaker Endpoint"
-                    />
-                  </FormField>
+                  <Grid gridDefinition={[{ colspan: 8 }, { colspan: 4 }]}>
+                    <FormField stretch label="SageMaker Endpoint">
+                      <Input
+                        {...bindSagemakerEndpoint}
+                        placeholder="Please provide SageMaker Endpoint"
+                      />
+                    </FormField>
+                    <FormField label="Switch for Streaming">
+                      <Toggle {...bindIsSagemakerStreaming}>Streaming</Toggle>
+                    </FormField>
+                  </Grid>
                   <FormField>
                     <Toggle {...bindIsCheckedTitanEmbedding}>
                       Use Titan Embedding
