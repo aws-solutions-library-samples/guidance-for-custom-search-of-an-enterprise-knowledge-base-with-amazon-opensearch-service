@@ -1,9 +1,7 @@
 import {
   Button,
   Container,
-  Grid,
   Input,
-  ProgressBar,
   StatusIndicator,
 } from '@cloudscape-design/components';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -13,17 +11,18 @@ import useInput from 'src/hooks/useInput';
 import useLsAppConfigs from 'src/hooks/useLsAppConfigs';
 import useLsSessionList from 'src/hooks/useLsSessionList';
 import AutoScrollToDiv from '../AutoScrollToDiv';
-import { StyledBoxVerticalCenter } from '../StyledComponents';
 import ChatIcon from './ChatIcon';
 
 const GENERAL_WSS_ERROR_MSG = 'Error on receiving Websocket data';
 let flagFirstStream = true;
+let answerTimer = 0;
 
 const SessionInput = ({ data }) => {
   const [query, bindQuery, resetQuery] = useInput();
   const [loading, setLoading] = useState(false);
   // const [percentage, setPercentage] = useState(0);
   const { sessionId } = useParams();
+  const [secondsTaken, setSecondsTaken] = useState(0);
 
   // NOTE: to automatically scroll down to the user input
   useEffect(() => {
@@ -31,25 +30,6 @@ const SessionInput = ({ data }) => {
       resetQuery();
     };
   }, [data, resetQuery]);
-
-  // NOTE: fake loading mechanism after user send query
-  // useEffect(() => {
-  //   let interval;
-  //   if (loading) {
-  //     interval = setInterval(() => {
-  //       setPercentage((prev) => {
-  //         if (prev > 98) {
-  //           clearInterval(interval);
-  //           return prev;
-  //         }
-  //         return prev + 1;
-  //       });
-  //     }, 150);
-  //   } else {
-  //     setPercentage(0);
-  //   }
-  //   return () => clearInterval(interval);
-  // }, [loading]);
 
   const { urlWss } = useLsAppConfigs();
   const socket = useRef(null);
@@ -89,7 +69,10 @@ const SessionInput = ({ data }) => {
             return;
           case 'streaming_end':
             // do this when streaming ends
-            onStreaming(data, flagFirstStream);
+            onStreaming(
+              { ...data, answerTook: Date.now() - answerTimer },
+              flagFirstStream
+            );
             setLoading(false);
             flagFirstStream = true;
             resetQuery();
@@ -104,7 +87,7 @@ const SessionInput = ({ data }) => {
             );
             lsAddContentToSessionItem(sessionId, lsSessionList, {
               type: 'robot',
-              content: data,
+              content: { ...data, answerTook: Date.now() - answerTimer },
             });
             setLoading(false);
             return;
@@ -213,34 +196,31 @@ const SessionInput = ({ data }) => {
       return toast('Please enter a query to search', { icon: '⚠️' });
     }
     // console.log({ query });
+    answerTimer = Date.now();
     setLoading(true);
     socketSendSearch();
   }, [query, socketSendSearch]);
 
+  useEffect(() => {
+    if (loading) {
+      const interval = setInterval(
+        () => setSecondsTaken((prev) => prev + 10),
+        10
+      );
+      return () => clearInterval(interval);
+    }
+    setSecondsTaken(0);
+    return () => {};
+  }, [loading]);
+
   return (
     <Container>
       <AutoScrollToDiv data={data} />
-      <Grid
-        gridDefinition={[
-          { colspan: 0.5 },
-          { colspan: 9 },
-          { colspan: 1.5 },
-          { colspan: 1 },
-        ]}
-      >
-        <ChatIcon />
-        <StyledBoxVerticalCenter>
-          {/* <ProgressBar
-            variant="key-value"
-            // label="Status"
-            value={percentage}
-            // description="Searching"
-          /> */}
-
-          {/* <div>
-            <span>Searching for answer...</span>
-          </div> */}
-
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div>
+          <ChatIcon />
+        </div>
+        <div style={{ flex: 1 }}>
           <Input
             disabled={!isConnected || loading}
             autoFocus
@@ -251,8 +231,8 @@ const SessionInput = ({ data }) => {
             data-corner-style="rounded"
             placeholder="Search Input"
           />
-        </StyledBoxVerticalCenter>
-        <StyledBoxVerticalCenter>
+        </div>
+        <div>
           <Button
             variant="primary"
             disabled={!isConnected}
@@ -261,54 +241,19 @@ const SessionInput = ({ data }) => {
           >
             {loading ? 'Searching' : 'Search'}
           </Button>
-        </StyledBoxVerticalCenter>
-        {loading ? null : (
-          <StyledBoxVerticalCenter>
+        </div>
+        {loading ? (
+          <div style={{ minWidth: '50px' }}>{secondsTaken / 1000} s</div>
+        ) : (
+          <div>
             <StatusIndicator type={isConnected ? 'success' : 'stopped'}>
               WSS
             </StatusIndicator>
-          </StyledBoxVerticalCenter>
+          </div>
         )}
-      </Grid>
+      </div>
     </Container>
   );
 };
 
 export default SessionInput;
-
-const content = {
-  text: 'Testing Adding an ai response. Exercitation nulla tempor velit exercitation dolore ea in exercitation. Labore eu labore nisi nisi ipsum consequat ad. Incididunt qui ex dolor reprehenderit velit eiusmod ullamco et.',
-  timestamp: '1793884718573',
-  scoreQueryAnswer: 0.902,
-  contentCheckLabel: 'terror',
-  contentCheckSuggestion: 'block',
-  sourceData: [
-    {
-      id: 'abc',
-      title:
-        'Exercitation voluptate enim officia proident elit et laborum quis.',
-      scoreQueryDoc: 0.402,
-      scoreAnswerDoc: 0.302,
-      titleLink: 'http://#',
-      paragraph:
-        'Deserunt fugiat proident officia ut non reprehenderit velit veniam laborum. Ad sit laboris pariatur nulla tempor Lorem adipisicing. Cupidatat non cupidatat ex ullamco aute. Et culpa anim id deserunt',
-    },
-    {
-      id: 'abcd',
-      title: 'Exercitation qui ipsum laborum amet sunt magna laborum aliquip.',
-      scoreQueryDoc: 0.402,
-      scoreAnswerDoc: 0.302,
-      paragraph:
-        'Deserunt fugiat proident officia ut non reprehenderit velit veniam laborum. Ad sit laboris pariatur nulla tempor Lorem adipisicing. Cupidatat non cupidatat ex ullamco aute. Et culpa anim id deserunt',
-    },
-    {
-      id: 'abcde',
-      title:
-        'Ut cupidatat laborum adipisicing ad irure ut deserunt elit veniam id Lorem.',
-      scoreQueryDoc: 0.402,
-      scoreAnswerDoc: 0.302,
-      paragraph:
-        'Deserunt fugiat proident officia ut non reprehenderit velit veniam laborum. Ad sit laboris pariatur nulla tempor Lorem adipisicing. Cupidatat non cupidatat ex ullamco aute. Et culpa anim id deserunt',
-    },
-  ],
-};
