@@ -290,7 +290,7 @@ const LanguageModelStrategy = () => {
                           recordId: `${sagemakerEndpoint}-${genRandomNum()}`,
                           // *** different items
                           sagemakerEndpoint,
-                          isSagemakerStreaming,
+                          streaming: isSagemakerStreaming,
                         };
                       } else {
                         // Third Party APIs
