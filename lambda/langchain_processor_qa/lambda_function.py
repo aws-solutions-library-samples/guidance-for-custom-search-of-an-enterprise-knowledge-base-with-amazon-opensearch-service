@@ -407,7 +407,23 @@ def lambda_handler(event, context):
                                                                              )
                     _moderation_suggestion = "NOT APPLICABLE"
                     _moderation_reason = "NOT APPLICABLE"
-
+                elif modelType == 'ecs':
+                    result = search_qa.get_answer_from_conversational_ecs(query,
+                                                                      sessionId,
+                                                                      table_name,
+                                                                      prompt_template=prompt_template,
+                                                                      condense_question_prompt=condense_question_prompt,
+                                                                      search_method=searchMethod,
+                                                                      top_k=topK,
+                                                                      txt_docs_num=txtDocsNum,
+                                                                      response_if_no_docs_found=responseIfNoDocsFound,
+                                                                      vec_docs_score_thresholds=vecDocsScoreThresholds,
+                                                                      txt_docs_score_thresholds=txtDocsScoreThresholds,
+                                                                      contextRounds=contextRounds,
+                                                                      text_field=textField,
+                                                                      vector_field=vectorField,
+                                                                      )
+                    
                 else:
                     result = search_qa.get_answer_from_conversational(query,
                                                                       sessionId,

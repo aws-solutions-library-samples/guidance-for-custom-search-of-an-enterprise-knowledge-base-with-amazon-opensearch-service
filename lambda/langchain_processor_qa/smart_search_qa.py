@@ -14,6 +14,12 @@ import numpy as np
 from model import *
 from session import *
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain.llms import OpenAI
+from langchain.embeddings import LocalAIEmbeddings
+
+os.environ["OPENAI_API_BASE"] = "http://llm-606881459.us-west-2.elb.amazonaws.com/v1"
+os.environ["OPENAI_API_KEY"] = "xxx"
+os.environ["embedding_name"] = "m3e-base"
 
 
 class SmartSearchQA:
@@ -100,6 +106,12 @@ class SmartSearchQA:
                     "api_key":api_key,
                 }
                 self.llm.model_kwargs = parameters
+        elif model_type=='ecs': #####################
+            print('to_openai')
+            self.llm = OpenAI(streaming=True, callbacks=[callbackHandler], temperature=0)
+            self.condense_question_llm=OpenAI(temperature=0)
+            self.embedding_type = 'ecs'
+
         else:
             if streaming:
                 self.llm = init_model_withstreaming(llm_endpoint_name,region,temperature=temperature,callbackHandler=callbackHandler)
@@ -113,6 +125,8 @@ class SmartSearchQA:
                 self.embeddings = init_embeddings(embedding_endpoint_name, region, self.language)
             elif self.embedding_type == 'bedrock':
                 self.embeddings = init_embeddings_bedrock()
+            elif self.embedding_type == 'ecs': ###############
+                self.embeddings = LocalAIEmbeddings(model = os.environ["embedding_name"])
 
         #init vector store
         if self.search_engine == "opensearch":
@@ -397,7 +411,78 @@ class SmartSearchQA:
         
         response = {'answer':answer,'source_documents':docs_with_scores}
         return response
+    
+    def get_answer_from_conversational_ecs(self,query,
+                                        session_id: str='',
+                                        table_name: str='',
+                                        language: str='chinese',
+                                        prompt_template: str = "请根据{context}，回答{question}",
+                                        condense_question_prompt: str="",
+                                        top_k: int = 3,
+                                        chain_type: str="stuff",
+                                        search_method: str="vector",
+                                        txt_docs_num: int=0,
+                                        response_if_no_docs_found: str="",
+                                        vec_docs_score_thresholds: float =0,
+                                        txt_docs_score_thresholds: float =0,
+                                        contextRounds: int = 3,
+                                        text_field: str="text",
+                                        vector_field: str="vector_field",
+                                        ):
+        
+        print('debug, now is get_answer_from_conversational_ecs')
+        prompt = PromptTemplate(template=prompt_template,
+                                input_variables=["context", "question"])
+        combine_docs_chain_kwargs={"prompt":prompt}
+        print('debug',combine_docs_chain_kwargs)
+        history = []
+        session_info = ""
+        if len(session_id) > 0 and len(table_name) > 0 and contextRounds > 0:
+            session_info = get_session_info(table_name,session_id)
+            if len(session_info) > 0:
+                session_info = session_info[-contextRounds:]
+                for item in session_info:
+                    print("session info:",item[0]," ; ",item[1]," ; ",item[2])
+                    if item[2] == "qa":
+                        history.append((item[0],item[1]))
+        
+        print('history:',history)
+        retriever = self.get_retriever(top_k,search_method,txt_docs_num,vec_docs_score_thresholds,txt_docs_score_thresholds,text_field,vector_field)
+        
+        ConversationalRetrievalChain._call = new_conversational_call
+        
+        chain = ConversationalRetrievalChain.from_llm(
+                    llm = self.llm,
+                    condense_question_llm=self.condense_question_llm or self.llm,
+                    chain_type=chain_type,
+                    retriever=retriever,
+                    condense_question_prompt = condense_question_prompt,
+                    combine_docs_chain_kwargs = combine_docs_chain_kwargs,
+                    return_source_documents = True,
+                    return_generated_question = True,
+                    response_if_no_docs_found = response_if_no_docs_found
+                )
+        
+#         result = chain({"question": query, "chat_history": history})
+        result = chain({
+            "question": query, 
+            "chat_history": history
+        })
 
+        
+        answer=result['answer']
+        
+        # answer=answer.split('\n\nhuman')[0].split('\n\n用户')[0].split('\n\nquestion')[0].split('\n\n\ufeffquestion')[0].split('\n\nQuestion')[0].strip()
+        
+        # if language == "english":
+        #     answer = answer.split('Answer:')[-1]
+
+        if len(session_id) > 0:
+            new_query=result['generated_question']
+            update_session_info(table_name, session_id, new_query, answer, "qa")
+        
+        return result
+    
     def get_answer_from_chat_llama2(self,query,
                                     prompt_template: str = "",
                                     table_name: str='',
