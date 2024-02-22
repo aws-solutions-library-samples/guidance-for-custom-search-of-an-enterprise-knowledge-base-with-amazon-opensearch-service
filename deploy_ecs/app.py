@@ -41,7 +41,6 @@ efs_file_system = efs.FileSystem(
             throughput_mode=efs.ThroughputMode.BURSTING
         )
 
-user_data = ec2.UserData.for_linux()
 commands = '''
 sudo su
 yum -q update -y
@@ -60,11 +59,12 @@ unzip awscliv2.zip
 
 echo 'alias aws2=/usr/local/bin/aws' >> .bash_profile
 
-user data is NOT working, need manual sync from S3 to EFS, be FAST before stack fails!
 '''
+user_data = ec2.UserData.for_linux()
+user_data.add_commands(commands)
 
 ec2_role = iam.Role(stack, "llmRole", assumed_by=iam.ServicePrincipal("ec2.amazonaws.com"))
-ec2_role.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'))
+ec2_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name('AmazonS3FullAccess'))
 launch_template = ec2.LaunchTemplate(
             stack,
             "LaunchTemplate",
@@ -104,6 +104,7 @@ task_role = iam.Role(
 task_managed_policy_names = ["AmazonEC2ContainerRegistryFullAccess", 
                         "AmazonECS_FullAccess",
                         "CloudWatchLogsFullAccess",
+                        "AmazonS3FullAccess"
                         ]
 for policy in task_managed_policy_names:
     task_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name(policy))
@@ -117,6 +118,7 @@ execution_role = iam.Role(
 execution_managed_policy_names = ["AmazonEC2ContainerRegistryFullAccess", 
                         "AmazonECS_FullAccess",
                         "CloudWatchLogsFullAccess",
+                        "AmazonS3FullAccess"
                         ]
 
 for policy in execution_managed_policy_names:
@@ -155,7 +157,16 @@ container = task_definition.add_container(
                 'PORT': '8000',
                 'LOAD_IN_8BIT': 'true',
             },
+
+    health_check=ecs.HealthCheck(
+        command=["CMD-SHELL", "true"],
+        interval=Duration.minutes(3),
+        retries=5,
+        start_period=Duration.minutes(5),
+        timeout=Duration.seconds(10)),
+
     gpu_count=1, 
+
     logging=ecs.AwsLogDriver(
                 stream_prefix="llmapi", 
             ),
