@@ -17,7 +17,7 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.llms import OpenAI
 from langchain.embeddings import LocalAIEmbeddings
 
-os.environ["OPENAI_API_BASE"] = "http://llm-606881459.us-west-2.elb.amazonaws.com/v1"
+os.environ["OPENAI_API_BASE"] = "http://xxx.us-east-2.elb.amazonaws.com/v1"
 os.environ["OPENAI_API_KEY"] = "xxx"
 os.environ["embedding_name"] = "m3e-base"
 
@@ -147,7 +147,7 @@ class SmartSearchQA:
                                                          zilliz_token)
     def get_qa_relation_score(self,query,answer):
         
-        if self.embedding_type == 'bedrock':
+        if self.embedding_type == 'bedrock' or self.embedding_type == 'ecs':
             query_answer_emb = np.array(self.embeddings.embed_documents([query,answer]))
         else:
             query_answer_emb = np.array(self.embeddings._embedding_func([query,answer]))

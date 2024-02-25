@@ -1,0 +1,42 @@
+PORT=8000
+
+#baichuan
+MODEL_NAME=baichuan2-13b-chat
+MODEL_PATH=baichuan-inc/Baichuan2-13B-Chat
+DEVICE_MAP=auto
+LOAD_IN_8BIT=true
+
+# qwen
+# MODEL_NAME=qwen
+# MODEL_PATH=efs/checkpoints/Qwen-7B-Chat
+# DEVICE_MAP=
+# LOAD_IN_8BIT=false
+
+# code-llama
+# MODEL_NAME=code-llama
+# MODEL_PATH=codellama/CodeLlama-7b-Instruct-hf
+# DEVICE_MAP=
+# LOAD_IN_8BIT=false
+
+EMBEDDING_NAME=efs/checkpoints/m3e-base
+ADAPTER_MODEL_PATH=
+QUANTIZE=16
+CONTEXT_LEN=
+USING_PTUNING_V2=false
+STREAM_INTERVERL=2
+PROMPT_NAME=
+
+# device related
+DEVICE=cuda
+GPUS=
+NUM_GPUs=1
+DTYPE=half
+
+# patch related
+PATCH_TYPE=
+
+# api related
+API_PREFIX=/v1
+
+USE_STREAMER_V2=false
+ENGINE=default
