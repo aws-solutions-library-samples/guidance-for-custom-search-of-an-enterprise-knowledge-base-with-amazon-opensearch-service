@@ -19,8 +19,8 @@ import subprocess
 
 import numpy as np
 from numpy import (
-    array, arange, empty, zeros, int32, int64, uint16, complex_, float64, rec,
-    copy, ones_like, where, alltrue, linspace,
+    array, arange, empty, zeros, int32, int64, uint16, cdouble, float64, rec,
+    copy, ones_like, where, all as alltrue, linspace,
     sum, prod, sqrt, fmod, floor, ceil,
     sin, cos, tan, arcsin, arccos, arctan, arctan2,
     sinh, cosh, tanh, arcsinh, arccosh, arctanh,
@@ -31,7 +31,7 @@ from numpy.testing import (assert_equal, assert_array_equal,
 from numpy import shape, allclose, array_equal, ravel, isnan, isinf
 
 import numexpr
-from numexpr import E, NumExpr, evaluate, re_evaluate, disassemble, use_vml
+from numexpr import E, NumExpr, evaluate, re_evaluate, validate, disassemble, use_vml
 from numexpr.expressions import ConstantNode
 
 import unittest
@@ -296,7 +296,7 @@ class test_numexpr(TestCase):
         b = b'a' * 40
         res = evaluate('contains(a, b)')
         assert_equal(res, True)
-        
+
     def test_where_scalar_bool(self):
         a = True
         b = array([1, 2])
@@ -307,7 +307,8 @@ class test_numexpr(TestCase):
         res = evaluate('where(a, b, c)')
         assert_array_equal(res, c)
 
-    
+    @unittest.skipIf(hasattr(sys, "pypy_version_info"),
+                     "PyPy does not have sys.getrefcount()")
     def test_refcount(self):
         # Regression test for issue #310
         a = array([1])
@@ -317,7 +318,7 @@ class test_numexpr(TestCase):
 
     def test_locals_clears_globals(self):
         # Check for issue #313, whereby clearing f_locals also clear f_globals
-        # if in the top-frame. This cannot be done inside `unittest` as it is always 
+        # if in the top-frame. This cannot be done inside `unittest` as it is always
         # executing code in a child frame.
         script = r';'.join([
                 r"import numexpr as ne",
@@ -333,7 +334,7 @@ class test_numexpr(TestCase):
             ])
         # Raises CalledProcessError on a non-normal exit
         check = subprocess.check_call([sys.executable, '-c', script])
-        # Ideally this test should also be done against ipython but it's not 
+        # Ideally this test should also be done against ipython but it's not
         # a requirement.
 
 
@@ -370,11 +371,41 @@ class test_evaluate(TestCase):
         assert_array_equal(x, array([86., 124., 168.]))
 
     def test_re_evaluate_dict(self):
+        a1 = array([1., 2., 3.])
+        b1 = array([4., 5., 6.])
+        c1 = array([7., 8., 9.])
+        local_dict={'a': a1, 'b': b1, 'c': c1}
+        x = evaluate("2*a + 3*b*c", local_dict=local_dict)
+        x = re_evaluate(local_dict=local_dict)
+        assert_array_equal(x, array([86., 124., 168.]))
+
+    def test_validate(self):
         a = array([1., 2., 3.])
         b = array([4., 5., 6.])
         c = array([7., 8., 9.])
-        x = evaluate("2*a + 3*b*c", local_dict={'a': a, 'b': b, 'c': c})
+        retval = validate("2*a + 3*b*c")
+        assert(retval is None)
         x = re_evaluate()
+        assert_array_equal(x, array([86., 124., 168.]))
+
+    def test_validate_missing_var(self):
+        a = array([1., 2., 3.])
+        b = array([4., 5., 6.])
+        retval = validate("2*a + 3*b*c")
+        assert(isinstance(retval, KeyError))
+
+    def test_validate_syntax(self):
+        retval = validate("2+")
+        assert(isinstance(retval, SyntaxError))
+
+    def test_validate_dict(self):
+        a1 = array([1., 2., 3.])
+        b1 = array([4., 5., 6.])
+        c1 = array([7., 8., 9.])
+        local_dict={'a': a1, 'b': b1, 'c': c1}
+        retval = validate("2*a + 3*b*c", local_dict=local_dict)
+        assert(retval is None)
+        x = re_evaluate(local_dict=local_dict)
         assert_array_equal(x, array([86., 124., 168.]))
 
     # Test for issue #22
@@ -413,7 +444,7 @@ class test_evaluate(TestCase):
 
     def test_complex_expr(self):
         def complex(a, b):
-            c = zeros(a.shape, dtype=complex_)
+            c = zeros(a.shape, dtype=cdouble)
             c.real = a
             c.imag = b
             return c
@@ -474,15 +505,107 @@ class test_evaluate(TestCase):
         a = arange(3)
         try:
             evaluate("a < [0, 0, 0]")
-        except TypeError:
+        except (ValueError, TypeError):
             pass
         else:
             self.fail()
 
+    def test_sanitize(self):
+        with _environment('NUMEXPR_SANITIZE', '1'):
+            # Forbid dunder
+            try:
+                evaluate('__builtins__')
+            except ValueError:
+                pass
+            else:
+                self.fail()
+
+            # Forbid colon for lambda funcs
+            try:
+                evaluate('lambda x: x')
+            except ValueError:
+                pass
+            else:
+                self.fail()
+
+            # Forbid indexing
+            try:
+                evaluate('locals()["evaluate"]')
+            except ValueError:
+                pass
+            else:
+                self.fail()
+
+            # Forbid semicolon
+            try:
+                evaluate('import os;')
+            except ValueError:
+                pass
+            else:
+                self.fail()
+
+            # Attribute access with spaces
+            try:
+                evaluate('os. cpu_count()')
+            except ValueError:
+                pass
+            else:
+                self.fail()
+
+            # Attribute access with funny unicode characters that eval translates
+            # into ASCII.
+            try:
+                evaluate("(3+1).ᵇit_length()")
+            except ValueError:
+                pass
+            else:
+                self.fail()
+
+            # Pass decimal points including scientific notation
+            a = 3.0
+            evaluate('a*2.e-5')
+            evaluate('a*2.e+5')
+            evaluate('a*2e-5')
+            evaluate('a*2e+5')
+            evaluate('a*2E-5')
+            evaluate('a*2.0e5')
+            evaluate('a*2.2e5')
+            evaluate('2.+a')
+
+            # pass .real and .imag
+            c = 2.5 + 1.5j
+            evaluate('c.real')
+            evaluate('c.imag')
+
+            # pass imaginary unit j
+            evaluate('1.5j')
+            evaluate('3.j')
+
+            # pass forbidden characters within quotes
+            x = np.array(['a', 'b'], dtype=bytes)
+            evaluate("x == 'b:'")
+
+
+    def test_no_sanitize(self):
+        try: # Errors on compile() after eval()
+            evaluate('import os;', sanitize=False)
+        except SyntaxError:
+            pass
+        else:
+            self.fail()
+
+        with _environment('NUMEXPR_SANITIZE', '0'):
+            try: # Errors on compile() after eval()
+                evaluate('import os;', sanitize=None)
+            except SyntaxError:
+                pass
+            else:
+                self.fail()
+
     def test_disassemble(self):
         assert_equal(disassemble(NumExpr(
             "where(m, a, -1)", [('m', bool), ('a', float)])),
-            [[b'where_fbff', b'r0', b'r1[m]', b'r2[a]', b'c3[-1.0]'], 
+            [[b'where_fbff', b'r0', b'r1[m]', b'r2[a]', b'c3[-1.0]'],
              [b'noop', None, None, None]])
 
     def test_constant_deduplication(self):
@@ -501,15 +624,39 @@ class test_evaluate(TestCase):
         assert_equal(ConstantNode(numpy.float32(1)).astKind, "float")
         assert_equal(ConstantNode(numpy.float32("nan")).astKind, "float")
         assert_equal(ConstantNode(numpy.float32(3)).value.dtype, numpy.dtype("float32"))
-        assert_array_equal(NumExpr(ConstantNode(numpy.float32(1))).run(), 
+        assert_array_equal(NumExpr(ConstantNode(numpy.float32(1))).run(),
                            numpy.array(1, dtype="float32"))
 
     def test_unaligned_singleton(self):
-        # Test for issue #397 whether singletons outputs assigned to consts must be 
+        # Test for issue #397 whether singletons outputs assigned to consts must be
         # aligned or not.
         a = np.empty(5, dtype=np.uint8)[1:].view(np.int32)
         evaluate('3', out=a)
         assert_equal(a, 3)
+
+    def test_negative_mod(self):
+        # Test for issue #413, modulus of negative integers. C modulus is
+        # actually remainder op, and hence different from Python modulus.
+        a = np.array([-500, -135, 0, 0, 135, 500], dtype=np.int32)
+        n = np.array([-360, -360, -360, 360, 360, 360], dtype=np.int32)
+        out_i = evaluate('a % n')
+        assert_equal(out_i, np.mod(a, n))
+
+        b = a.astype(np.int64)
+        m = n.astype(np.int64)
+        out_l = evaluate('b % m')
+        assert_equal(out_l, np.mod(b, m))
+
+    def test_negative_power_scalar(self):
+        # Test for issue #428, where the power is negative and the base is an
+        # integer. This was running afoul in the precomputation in `expressions.py:pow_op()`
+        base = np.array([-2, -1, 1, 2, 3], dtype=np.int32)
+        out_i = evaluate('base ** -1.0')
+        assert_equal(out_i, np.power(base, -1.0))
+
+        base = np.array([-2, -1, 1, 2, 3], dtype=np.int64)
+        out_l = evaluate('base ** -1.0')
+        assert_equal(out_l, np.power(base, -1.0))
 
 
     def test_ex_uses_vml(self):
@@ -624,7 +771,7 @@ def equal(a, b, exact):
         return (shape(a) == shape(b)) and alltrue(ravel(a) == ravel(b), axis=0)
     else:
         if hasattr(a, 'dtype') and a.dtype == 'f4':
-            atol = 1e-5  # Relax precission for special opcodes, like fmod
+            atol = 1e-5  # Relax precision for special opcodes, like fmod
         else:
             atol = 1e-8
         return (shape(a) == shape(b) and
@@ -973,7 +1120,7 @@ def _environment(key, value):
 # Test cases for the threading configuration
 class test_threading_config(TestCase):
     def test_max_threads_unset(self):
-        # Has to be done in a subprocess as `importlib.reload` doesn't let us 
+        # Has to be done in a subprocess as `importlib.reload` doesn't let us
         # re-initialize the threadpool
         script = '\n'.join([
                 "import os",
@@ -985,7 +1132,7 @@ class test_threading_config(TestCase):
         subprocess.check_call([sys.executable, '-c', script])
 
     def test_max_threads_set(self):
-        # Has to be done in a subprocess as `importlib.reload` doesn't let us 
+        # Has to be done in a subprocess as `importlib.reload` doesn't let us
         # re-initialize the threadpool
         script = '\n'.join([
                 "import os",
@@ -1100,7 +1247,7 @@ def print_versions():
     (sysname, nodename, release, os_version, machine, processor) = platform.uname()
     print('Platform:          %s-%s-%s' % (sys.platform, machine, os_version))
     try:
-        # cpuinfo doesn't work on OSX well it seems, so protect these outputs 
+        # cpuinfo doesn't work on OSX well it seems, so protect these outputs
         # with a try block
         cpu_info = cpu.info[0]
         print('CPU vendor:        %s' % cpu_info.get('VendorIdentifier', ''))

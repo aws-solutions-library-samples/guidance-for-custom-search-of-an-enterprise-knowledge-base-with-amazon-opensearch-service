@@ -19,7 +19,7 @@ from langchain import SagemakerEndpoint
 from langchain.llms.sagemaker_endpoint import ContentHandlerBase
 from langchain.llms.sagemaker_endpoint import LLMContentHandler
 from langchain.vectorstores import Zilliz
-from langchain.embeddings import BedrockEmbeddings
+from bedrock import BedrockEmbeddings
 from chinese_text_splitter import ChineseTextSplitter
 import json
 from typing import Dict, List, Tuple, Optional,Any
@@ -63,6 +63,8 @@ def load_file(filepath,language,pdf_to_html: bool=False, chunk_size: int=100, ch
     print('begin load and split')
     if filepath.lower().endswith(".pdf") and pdf_to_html:
         docs = [loader.load()[0]]
+    elif filepath.lower().endswith(".csv"):
+        docs = loader.load()
     else:
         docs = loader.load_and_split(textsplitter)
     return docs
@@ -75,7 +77,10 @@ def init_embeddings(endpoint_name,region_name,language: str = "chinese"):
         accepts = "application/json"
 
         def transform_input(self, inputs: List[str], model_kwargs: Dict) -> bytes:
-            input_str = json.dumps({"inputs": inputs, **model_kwargs})
+            instruction = "为这个句子生成表示以用于检索相关文章："
+            if language == 'english':
+                instruction = "Represent this sentence for searching relevant passages:"
+            input_str = json.dumps({"inputs": inputs, "is_query":False,"instruction":instruction, **model_kwargs})
             return input_str.encode('utf-8')
 
         def transform_output(self, output: bytes) -> List[List[float]]:
@@ -162,7 +167,7 @@ def csv_processor(texts,metadatas,language: str='chinese',qa_title_name: str='',
         text = texts[i]
         metadata = dict(metadatas[i])
         row = int(metadata['row'])
-        title= text.split(':')[1] if text.find(qa_title_name) >= 0 else ''
+        title= text.split(':')[1].split('。')[0] if text.find(qa_title_name) >= 0 else ''
 
         if i == 0:
             pre_metadata = metadata
@@ -310,6 +315,9 @@ class SmartSearchDataload:
         if embedding_endpoint_name == 'bedrock-titan-embed':
             self.embeddings = init_embeddings_bedrock()
             self.embedding_type = 'bedrock'
+        elif embedding_endpoint_name == 'bedrock-cohere-embed':
+            self.embeddings = init_embeddings_bedrock('cohere.embed-multilingual-v3')
+            self.embedding_type = 'bedrock'
         else:
             self.embeddings = init_embeddings(embedding_endpoint_name,region,self.language)
         if searchEngine == "opensearch":
@@ -408,11 +416,12 @@ class SmartSearchDataload:
                     else:
                         texts_length = len(texts)
                         for i in range(0, texts_length):
-                            paragraph = assemble_paragraph(texts,i,paragraph_include_sentence_num)
-                            new_texts.append(paragraph)
                             metadata = metadatas[i]
                             metadata['sentence'] = truncate_text(texts[i],text_max_length) if self.embedding_type=='sagemaker' else texts[i]
-                            new_metadatas.append(metadata)
+                            if len(metadata['sentence']) > 0:
+                                paragraph = assemble_paragraph(texts,i,paragraph_include_sentence_num).strip()
+                                new_texts.append(paragraph)
+                                new_metadatas.append(metadata)
                     ids = self.vector_store.add_texts_sentence_in_metadata(new_texts, new_metadatas, bulk_size=bulk_size, text_field=text_field,vector_field=vector_field,embedding_type=self.embedding_type)
                 else:
                     new_texts = [truncate_text(text,text_max_length) for text in texts] if self.embedding_type=='sagemaker' else texts

@@ -1617,6 +1617,8 @@ class TestUfunc:
         assert_equal(np.minimum.reduce(a, axis=()), a)
 
     @requires_memory(6 * 1024**3)
+    @pytest.mark.skipif(sys.maxsize < 2**32,
+            reason="test array too large for 32bit platform")
     def test_identityless_reduction_huge_array(self):
         # Regression test for gh-20921 (copying identity incorrectly failed)
         arr = np.zeros((2, 2**31), 'uint8')
@@ -2214,6 +2216,23 @@ class TestUfunc:
         a = np.array([1, 2, 3])
         np.maximum.at(a, [0], 0)
         assert_equal(a, np.array([1, 2, 3]))
+
+    @pytest.mark.parametrize("dtype",
+            np.typecodes['AllInteger'] + np.typecodes['Float'])
+    @pytest.mark.parametrize("ufunc",
+            [np.add, np.subtract, np.divide, np.minimum, np.maximum])
+    def test_at_negative_indexes(self, dtype, ufunc):
+        a = np.arange(0, 10).astype(dtype)
+        indxs = np.array([-1, 1, -1, 2]).astype(np.intp)
+        vals = np.array([1, 5, 2, 10], dtype=a.dtype)
+
+        expected = a.copy()
+        for i, v in zip(indxs, vals):
+            expected[i] = ufunc(expected[i], v)
+
+        ufunc.at(a, indxs, vals)
+        assert_array_equal(a, expected)
+        assert np.all(indxs == [-1, 1, -1, 2])
 
     def test_at_not_none_signature(self):
         # Test ufuncs with non-trivial signature raise a TypeError

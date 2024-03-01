@@ -19,7 +19,7 @@ from langchain import SagemakerEndpoint
 from langchain.llms.sagemaker_endpoint import ContentHandlerBase
 from langchain.llms.sagemaker_endpoint import LLMContentHandler
 from langchain.vectorstores import Zilliz
-from langchain.embeddings import BedrockEmbeddings
+from bedrock import BedrockEmbeddings
 from chinese_text_splitter import ChineseTextSplitter
 import json
 from typing import Dict, List, Tuple, Optional,Any
@@ -63,6 +63,8 @@ def load_file(filepath,language,pdf_to_html: bool=False, chunk_size: int=100, ch
     print('begin load and split')
     if filepath.lower().endswith(".pdf") and pdf_to_html:
         docs = [loader.load()[0]]
+    elif filepath.lower().endswith(".csv"):
+        docs = loader.load()
     else:
         docs = loader.load_and_split(textsplitter)
     return docs
@@ -75,7 +77,10 @@ def init_embeddings(endpoint_name,region_name,language: str = "chinese"):
         accepts = "application/json"
 
         def transform_input(self, inputs: List[str], model_kwargs: Dict) -> bytes:
-            input_str = json.dumps({"inputs": inputs, **model_kwargs})
+            instruction = "为这个句子生成表示以用于检索相关文章："
+            if language == 'english':
+                instruction = "Represent this sentence for searching relevant passages:"
+            input_str = json.dumps({"inputs": inputs, "is_query":False,"instruction":instruction, **model_kwargs})
             return input_str.encode('utf-8')
 
         def transform_output(self, output: bytes) -> List[List[float]]:
@@ -131,20 +136,23 @@ def assemble_paragraph(texts,i,paragraph_include_sentence_num):
     paragraph = ",".join([t for t in texts[i: i + append_num]])
     return paragraph
 
-def insert_data(pre_title,sen_texts,phase_text,metadata,new_texts,new_metadatas,embedding_type: str='sagemaker'):
+def insert_data(pre_title,sen_texts,phase_text,metadata,new_texts,new_metadatas,embedding_type: str='sagemaker',text_max_length: int=350):
     if len(pre_title) > 0:
         new_texts.append(phase_text)
-        metadata['sentence'] = truncate_text(pre_title,text_max_length) if embedding_type=='sagemaker' else pre_title
-        new_metadatas.append(metadata)
+        new_metadata = metadata.copy()
+        new_metadata['sentence'] = truncate_text(pre_title,text_max_length) if embedding_type=='sagemaker' else pre_title
+        new_metadatas.append(new_metadata)
     for sen_text in sen_texts:
-        if len(sen_text.strip()) > 0:
+        new_metadata = metadata.copy()
+        sen_text = sen_text.strip()
+        if len(sen_text) > 0:
             new_texts.append(phase_text)
-            metadata['sentence'] = truncate_text(sen_text,text_max_length) if embedding_type=='sagemaker' else sen_text
-            new_metadatas.append(metadata)
+            new_metadata['sentence'] = truncate_text(sen_text,text_max_length) if embedding_type=='sagemaker' else sen_text
+            new_metadatas.append(new_metadata)
     return new_texts,new_metadatas
 
 #定义CSV格式文件，在split_to_sentence_paragraph=Ture模式下的处理逻辑
-def csv_processor(texts,metadatas,language: str='chinese',qa_title_name: str='',sep_word_len: int=2000,embedding_type: str='sagemaker'):
+def csv_processor(texts,metadatas,language: str='chinese',qa_title_name: str='',sep_word_len: int=2000,embedding_type: str='sagemaker',text_max_length: int=350):
     new_texts = []
     new_metadatas = []
     sep = '。'
@@ -159,7 +167,7 @@ def csv_processor(texts,metadatas,language: str='chinese',qa_title_name: str='',
         text = texts[i]
         metadata = dict(metadatas[i])
         row = int(metadata['row'])
-        title= qa_title_name if text.find(qa_title_name) >= 0 else ''
+        title= text.split(':')[1].split('。')[0] if text.find(qa_title_name) >= 0 else ''
 
         if i == 0:
             pre_metadata = metadata
@@ -172,11 +180,11 @@ def csv_processor(texts,metadatas,language: str='chinese',qa_title_name: str='',
             for sen in sen_texts:
                 word_len += len(sen)
             if word_len > sep_word_len:
-                new_texts,new_metadatas = insert_data(pre_title,sen_texts,phase_text,pre_metadata,new_texts,new_metadatas,embedding_type)
+                new_texts,new_metadatas = insert_data(pre_title,sen_texts,phase_text,pre_metadata,new_texts,new_metadatas,embedding_type,text_max_length)
                 sen_texts = []
                 phase_text = ''
         else:
-            new_texts,new_metadatas = insert_data(pre_title,sen_texts,phase_text,pre_metadata,new_texts,new_metadatas,embedding_type)
+            new_texts,new_metadatas = insert_data(pre_title,sen_texts,phase_text,pre_metadata,new_texts,new_metadatas,embedding_type,text_max_length)
             phase_text = text
             pre_row = row
             pre_metadata = metadata
@@ -184,13 +192,13 @@ def csv_processor(texts,metadatas,language: str='chinese',qa_title_name: str='',
             sen_texts = []
             sen_texts.append(text)
     if(len(sen_texts)>0):
-        new_texts,new_metadatas = insert_data(pre_title,sen_texts,phase_text,pre_metadata,new_texts,new_metadatas,embedding_type)
+        new_texts,new_metadatas = insert_data(pre_title,sen_texts,phase_text,pre_metadata,new_texts,new_metadatas,embedding_type,text_max_length)
         
     return new_texts,new_metadatas
 
 
 #定义HTML文件的逻辑段落拆分方式，默认使用字体大小的信息进行拆分
-def html_file_processor(document,language,embedding_type):
+def html_file_processor(document,language,embedding_type,text_max_length: int=350):
     from bs4 import BeautifulSoup
     soup = BeautifulSoup(document.page_content,'html.parser')
     content = soup.find_all('div')
@@ -281,7 +289,7 @@ def html_file_processor(document,language,embedding_type):
                     if len(texts[i]) > 0:
                         html_texts.append(metadatas[i]['heading'].strip() + ':' + texts[i].replace('\n',' ').strip())
                         html_metadatas.append({'source':metadatas[i]['source'],'row':i})
-        new_texts,new_metadatas = csv_processor(html_texts,html_metadatas,language,embedding_type=embedding_type)        
+        new_texts,new_metadatas = csv_processor(html_texts,html_metadatas,language,embedding_type=embedding_type,text_max_length=text_max_length)        
         return new_texts,new_metadatas
     else:
         return html_texts,html_metadatas
@@ -306,6 +314,9 @@ class SmartSearchDataload:
             
         if embedding_endpoint_name == 'bedrock-titan-embed':
             self.embeddings = init_embeddings_bedrock()
+            self.embedding_type = 'bedrock'
+        elif embedding_endpoint_name == 'bedrock-cohere-embed':
+            self.embeddings = init_embeddings_bedrock('cohere.embed-multilingual-v3')
             self.embedding_type = 'bedrock'
         else:
             self.embeddings = init_embeddings(embedding_endpoint_name,region,self.language)
@@ -386,28 +397,35 @@ class SmartSearchDataload:
             if self.vector_store is not None:
                 texts = [d.page_content for d in docs]
                 metadatas = [d.metadata for d in docs]
+                
+                filter_texts = []
+                for text in texts:
+                    text = text.replace('\ufeff','').strip().replace('\n','。')
+                    filter_texts.append(text)
+                texts = filter_texts
 
                 if split_to_sentence_paragraph:
                     new_texts = []
                     new_metadatas = []
                     if len(metadatas) > 0 and 'row' in metadatas[0].keys():
-                        new_texts,new_metadatas = csv_processor(texts,metadatas,self.language,qa_title_name,sep_word_len,self.embedding_type)
+                        new_texts,new_metadatas = csv_processor(texts,metadatas,self.language,qa_title_name,sep_word_len,self.embedding_type,text_max_length=text_max_length)
                     elif len(texts) > 0 and texts[0].find('<html>') >=0:
-                        new_texts,new_metadatas = html_file_processor(docs[0],self.language,self.embedding_type)
-                        print('new_texts:',new_texts)
-                        print('new_metadatas:',new_metadatas)
+                        new_texts,new_metadatas = html_file_processor(docs[0],self.language,self.embedding_type,text_max_length)
+                        # print('new_texts:',new_texts)
+                        # print('new_metadatas:',new_metadatas)
                     else:
                         texts_length = len(texts)
                         for i in range(0, texts_length):
-                            paragraph = assemble_paragraph(texts,i,paragraph_include_sentence_num)
-                            new_texts.append(paragraph)
                             metadata = metadatas[i]
                             metadata['sentence'] = truncate_text(texts[i],text_max_length) if self.embedding_type=='sagemaker' else texts[i]
-                            new_metadatas.append(metadata)
-                    ids = self.vector_store.add_texts_sentence_in_metadata(new_texts, new_metadatas, bulk_size=bulk_size, text_field=text_field,vector_field=vector_field)
+                            if len(metadata['sentence']) > 0:
+                                paragraph = assemble_paragraph(texts,i,paragraph_include_sentence_num).strip()
+                                new_texts.append(paragraph)
+                                new_metadatas.append(metadata)
+                    ids = self.vector_store.add_texts_sentence_in_metadata(new_texts, new_metadatas, bulk_size=bulk_size, text_field=text_field,vector_field=vector_field,embedding_type=self.embedding_type)
                 else:
                     new_texts = [truncate_text(text,text_max_length) for text in texts] if self.embedding_type=='sagemaker' else texts
-                    ids = self.vector_store.add_texts(texts, metadatas, bulk_size=bulk_size,text_field=text_field,vector_field=vector_field)
+                    ids = self.vector_store.add_texts(texts, metadatas, bulk_size=bulk_size,text_field=text_field,vector_field=vector_field,embedding_type=self.embedding_type)
                 return loaded_files
             else:
                 print("Vector library is not specified, please specify the vector database")
