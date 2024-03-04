@@ -9,7 +9,7 @@ More Details can be found in [AWS Solutions Library](https://aws.amazon.com/cn/s
 ## Deployment Guide
 
 
-* Follow the deployment guide in [AWS Solutions Library](https://catalog.us-east-1.prod.workshops.aws/workshops/3973557a-0853-41f6-9678-00ae171ba1f6/zh-CN/03cdkinstall/30preinstall)
+* Follow the deployment guide in [AWS Workshop](https://catalog.us-east-1.prod.workshops.aws/workshops/3973557a-0853-41f6-9678-00ae171ba1f6/zh-CN/03cdkinstall/30preinstall)
 
 
 
