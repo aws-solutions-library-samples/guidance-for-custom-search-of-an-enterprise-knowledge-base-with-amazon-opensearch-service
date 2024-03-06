@@ -107,8 +107,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
 
   const [indexName, setIndexName] = useState('');
   const [kendraIndexId, setKendraIndexId] = useState('');
-  const { indexNameList, loading: loadingIndexNameList } =
-    useIndexNameList(modalVisible);
+  const [indexNameList, loadingIndexNameList] = useIndexNameList(modalVisible);
   const [searchMethod, setSearchMethod] = useState(SEARCH_METHOD[0].value);
   const [txtDocsNum, setTxtDocsNum] = useState(0);
   const [vecDocsScoreThresholds, setVecDocsScoreThresholds] = useState(0);
@@ -347,23 +346,21 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                 <Input {...bindName} placeholder="Data search" />
               </FormField>
 
-              {lsSessionList.length === 0 ? null : (
-                <FormField
-                  label="Refer to an Existing Session"
-                  description="Select an existing session as template"
-                >
-                  <Select
-                    selectedOption={sessionTemplateOpt}
-                    onChange={({ detail }) =>
-                      setSessionTemplateOpt(detail.selectedOption)
-                    }
-                    options={lsSessionList.map(({ text, sessionId }) => ({
-                      value: sessionId,
-                      label: text,
-                    }))}
-                  />
-                </FormField>
-              )}
+              <FormField
+                label="Refer to an existing session or a template"
+                description="Select a template or an existing session as template"
+              >
+                <Select
+                  selectedOption={sessionTemplateOpt}
+                  onChange={({ detail }) =>
+                    setSessionTemplateOpt(detail.selectedOption)
+                  }
+                  options={lsSessionList.map(({ text, sessionId }) => ({
+                    value: sessionId,
+                    label: text,
+                  }))}
+                />
+              </FormField>
             </ColumnLayout>
 
             <Divider />
@@ -614,18 +611,22 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                         />
                       </FormField>
                     </ColumnLayout>
+                    {isKendra ? null : (
+                      <FormField stretch label="Calculate Confidence Scores">
+                        <SpaceBetween direction="horizontal" size="xxl">
+                          <Checkbox {...bindScoreQA}>
+                            Query-Answer score
+                          </Checkbox>
+                          <Checkbox {...bindScoreQD}>Query-Doc scores</Checkbox>
+                          <Checkbox {...bindScoreAD}>
+                            Answer-Doc scores
+                          </Checkbox>
+                        </SpaceBetween>
+                      </FormField>
+                    )}
                   </SpaceBetween>
                 )
               ) : null}
-              {isKendra ? null : (
-                <FormField stretch label="Confidence Scores">
-                  <SpaceBetween direction="horizontal" size="xxl">
-                    <Checkbox {...bindScoreQA}>Query-Answer score</Checkbox>
-                    <Checkbox {...bindScoreQD}>Query-Doc scores</Checkbox>
-                    <Checkbox {...bindScoreAD}>Answer-Doc scores</Checkbox>
-                  </SpaceBetween>
-                </FormField>
-              )}
 
               <Divider />
 

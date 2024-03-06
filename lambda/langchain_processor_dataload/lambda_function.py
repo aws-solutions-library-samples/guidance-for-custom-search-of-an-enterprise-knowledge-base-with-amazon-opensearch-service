@@ -122,7 +122,7 @@ def lambda_handler(event, context):
             #目前主要在拆分csv文档时用到，一行的内容如果token数超过该参数，就会对一行内容进行拆分
             sep_word_len = 2000  
             #目前主要在拆分QA格式的csv文档时用到，如果指定了title_name，在拆分时会确保单独对title列的文本进行向量化，在split_to_sentence_paragraph=True时使用
-            qa_title_name = ''     
+            qa_title_name = '标题'     
             #文档是否拆分为sentence、paragraph的格式，使用sentence文本进行向量化，使用多条sentence组合为paragraph，给到大模型推理
             split_to_sentence_paragraph = True    
             #使用多少条sentence组装为paragraph

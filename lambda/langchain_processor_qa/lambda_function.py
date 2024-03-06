@@ -195,9 +195,9 @@ def lambda_handler(event, context):
             if "isCheckedTitanEmbedding" in llmData.keys():
                 isCheckedTitanEmbedding = ast.literal_eval(str(llmData['isCheckedTitanEmbedding']).title())
             print('isCheckedTitanEmbedding:', isCheckedTitanEmbedding)
-            if isCheckedTitanEmbedding:
-                embeddingEndpoint = "bedrock-titan-embed"
-            print('embeddingEndpoint:', embeddingEndpoint)
+        if isCheckedTitanEmbedding or embeddingEndpoint == "bedrock-titan-embed":
+            embeddingEndpoint = "amazon.titan-embed-text-v1"
+        print('embeddingEndpoint:', embeddingEndpoint)
 
         searchEngine = "opensearch"
         if not search_engine_opensearch and search_engine_kendra:

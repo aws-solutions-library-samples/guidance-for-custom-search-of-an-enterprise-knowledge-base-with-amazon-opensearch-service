@@ -26,13 +26,6 @@ const Session = () => {
       // navigate back to landing page
       navigate('/');
     }
-
-    // TODO?
-    // sync data with server
-    // services.session
-    //   .getById(sessionId)
-    //   .then((res) => res.json())
-    //   .then((data) => setData(data));
   }, [lsSessionList, navigate, sessionId]);
 
   return (

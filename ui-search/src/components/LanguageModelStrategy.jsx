@@ -1,10 +1,11 @@
-// @ts-nocheck
 import {
+  Autosuggest,
   Box,
   Button,
   Container,
   Form,
   FormField,
+  Grid,
   Header,
   Input,
   SpaceBetween,
@@ -18,6 +19,7 @@ import useInput from 'src/hooks/useInput';
 import useLsLanguageModelList from 'src/hooks/useLsLanguageModelList';
 import useToggle from 'src/hooks/useToggle';
 import { genRandomNum } from 'src/utils/genUID';
+import useEndpointList from 'src/hooks/useEndpointList';
 
 const SIZE = 'l';
 
@@ -40,6 +42,11 @@ const THIRD_PARTY_API_MODEL_NAMES = [
     modelType: ['bedrock', 'bedrock_api'],
   },
   {
+    label: 'anthropic.claude-v2:1',
+    value: 'anthropic.claude-v2:1',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
     label: 'anthropic.claude-v1',
     value: 'anthropic.claude-v1',
     modelType: ['bedrock', 'bedrock_api'],
@@ -54,13 +61,38 @@ const THIRD_PARTY_API_MODEL_NAMES = [
     value: 'meta.llama2-13b-chat-v1',
     modelType: ['bedrock', 'bedrock_api'],
   },
+  {
+    label: 'anthropic.claude-3-sonnet',
+    value: 'anthropic.claude-3-sonnet-20240229-v1:0',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
+    label: 'mistral.mistral-7b',
+    value: 'mistral.mistral-7b-instruct-v0:2',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
+    label: 'mistral.mixtral-8x7b',
+    value: 'mistral.mixtral-8x7b-instruct-v0:1',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
 ];
 
 const LanguageModelStrategy = () => {
   const [strategyName, bindStrategyName, resetStrategyName] = useInput('');
   const [type, setType] = useState(TYPE.sagemaker);
+  const [
+    OptionsSagemakerEndpoint,
+    OptionsEmbeddingEndpoint,
+    loadingEndpointList,
+  ] = useEndpointList();
   const [sagemakerEndpoint, bindSagemakerEndpoint, resetSagemakerEndpoint] =
     useInput('');
+  const [
+    isSagemakerStreaming,
+    bindIsSagemakerStreaming,
+    resetIsSagemakerStreaming,
+  ] = useToggle(true);
   const [embeddingEndpoint, bindEmbeddingEndpoint, resetEmbeddingEndpoint] =
     useInput('');
   const [
@@ -104,12 +136,6 @@ const LanguageModelStrategy = () => {
     resetThirdPartySecretKey();
   }, [thirdPartyModelType]);
 
-  const [
-    isCheckedTitanEmbedding,
-    bindIsCheckedTitanEmbedding,
-    resetTitanEmbedding,
-  ] = useToggle(false);
-
   const [isCheckedLlama2Switch, bindLlama2Switch, resetLlama2Switch] =
     useToggle(false);
 
@@ -123,8 +149,8 @@ const LanguageModelStrategy = () => {
 
   const resetForm = useCallback(() => {
     resetStrategyName();
-    resetTitanEmbedding();
     resetSagemakerEndpoint();
+    resetIsSagemakerStreaming();
     resetEmbeddingEndpoint();
     resetThirdPartyEmbeddingEmbeddingEndpoint();
     setThirdPartyModelType(THIRD_PARTY_API_MODEL_TYPES[0].value);
@@ -284,9 +310,9 @@ const LanguageModelStrategy = () => {
                           embeddingEndpoint,
                           modelType: sagemakerModelType,
                           recordId: `${sagemakerEndpoint}-${genRandomNum()}`,
-                          isCheckedTitanEmbedding,
                           // *** different items
                           sagemakerEndpoint,
+                          streaming: isSagemakerStreaming,
                         };
                       } else {
                         // Third Party APIs
@@ -297,7 +323,6 @@ const LanguageModelStrategy = () => {
                           modelType: thirdPartyModelType,
                           modelName: thirdPartyModelName,
                           recordId: `${thirdPartyModelName}-${genRandomNum()}`,
-                          isCheckedTitanEmbedding,
                           // *** different items
                           apiUrl: thirdPartyApiUrl,
                           apiKey: thirdPartyApiKey,
@@ -352,43 +377,46 @@ const LanguageModelStrategy = () => {
               </FormField>
 
               {type === TYPE.sagemaker ? (
+                // **** SageMaker *************************************************************
                 <>
                   <FormField>
                     <Toggle {...bindLlama2Switch}>
                       LLama2 model deployed through Jumpstart
                     </Toggle>
                   </FormField>
-                  {/* <FormField label="Model Type">
-                    <Tiles
-                      columns={4}
-                      onChange={({ detail }) =>
-                        setSagemakerModelType(detail.value)
-                      }
-                      value={sagemakerModelType}
-                      items={SAGEMAKER_MODEL_TYPE}
-                    />
-                  </FormField> */}
-                  <FormField label="SageMaker Endpoint">
-                    <Input
-                      {...bindSagemakerEndpoint}
-                      placeholder="Please provide SageMaker Endpoint"
-                    />
-                  </FormField>
-                  <FormField>
-                    <Toggle {...bindIsCheckedTitanEmbedding}>
-                      Use Titan Embedding
-                    </Toggle>
-                  </FormField>
-                  {isCheckedTitanEmbedding ? null : (
-                    <FormField label="Embedding Endpoint">
-                      <Input
-                        {...bindEmbeddingEndpoint}
-                        placeholder="Please provide embedding endpoint"
+                  <Grid gridDefinition={[{ colspan: 8 }, { colspan: 4 }]}>
+                    <FormField stretch label="SageMaker Endpoint">
+                      <Autosuggest
+                        enteredTextLabel={(v) => `Use: "${v}"`}
+                        {...bindSagemakerEndpoint}
+                        loadingText="loading endpoint list"
+                        statusType={
+                          loadingEndpointList ? 'loading' : 'finished'
+                        }
+                        options={OptionsSagemakerEndpoint}
+                        placeholder="Search or enter value"
+                        empty="No matches found"
                       />
                     </FormField>
-                  )}
+                    <FormField label="Switch for Streaming">
+                      <Toggle {...bindIsSagemakerStreaming}>Streaming</Toggle>
+                    </FormField>
+                  </Grid>
+
+                  <FormField label="Embedding Endpoint">
+                    <Autosuggest
+                      enteredTextLabel={(v) => `Use: "${v}"`}
+                      {...bindEmbeddingEndpoint}
+                      loadingText="loading endpoint list"
+                      statusType={loadingEndpointList ? 'loading' : 'finished'}
+                      options={OptionsEmbeddingEndpoint}
+                      placeholder="Search or enter value"
+                      empty="No matches found"
+                    />
+                  </FormField>
                 </>
               ) : (
+                // **** Third Party ***********************************************************
                 <>
                   <FormField label="Model Type" stretch>
                     <Tiles
@@ -410,19 +438,18 @@ const LanguageModelStrategy = () => {
                       items={thirdPartyModelNameOpts}
                     />
                   </FormField>
-                  <FormField>
-                    <Toggle {...bindIsCheckedTitanEmbedding}>
-                      Use Titan Embedding
-                    </Toggle>
+
+                  <FormField label="Embedding Endpoint">
+                    <Autosuggest
+                      enteredTextLabel={(v) => `Use: "${v}"`}
+                      {...bindThirdPartyEmbeddingEndpoint}
+                      loadingText="loading endpoint list"
+                      statusType={loadingEndpointList ? 'loading' : 'finished'}
+                      options={OptionsEmbeddingEndpoint}
+                      placeholder="Search or enter value"
+                      empty="No matches found"
+                    />
                   </FormField>
-                  {isCheckedTitanEmbedding ? null : (
-                    <FormField label="Embedding Endpoint">
-                      <Input
-                        {...bindThirdPartyEmbeddingEndpoint}
-                        placeholder="Please provide embedding endpoint"
-                      />
-                    </FormField>
-                  )}
                   {thirdPartyModelType ===
                   'bedrock' ? null : thirdPartyModelType === 'bedrock_api' ? (
                     <>

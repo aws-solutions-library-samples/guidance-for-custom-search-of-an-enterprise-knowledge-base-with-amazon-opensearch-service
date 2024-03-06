@@ -1,3 +1,6 @@
+import sys
+sys.path.append(r"./python")
+
 import os
 import shutil
 from langchain.document_loaders import TextLoader
@@ -19,7 +22,7 @@ from langchain import SagemakerEndpoint
 from langchain.llms.sagemaker_endpoint import ContentHandlerBase
 from langchain.llms.sagemaker_endpoint import LLMContentHandler
 from langchain.vectorstores import Zilliz
-from langchain.embeddings import BedrockEmbeddings
+from bedrock import BedrockEmbeddings
 from chinese_text_splitter import ChineseTextSplitter
 import json
 from typing import Dict, List, Tuple, Optional,Any
@@ -53,7 +56,7 @@ def load_file(filepath,language,pdf_to_html: bool=False, chunk_size: int=100, ch
         if filepath.lower().endswith(".pdf"):
             if not pdf_to_html:
                 textsplitter = ChineseTextSplitter(pdf=True)
-        else:
+        elif not filepath.lower().endswith(".csv"):
             textsplitter = ChineseTextSplitter()
     elif language == "english":
         textsplitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
@@ -63,6 +66,8 @@ def load_file(filepath,language,pdf_to_html: bool=False, chunk_size: int=100, ch
     print('begin load and split')
     if filepath.lower().endswith(".pdf") and pdf_to_html:
         docs = [loader.load()[0]]
+    elif filepath.lower().endswith(".csv"):
+        docs = loader.load()
     else:
         docs = loader.load_and_split(textsplitter)
     return docs
@@ -73,9 +78,12 @@ def init_embeddings(endpoint_name,region_name,language: str = "chinese"):
     class ContentHandler(EmbeddingsContentHandler):
         content_type = "application/json"
         accepts = "application/json"
-
+        
         def transform_input(self, inputs: List[str], model_kwargs: Dict) -> bytes:
-            input_str = json.dumps({"inputs": inputs, **model_kwargs})
+            instruction = "为这个句子生成表示以用于检索相关文章："
+            if language == 'english':
+                instruction = "Represent this sentence for searching relevant passages:"
+            input_str = json.dumps({"inputs": inputs, "is_query":False,"instruction":instruction, **model_kwargs})
             return input_str.encode('utf-8')
 
         def transform_output(self, output: bytes) -> List[List[float]]:
@@ -134,13 +142,16 @@ def assemble_paragraph(texts,i,paragraph_include_sentence_num):
 def insert_data(pre_title,sen_texts,phase_text,metadata,new_texts,new_metadatas,embedding_type: str='sagemaker',text_max_length: int=350):
     if len(pre_title) > 0:
         new_texts.append(phase_text)
-        metadata['sentence'] = truncate_text(pre_title,text_max_length) if embedding_type=='sagemaker' else pre_title
-        new_metadatas.append(metadata)
+        new_metadata = metadata.copy()
+        new_metadata['sentence'] = truncate_text(pre_title,text_max_length) if embedding_type=='sagemaker' else pre_title
+        new_metadatas.append(new_metadata)
     for sen_text in sen_texts:
-        if len(sen_text.strip()) > 0:
+        new_metadata = metadata.copy()
+        sen_text = sen_text.strip()
+        if len(sen_text) > 0:
             new_texts.append(phase_text)
-            metadata['sentence'] = truncate_text(sen_text,text_max_length) if embedding_type=='sagemaker' else sen_text
-            new_metadatas.append(metadata)
+            new_metadata['sentence'] = truncate_text(sen_text,text_max_length) if embedding_type=='sagemaker' else sen_text
+            new_metadatas.append(new_metadata)
     return new_texts,new_metadatas
 
 #定义CSV格式文件，在split_to_sentence_paragraph=Ture模式下的处理逻辑
@@ -159,7 +170,7 @@ def csv_processor(texts,metadatas,language: str='chinese',qa_title_name: str='',
         text = texts[i]
         metadata = dict(metadatas[i])
         row = int(metadata['row'])
-        title= qa_title_name if text.find(qa_title_name) >= 0 else ''
+        title= text.split(':')[1].split('。')[0] if text.find(qa_title_name) >= 0 else ''
 
         if i == 0:
             pre_metadata = metadata
@@ -307,6 +318,9 @@ class SmartSearchDataload:
         if embedding_endpoint_name == 'bedrock-titan-embed':
             self.embeddings = init_embeddings_bedrock()
             self.embedding_type = 'bedrock'
+        elif embedding_endpoint_name == 'bedrock-cohere-embed':
+            self.embeddings = init_embeddings_bedrock('cohere.embed-multilingual-v3')
+            self.embedding_type = 'bedrock'
         else:
             self.embeddings = init_embeddings(embedding_endpoint_name,region,self.language)
         if searchEngine == "opensearch":
@@ -386,6 +400,12 @@ class SmartSearchDataload:
             if self.vector_store is not None:
                 texts = [d.page_content for d in docs]
                 metadatas = [d.metadata for d in docs]
+                
+                filter_texts = []
+                for text in texts:
+                    text = text.replace('\ufeff','').strip().replace('\n','。')
+                    filter_texts.append(text)
+                texts = filter_texts
 
                 if split_to_sentence_paragraph:
                     new_texts = []
@@ -399,15 +419,18 @@ class SmartSearchDataload:
                     else:
                         texts_length = len(texts)
                         for i in range(0, texts_length):
-                            paragraph = assemble_paragraph(texts,i,paragraph_include_sentence_num)
-                            new_texts.append(paragraph)
                             metadata = metadatas[i]
                             metadata['sentence'] = truncate_text(texts[i],text_max_length) if self.embedding_type=='sagemaker' else texts[i]
-                            new_metadatas.append(metadata)
+                            if len(metadata['sentence']) > 0:
+                                paragraph = assemble_paragraph(texts,i,paragraph_include_sentence_num).strip()
+                                new_texts.append(paragraph)
+                                new_metadatas.append(metadata)
+                    print('new texts len:',len(new_texts))
+                    print('new metadatas len:',len(new_metadatas))
                     ids = self.vector_store.add_texts_sentence_in_metadata(new_texts, new_metadatas, bulk_size=bulk_size, text_field=text_field,vector_field=vector_field,embedding_type=self.embedding_type)
                 else:
                     new_texts = [truncate_text(text,text_max_length) for text in texts] if self.embedding_type=='sagemaker' else texts
-                    ids = self.vector_store.add_texts(texts, metadatas, bulk_size=bulk_size,text_field=text_field,vector_field=vector_field,embedding_type=self.embedding_type)
+                    ids = self.vector_store.add_texts(new_texts, metadatas, bulk_size=bulk_size,text_field=text_field,vector_field=vector_field,embedding_type=self.embedding_type)
                 return loaded_files
             else:
                 print("Vector library is not specified, please specify the vector database")
