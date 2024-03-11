@@ -50,6 +50,8 @@ def _get_opensearch_client(opensearch_url: str, **kwargs: Any) -> Any:
     try:
         opensearch = _import_opensearch()
         hosts = kwargs.get("hosts",[])
+        print("*********")
+        print(hosts)
         http_auth = kwargs.get("http_auth",[])
         client = opensearch(hosts=hosts,http_auth=http_auth,use_ssl = True,timeout=600)
     except ValueError as e:
@@ -475,7 +477,8 @@ class OpenSearchVectorSearch(VectorStore):
             bulk_size=bulk_size,
             **kwargs,
         )
-
+    
+    
     def add_texts_sentence_in_metadata(
         self,
         texts: Iterable[str],
@@ -516,6 +519,7 @@ class OpenSearchVectorSearch(VectorStore):
             **kwargs,
         )        
    
+
     def add_embeddings(
         self,
         text_embeddings: Iterable[Tuple[str, List[float]]],
@@ -632,9 +636,8 @@ class OpenSearchVectorSearch(VectorStore):
         if len(vec_docs+aos_docs) > 0:
             new_vec_docs = []
             new_aos_docs = []
-            if search_method != "text" and len(vec_docs) > 0:              
+            if search_method != "text" and len(vec_docs) > 0 and vec_docs_score_thresholds > 0:              
                 for doc in vec_docs:
-                    doc[1] = float(doc[1]) if float(doc[1]) < 1 else float(doc[1])/100
                     if float(doc[1]) >= vec_docs_score_thresholds:
                         new_vec_docs.append(doc)
             else:
@@ -684,7 +687,7 @@ class OpenSearchVectorSearch(VectorStore):
         hits = self._raw_similarity_search_with_score(query=query, k=k, **kwargs)
 
         documents_with_scores = [
-            [
+            (
                 Document(
                     page_content=hit["_source"][text_field][0] if isinstance(hit["_source"][text_field],list)  else hit["_source"][text_field],
                     metadata=hit["_source"]
@@ -692,7 +695,7 @@ class OpenSearchVectorSearch(VectorStore):
                     else hit["_source"][metadata_field],
                 ),
                 hit["_score"] * 100  if embedding_type == 'bedrock' else hit["_score"],
-            ]
+            )
             for hit in hits
         ]
         return documents_with_scores

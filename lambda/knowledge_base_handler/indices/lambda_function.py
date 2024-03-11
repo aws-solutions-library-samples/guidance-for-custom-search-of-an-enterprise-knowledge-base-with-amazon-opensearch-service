@@ -4,7 +4,7 @@ import boto3
 from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth, helpers
 
 # get opensearch env 
-host =  os.environ.get('host')
+host =  os.environ.get('HOST')
 index =  os.environ.get('index')
 
 # retrieve secret manager value by key using boto3                                             
