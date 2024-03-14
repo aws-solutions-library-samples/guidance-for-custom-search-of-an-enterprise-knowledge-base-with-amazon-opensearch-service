@@ -17,7 +17,7 @@ args = getResolvedOptions(
         "language",
         "sourceKey",
         "chunkSize",
-        "EMBEDDING_ENDPOINT_NAME",
+        "embeddingEndpoint",
         "BUCKET",
         "HOST",
         "REGION",
@@ -28,13 +28,12 @@ args = getResolvedOptions(
 )
 
 #get environment vars
-EMBEDDING_ENDPOINT_NAME = args.get('embedding_endpoint_name',"bedrock-titan-embed")
+EMBEDDING_ENDPOINT_NAME = args.get('embeddingEndpoint',"")
 BUCKET = args.get('BUCKET')
 HOST = args.get('HOST', "")
 REGION = args.get('REGION','us-west-2')
 SEARCH_ENGINE = args.get('SEARCH_ENGINE',"opensearch")
 PORT = 443
-BULK_SIZE = 10000000
 TABLE_NAME = args.get('TABLE_NAME', '')
 PRIMARY_KEY = args.get('PRIMARY_KEY', '')
 

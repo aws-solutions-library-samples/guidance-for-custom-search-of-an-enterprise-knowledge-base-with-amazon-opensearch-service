@@ -31,7 +31,7 @@ from datetime import datetime
 import boto3
 import numpy as np
 
-bulk_size = 10000
+bulk_size = 100000
 
 def load_file(filepath,language,pdf_to_html: bool=False, chunk_size: int=100, chunk_overlap: int=10):
     
