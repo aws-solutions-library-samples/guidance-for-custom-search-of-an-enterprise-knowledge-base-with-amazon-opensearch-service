@@ -315,11 +315,8 @@ class SmartSearchDataload:
         self.language = language
         self.embedding_type = 'sagemaker'
             
-        if embedding_endpoint_name == 'bedrock-titan-embed':
-            self.embeddings = init_embeddings_bedrock()
-            self.embedding_type = 'bedrock'
-        elif embedding_endpoint_name == 'bedrock-cohere-embed':
-            self.embeddings = init_embeddings_bedrock('cohere.embed-multilingual-v3')
+        if embedding_endpoint_name.find('amazon.titan') >=0 or embedding_endpoint_name.find('cohere.embed') >= 0:
+            self.embeddings = init_embeddings_bedrock(embedding_endpoint_name)
             self.embedding_type = 'bedrock'
         else:
             self.embeddings = init_embeddings(embedding_endpoint_name,region,self.language)
