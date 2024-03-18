@@ -43,7 +43,7 @@ class SmartSearchQA:
                 ):
         self.language = language
         self.search_engine = search_engine
-        self.embedding_type = 'bedrock' if embedding_endpoint_name == 'bedrock-titan-embed' else 'sagemaker'
+        self.embedding_type = 'bedrock' if (embedding_endpoint_name.find('amazon.titan') >=0 or embedding_endpoint_name.find('cohere.embed') >= 0) else 'sagemaker'
 
         #add aos parmeter
         self.aos_index = opensearch_index_name
@@ -83,6 +83,8 @@ class SmartSearchQA:
                 parameters['max_tokens_to_sample'] = max_tokens
             elif provider == "meta":
                 parameters['max_gen_len'] = max_tokens
+            elif provider == "mistral":
+                parameters['max_tokens'] = max_tokens
             self.llm.model_kwargs = parameters
         elif model_type == 'llm_api':
             if model_name.find('Baichuan2') >= 0:
@@ -112,7 +114,7 @@ class SmartSearchQA:
             if self.embedding_type == 'sagemaker':
                 self.embeddings = init_embeddings(embedding_endpoint_name, region, self.language)
             elif self.embedding_type == 'bedrock':
-                self.embeddings = init_embeddings_bedrock()
+                self.embeddings = init_embeddings_bedrock(embedding_endpoint_name)
 
         #init vector store
         if self.search_engine == "opensearch":
@@ -314,10 +316,28 @@ class SmartSearchQA:
         
         answer=result['answer']
         
-        # answer=answer.split('\n\nhuman')[0].split('\n\n用户')[0].split('\n\nquestion')[0].split('\n\n\ufeffquestion')[0].split('\n\nQuestion')[0].strip()
-        
-        # if language == "english":
-        #     answer = answer.split('Answer:')[-1]
+        # print('answer:',answer)
+        # print('response_if_no_docs_found:',response_if_no_docs_found)
+        # if answer == response_if_no_docs_found:
+        #     vec_docs_score_thresholds = 0
+        #     txt_docs_score_thresholds = 0
+        #     retriever = self.get_retriever(top_k,search_method,txt_docs_num,vec_docs_score_thresholds,txt_docs_score_thresholds,text_field,vector_field)
+        #     docs = retriever.get_relevant_documents(query)
+        #     print('docs:',docs)
+        #     if len(docs) > 0:
+        #         answer = '找不到这个问题的答案，您可以问以下问题：'
+        #         title_set = set()
+        #         for doc in docs:
+        #             title = doc[0].metadata['sentence']
+        #             if title.find('标题') >=0 and title.find('内容') >=0:
+        #                 title = title.split(':')[1][:-3]
+        #             elif title.find('标题') >=0:
+        #                 title = title.split(':')[1]
+        #             title_set.add(title.strip())
+        #         for title in iter(title_set):
+        #             answer += ('\n' + title)
+        #     print('new answer:',answer)
+        #     result['answer'] = answer
 
         if len(session_id) > 0:
             new_query=result['generated_question']

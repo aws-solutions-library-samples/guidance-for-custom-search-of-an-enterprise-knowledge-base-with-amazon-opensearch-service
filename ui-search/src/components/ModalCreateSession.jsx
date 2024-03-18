@@ -107,7 +107,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
 
   const [indexName, setIndexName] = useState('');
   const [kendraIndexId, setKendraIndexId] = useState('');
-  const { indexNameList, loading: loadingIndexNameList } =
+  const [indexNameList, loadingIndexNameList, refreshIndexNameList] =
     useIndexNameList(modalVisible);
   const [searchMethod, setSearchMethod] = useState(SEARCH_METHOD[0].value);
   const [txtDocsNum, setTxtDocsNum] = useState(0);
@@ -347,23 +347,21 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                 <Input {...bindName} placeholder="Data search" />
               </FormField>
 
-              {lsSessionList.length === 0 ? null : (
-                <FormField
-                  label="Refer to an Existing Session"
-                  description="Select an existing session as template"
-                >
-                  <Select
-                    selectedOption={sessionTemplateOpt}
-                    onChange={({ detail }) =>
-                      setSessionTemplateOpt(detail.selectedOption)
-                    }
-                    options={lsSessionList.map(({ text, sessionId }) => ({
-                      value: sessionId,
-                      label: text,
-                    }))}
-                  />
-                </FormField>
-              )}
+              <FormField
+                label="Refer to an existing session or a template"
+                description="Select a template or an existing session as template"
+              >
+                <Select
+                  selectedOption={sessionTemplateOpt}
+                  onChange={({ detail }) =>
+                    setSessionTemplateOpt(detail.selectedOption)
+                  }
+                  options={lsSessionList.map(({ text, sessionId }) => ({
+                    value: sessionId,
+                    label: text,
+                  }))}
+                />
+              </FormField>
             </ColumnLayout>
 
             <Divider />
@@ -488,6 +486,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                         }
                       >
                         <Select
+                          onFocus={refreshIndexNameList}
                           empty="Upload a file if no options present"
                           onChange={({ detail }) =>
                             setIndexName(detail.selectedOption.value)
@@ -542,11 +541,11 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                       <FormField
                         stretch
                         label="Number of doc for vector search"
-                        constraintText="Integer between 1 and 10"
+                        constraintText="Integer between 0 and 200"
                         errorText={
-                          topK >= 0 && topK <= 10
+                          topK >= 0 && topK <= 200
                             ? ''
-                            : 'A number between 0 and 10'
+                            : 'A number between 0 and 200'
                         }
                       >
                         <Input
@@ -565,11 +564,11 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                       <FormField
                         stretch
                         label="Number of doc for text search"
-                        constraintText="Integer between 1 and 10"
+                        constraintText="Integer between 0 and 200"
                         errorText={
-                          txtDocsNum >= 0 && txtDocsNum <= 10
+                          txtDocsNum >= 0 && txtDocsNum <= 200
                             ? ''
-                            : 'A number between 0 and 10'
+                            : 'A number between 0 and 200'
                         }
                       >
                         <Input
@@ -614,18 +613,22 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                         />
                       </FormField>
                     </ColumnLayout>
+                    {isKendra ? null : (
+                      <FormField stretch label="Calculate Confidence Scores">
+                        <SpaceBetween direction="horizontal" size="xxl">
+                          <Checkbox {...bindScoreQA}>
+                            Query-Answer score
+                          </Checkbox>
+                          <Checkbox {...bindScoreQD}>Query-Doc scores</Checkbox>
+                          <Checkbox {...bindScoreAD}>
+                            Answer-Doc scores
+                          </Checkbox>
+                        </SpaceBetween>
+                      </FormField>
+                    )}
                   </SpaceBetween>
                 )
               ) : null}
-              {isKendra ? null : (
-                <FormField stretch label="Display Scores">
-                  <SpaceBetween direction="horizontal" size="xxl">
-                    <Checkbox {...bindScoreQA}>Query-Answer score</Checkbox>
-                    <Checkbox {...bindScoreQD}>Query-Doc scores</Checkbox>
-                    <Checkbox {...bindScoreAD}>Answer-Doc scores</Checkbox>
-                  </SpaceBetween>
-                </FormField>
-              )}
 
               <Divider />
 

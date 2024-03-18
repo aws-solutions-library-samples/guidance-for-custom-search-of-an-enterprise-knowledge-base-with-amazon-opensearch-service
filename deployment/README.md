@@ -29,6 +29,14 @@ cd ./deployment
 npm install -g aws-cdk
 ```
 
+启动Docker
+```
+sudo yum install -y npm docker
+sudo yum install docker -y
+sudo service docker start
+sudo chmod 666 /var/run/docker.sock
+```
+
 
 3. Bootstrap the CDK to provision all the infrastructure needed for the CDK to make changes to your AWS account
 

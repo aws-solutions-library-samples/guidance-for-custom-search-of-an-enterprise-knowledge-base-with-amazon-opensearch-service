@@ -13,11 +13,11 @@ const SessionChats = ({ conversations }) => {
     <Container>
       <SpaceBetween size="l">
         {conversations.length === 0 ? (
-          <ConverstationPlaceholder />
+          <ConversationPlaceholder />
         ) : (
           conversations.map(({ type, content }, i) =>
             type === 'customer' ? (
-              // customer chat
+              // customer search query record
               <StyledQ key={i}>
                 <div className="icon">
                   <ChatIcon />
@@ -26,7 +26,7 @@ const SessionChats = ({ conversations }) => {
                 <div className="extra">{readTimestamp(content.timestamp)}</div>
               </StyledQ>
             ) : (
-              // robot chat
+              // robot response record
               <SessionChatsAI content={content} key={i} />
             )
           )
@@ -38,6 +38,6 @@ const SessionChats = ({ conversations }) => {
 
 export default SessionChats;
 
-function ConverstationPlaceholder() {
+function ConversationPlaceholder() {
   return <Box></Box>;
 }

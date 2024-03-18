@@ -4,7 +4,7 @@ from sagemaker_endpoint import SagemakerEndpoint
 from sagemaker_endpoint import LLMContentHandler
 # from langchain.llms import Bedrock
 from bedrock import Bedrock
-from langchain.embeddings import BedrockEmbeddings
+from bedrock_embedding import BedrockEmbeddings
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.utils import enforce_stop_tokens
 # from langchain.vectorstores import OpenSearchVectorSearch
@@ -25,7 +25,10 @@ def init_embeddings(endpoint_name,region_name,language: str = "chinese"):
         accepts = "application/json"
 
         def transform_input(self, inputs: List[str], model_kwargs: Dict) -> bytes:
-            input_str = json.dumps({"inputs": inputs, **model_kwargs})
+            instruction = "为这个句子生成表示以用于检索相关文章："
+            if language == 'english':
+                instruction = "Represent this sentence for searching relevant passages:"
+            input_str = json.dumps({"inputs": inputs, "is_query":True,"instruction":instruction, **model_kwargs})
             return input_str.encode('utf-8')
 
         def transform_output(self, output: bytes) -> List[List[float]]:

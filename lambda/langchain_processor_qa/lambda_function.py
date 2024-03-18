@@ -191,6 +191,13 @@ def lambda_handler(event, context):
                 apiKey = llmData['apiKey']
             if "secretKey" in llmData.keys():
                 secretKey = llmData['secretKey']
+            isCheckedTitanEmbedding = False
+            if "isCheckedTitanEmbedding" in llmData.keys():
+                isCheckedTitanEmbedding = ast.literal_eval(str(llmData['isCheckedTitanEmbedding']).title())
+            print('isCheckedTitanEmbedding:', isCheckedTitanEmbedding)
+        if isCheckedTitanEmbedding or embeddingEndpoint == "bedrock-titan-embed":
+            embeddingEndpoint = "amazon.titan-embed-text-v1"
+        print('embeddingEndpoint:', embeddingEndpoint)
 
         searchEngine = "opensearch"
         if not search_engine_opensearch and search_engine_kendra:
@@ -459,6 +466,8 @@ def lambda_handler(event, context):
                     #print(f"if streaming and requestType == 'websocket'==={len(source_list)}")
                     sendWebSocket(response['body'],event)
 
+                chinese_truncation_len = 350
+                english_truncation_len = 500
                 # cal query_answer_score
                 isCheckedScoreQA = False
                 query_answer_score = -1
@@ -466,8 +475,15 @@ def lambda_handler(event, context):
                     isCheckedScoreQA = ast.literal_eval(str(evt_body['isCheckedScoreQA']).title())
                 if isCheckedScoreQA and (searchEngine == "opensearch" or searchEngine == "zilliz"):
                     cal_answer = answer
-                    if language.find("chinese") >= 0 and len(answer) > 350:
-                        cal_answer = answer[:350]
+                    if language.find("chinese") >= 0 and len(answer) > chinese_truncation_len:
+                        cal_answer = answer[:chinese_truncation_len]
+                    elif language.find("english") >= 0 and len(answer) > english_truncation_len:
+                        cal_answer = answer[:english_truncation_len]
+
+                    if language.find("chinese") >= 0 and len(query) > chinese_truncation_len:
+                        query = query[:chinese_truncation_len]
+                    elif language.find("english") >= 0 and len(query) > english_truncation_len:
+                        query = query[:english_truncation_len]
                     query_answer_score = search_qa.get_qa_relation_score(query, cal_answer)
                 print('1.query_answer_score:', query_answer_score)
 
@@ -479,12 +495,17 @@ def lambda_handler(event, context):
                 print('isCheckedScoreAD:',isCheckedScoreAD)
                 if isCheckedScoreAD and (searchEngine == "opensearch" or searchEngine == "zilliz"):
                     cal_answer = answer
-                    if language.find("chinese") >= 0 and len(answer) > 150:
-                        cal_answer = answer[:150]
+                    if language.find("chinese") >= 0 and len(answer) > chinese_truncation_len:
+                        cal_answer = answer[:chinese_truncation_len]
+                    elif language.find("english") >= 0 and len(answer) > english_truncation_len:
+                        cal_answer = answer[:english_truncation_len]    
+                        
                     for source_doc in source_docs:
                         cal_source_page_content = source_doc.page_content
-                        if language.find("chinese") >= 0 and len(cal_source_page_content) > 150:
-                            cal_source_page_content = cal_source_page_content[:150]
+                        if language.find("chinese") >= 0 and len(cal_source_page_content) > chinese_truncation_len:
+                            cal_source_page_content = cal_source_page_content[:chinese_truncation_len]
+                        elif language.find("english") >= 0 and len(cal_source_page_content) > english_truncation_len:
+                            cal_source_page_content = cal_source_page_content[:english_truncation_len]
                         answer_docs_score = search_qa.get_qa_relation_score(cal_answer, cal_source_page_content)
                         answer_docs_scores.append(answer_docs_score)
                 print('2.answer_docs_scores:', answer_docs_scores)
@@ -535,6 +556,7 @@ def lambda_handler(event, context):
             {
                 'timestamp': time.time() * 1000,
                 'text': str(e),
+                'errorMessage': str(e),
                 'sourceData': [],
                 'message':'error',
                 'contentCheckLabel': contentCheckLabel,
