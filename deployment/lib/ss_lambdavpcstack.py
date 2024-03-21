@@ -9,18 +9,23 @@ from aws_cdk import (
     CfnParameter,
     Aws,
     Duration,
+    aws_ec2,
     aws_lambda as _lambda,
     aws_apigateway as apigw,
     aws_dynamodb as dynamodb,
     aws_s3 as s3,
     aws_s3_notifications as s3n,
     aws_iam as _iam,
-    aws_ec2,
+    aws_sqs as sqs,
+    aws_glue as glue,
+    aws_s3_deployment as s3deploy,
     ContextProvider,
     RemovalPolicy
 )
 from aws_cdk.aws_apigatewayv2_integrations_alpha import WebSocketLambdaIntegration
 from aws_cdk import aws_apigatewayv2_alpha as apigwv2
+from aws_cdk.aws_lambda_event_sources import DynamoEventSource
+from aws_cdk.aws_lambda_event_sources import SqsEventSource
 import os
 
 binary_media_types = ["multipart/form-data"]
@@ -101,22 +106,7 @@ class LambdaVPCStack(Stack):
                                        required=["ind", "knn", "q"]
                                    )
                                    )
-        #
-        #     search_knn_resource.add_method(
-        #         'GET',
-        #         search_knn_integration,
-        #         request_models={
-        #             "application/json": user_model
-        #         },
-        #         method_responses=[
-        #             apigw.MethodResponse(
-        #                 status_code="200",
-        #                 response_parameters={
-        #                     'method.response.header.Access-Control-Allow-Origin': True
-        #                 }
-        #             )
-        #         ]
-        #     )
+
         websocket_table = dynamodb.Table(self, "websocket",
                                          partition_key=dynamodb.Attribute(name="id",
                                                                           type=dynamodb.AttributeType.STRING),
@@ -693,56 +683,56 @@ class LambdaVPCStack(Stack):
             "integration.request.path.sub_prefix": "method.request.path.sub_prefix",
         }
 
-        """
-        6. Create Lambda for list all indices from OpenSearch for front-end
-        """
-        function_name = 'knowledge_base_handler'
+        # """
+        # 6. Create Lambda for list all indices from OpenSearch for front-end
+        # """
+        # function_name = 'knowledge_base_handler'
 
-        _knowledge_base_role_policy = _iam.PolicyStatement(
-            actions=[
-                's3:AmazonS3FullAccess',
-                'lambda:AWSLambdaBasicExecutionRole',
-                'secretsmanager:SecretsManagerReadWrite'
-            ],
-            resources=['*']  # 可根据需求进行更改
-        )
-        knowledge_base_handler_role = _iam.Role(
-            self, 'knowledge_base_handler_role',
-            assumed_by=_iam.ServicePrincipal('lambda.amazonaws.com')
-        )
-        knowledge_base_handler_role.add_to_policy(_data_load_role_policy)
+        # _knowledge_base_role_policy = _iam.PolicyStatement(
+        #     actions=[
+        #         's3:AmazonS3FullAccess',
+        #         'lambda:AWSLambdaBasicExecutionRole',
+        #         'secretsmanager:SecretsManagerReadWrite'
+        #     ],
+        #     resources=['*']  # 可根据需求进行更改
+        # )
+        # knowledge_base_handler_role = _iam.Role(
+        #     self, 'knowledge_base_handler_role',
+        #     assumed_by=_iam.ServicePrincipal('lambda.amazonaws.com')
+        # )
+        # knowledge_base_handler_role.add_to_policy(_data_load_role_policy)
 
-        knowledge_base_handler_role.add_managed_policy(
-            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
-        )
+        # knowledge_base_handler_role.add_managed_policy(
+        #     _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
+        # )
 
-        knowledge_base_handler_role.add_managed_policy(
-            _iam.ManagedPolicy.from_aws_managed_policy_name("SecretsManagerReadWrite")
-        )
+        # knowledge_base_handler_role.add_managed_policy(
+        #     _iam.ManagedPolicy.from_aws_managed_policy_name("SecretsManagerReadWrite")
+        # )
 
-        knowledge_base_handler_role.add_managed_policy(
-            _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonS3FullAccess")
-        )
+        # knowledge_base_handler_role.add_managed_policy(
+        #     _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonS3FullAccess")
+        # )
 
-        knowledge_base_handler_function = _lambda.Function(
-            self, function_name,
-            function_name=function_name,
-            runtime=_lambda.Runtime.PYTHON_3_9,
-            role=knowledge_base_handler_role,
-            layers=[self.langchain_processor_qa_layer],
-            code=_lambda.Code.from_asset('../lambda/' + function_name),
-            handler='lambda_function' + '.lambda_handler',
-            timeout=Duration.minutes(10),
-            vpc=vpc,
-            vpc_subnets=vpc_subnets,
-            reserved_concurrent_executions=20
-        )
-        knowledge_base_handler_function.add_environment("host", search_engine_key)
+        # knowledge_base_handler_function = _lambda.Function(
+        #     self, function_name,
+        #     function_name=function_name,
+        #     runtime=_lambda.Runtime.PYTHON_3_9,
+        #     role=knowledge_base_handler_role,
+        #     layers=[self.langchain_processor_qa_layer],
+        #     code=_lambda.Code.from_asset('../lambda/' + function_name),
+        #     handler='lambda_function' + '.lambda_handler',
+        #     timeout=Duration.minutes(10),
+        #     vpc=vpc,
+        #     vpc_subnets=vpc_subnets,
+        #     reserved_concurrent_executions=20
+        # )
+        # knowledge_base_handler_function.add_environment("host", search_engine_key)
 
-        self.create_apigw_resource_method_for_knowledge_base_handler(
-            api=api,
-            knowledge_base_handler_function=knowledge_base_handler_function
-        )
+        # self.create_apigw_resource_method_for_knowledge_base_handler(
+        #     api=api,
+        #     knowledge_base_handler_function=knowledge_base_handler_function
+        # )
 
         """
         7. Create Lambda for list all sagemaker endpoint  for front-end
@@ -896,3 +886,245 @@ class LambdaVPCStack(Stack):
         content_moderation_func.add_environment("content_moderation_api", content_moderation_api)
 
         return content_moderation_func
+
+    def create_apigw_resource_method_for_knowledge_base_handler(self, api, **kwargs):
+            knowledge_base_handler = api.root.add_resource('knowledge_base_handler')
+
+            jobs = knowledge_base_handler.add_resource(
+                        "jobs",
+                        default_cors_preflight_options=apigw.CorsOptions(
+                            allow_methods=['GET','POST'],
+                            allow_origins=apigw.Cors.ALL_ORIGINS)
+                    )
+            jobs_id = jobs.add_resource(
+                        "{id}",
+                        default_cors_preflight_options=apigw.CorsOptions(
+                            allow_methods=['PUT','DELETE','GET'],
+                            allow_origins=apigw.Cors.ALL_ORIGINS)
+                    )
+            presignurl = knowledge_base_handler.add_resource(
+                        "presignurl",
+                        default_cors_preflight_options=apigw.CorsOptions(
+                            allow_methods=['POST'],
+                            allow_origins=apigw.Cors.ALL_ORIGINS)
+                    )
+            indices = knowledge_base_handler.add_resource(
+                        "indices",
+                        default_cors_preflight_options=apigw.CorsOptions(
+                            allow_methods=['GET'],
+                            allow_origins=apigw.Cors.ALL_ORIGINS)
+                    )
+            
+            get_presignurl_function = kwargs.get('get_presignurl_function')
+            create_job_function = kwargs.get('create_job_function')
+
+            list_jobs_function = kwargs.get('list_jobs_function')
+            get_indice_list_function = kwargs.get('get_indice_list_function')
+
+            def create_api_integration(function,resource,method):
+
+                sub_resource_integration = apigw.LambdaIntegration(
+                    function,
+                    proxy=True,
+                    integration_responses=[
+                        apigw.IntegrationResponse(
+                            status_code="200",
+                            response_parameters={
+                                'method.response.header.Access-Control-Allow-Origin': "'*'"
+                            }
+                        )
+                    ]
+                )
+                resource.add_method(
+                    method,
+                    sub_resource_integration,
+                    method_responses=[
+                        apigw.MethodResponse(
+                            status_code="200",
+                            response_parameters={
+                                'method.response.header.Access-Control-Allow-Origin': True
+                            }
+                        )
+                    ]
+                )
+
+            #POST knowledge_base_handler/jobs
+            create_api_integration(create_job_function,jobs,"POST")  
+            #GET  knowledge_base_handler/jobs
+            create_api_integration(list_jobs_function,jobs,"GET")  
+
+            #POST knowledge_base_handler/presignurl
+            create_api_integration(get_presignurl_function,presignurl,"POST")
+            #GET knowledge_base_handler/indices
+            create_api_integration(get_indice_list_function,indices,"GET")
+
+    def create_knowledge_base_handler(self, api, search_engine_key):
+
+            REGION = os.getenv('AWS_REGION', '')
+            EMBEDDING_ENDPOINT_NAME = "bedrock-titan-embed"
+            SEARCH_ENGINE = "opensearch"
+            PRIMARY_KEY = 'id'
+
+            _knowledge_base_role_policy = _iam.PolicyStatement(
+                actions=[
+                    'sagemaker:InvokeEndpointAsync',
+                    'sagemaker:InvokeEndpoint',
+                    's3:AmazonS3FullAccess',
+                    'lambda:AWSLambdaBasicExecutionRole',
+                    'secretsmanager:GetSecretValue',
+                    'bedrock:*',
+                    'dynamodb:AmazonDynamoDBFullAccess',
+                    'logs:*',
+                    'glue:*'
+                ],
+                resources=['*']  # 可根据需求进行更改
+            )
+
+            knowledge_base_handler_role = _iam.Role(
+                self, 'knowledge_base_handler_rolev2',
+                assumed_by=_iam.ServicePrincipal('lambda.amazonaws.com')
+            )
+            knowledge_base_handler_role.add_to_policy(_knowledge_base_role_policy)
+
+            job_table = dynamodb.Table(
+                self, "job table",
+                partition_key=dynamodb.Attribute(
+                    name="id",
+                    type=dynamodb.AttributeType.STRING,
+                ),
+                removal_policy=RemovalPolicy.DESTROY,
+                stream=dynamodb.StreamViewType.NEW_IMAGE
+            )
+        
+            deployment = s3deploy.BucketDeployment(self, "extraPythonFiles",
+                sources=[s3deploy.Source.asset("../lambda/knowledge_base_handler/job")],
+                destination_key_prefix="glue_job_assets",
+                destination_bucket=self.bucket
+            )
+
+            GlueS3Prefix = f"s3://{self.bucket.bucket_name}/glue_job_assets",
+
+            knowledge_base_handler_glue_role = _iam.Role(
+                self, 'knowledge_base_handler_rolev3',
+                assumed_by=_iam.ServicePrincipal('glue.amazonaws.com')
+            )
+            knowledge_base_handler_glue_role.add_to_policy(_knowledge_base_role_policy)
+            self.bucket.grant_read_write(knowledge_base_handler_glue_role)
+            job_table.grant_full_access(knowledge_base_handler_glue_role)
+
+            glue_job = glue.CfnJob(
+                self, "MyGlueJob",
+                name="my-glue-job",
+                role=knowledge_base_handler_glue_role.role_name,
+                execution_property = glue.CfnJob.ExecutionPropertyProperty(
+                    max_concurrent_runs=5
+                ),
+                command=glue.CfnJob.JobCommandProperty(
+                    name="pythonshell",
+                    python_version="3.9",
+                    script_location=f"s3://{self.bucket.bucket_name}/glue_job_assets/glue-job-script.py",
+                ),
+                default_arguments={
+                    "--TempDir": f"s3://{self.bucket.bucket_name}/temporary",
+                    "--extra-py-files": f"s3://{self.bucket.bucket_name}/glue_job_assets/smart_search_dataload.py,s3://{self.bucket.bucket_name}/glue_job_assets/bedrock.py,s3://{self.bucket.bucket_name}/glue_job_assets/chinese_text_splitter.py,s3://{self.bucket.bucket_name}/glue_job_assets/opensearch_vector_search.py",
+                    "--additional-python-modules": "tiktoken,tqdm==4.65.0,boto3==1.28.72,langchain==0.0.325,opensearch-py==2.3.2,docx2txt==0.8,pypdf==3.16.4,numexpr==2.8.4",
+                },
+                glue_version="3.0",
+                max_capacity=1.0,
+                )
+            
+            self.bucket.grant_read_write(knowledge_base_handler_role)
+            job_table.grant_full_access(knowledge_base_handler_role)
+
+            function_name = 'createJob',
+            create_job_function = _lambda.Function(
+                self, 'createJob',
+                function_name='createJob',
+                runtime=_lambda.Runtime.PYTHON_3_9,
+                role=knowledge_base_handler_role,
+                layers=[self.langchain_processor_qa_layer],
+                code=_lambda.Code.from_asset(f"../lambda/knowledge_base_handler/job"),
+                handler='lambda_function' + '.lambda_handler',
+                timeout=Duration.minutes(5),
+                environment={
+                    "EMBEDDING_ENDPOINT_NAME": EMBEDDING_ENDPOINT_NAME,
+                    "BUCKET": self.bucket.bucket_name,
+                    "HOST": search_engine_key,
+                    "REGION": REGION,
+                    "SEARCH_ENGINE": SEARCH_ENGINE,
+                    "TABLE_NAME": job_table.table_name,
+                    "PRIMARY_KEY": PRIMARY_KEY,
+            }
+            )
+
+            function_name = 'listJobs',
+            list_jobs_function = _lambda.Function(
+                self, 'listJobs',
+                function_name='listJobs',
+                runtime=_lambda.Runtime.PYTHON_3_9,
+                role=knowledge_base_handler_role,
+                layers=[self.langchain_processor_qa_layer],
+                code=_lambda.Code.from_asset(f"../lambda/knowledge_base_handler/crud"),
+                handler='get-all' + '.handler',
+                timeout=Duration.minutes(5),
+                environment={
+                    "EMBEDDING_ENDPOINT_NAME": EMBEDDING_ENDPOINT_NAME,
+                    "BUCKET": self.bucket.bucket_name,
+                    "HOST": search_engine_key,
+                    "REGION": REGION,
+                    "SEARCH_ENGINE": SEARCH_ENGINE,
+                    "TABLE_NAME": job_table.table_name,
+                    "PRIMARY_KEY": PRIMARY_KEY
+            }
+            )
+
+            function_name = 'getPresignURL',
+            get_presignurl_function = _lambda.Function(
+                self, 'getPresignURL',
+                function_name='getPresignURL',
+                runtime=_lambda.Runtime.PYTHON_3_9,
+                role=knowledge_base_handler_role,
+                layers=[self.langchain_processor_qa_layer],
+                code=_lambda.Code.from_asset(f"../lambda/knowledge_base_handler/s3action"),
+                handler='get-presign-url' + '.handler',
+                timeout=Duration.minutes(5),
+                environment={
+                    "EMBEDDING_ENDPOINT_NAME": EMBEDDING_ENDPOINT_NAME,
+                    "BUCKET": self.bucket.bucket_name,
+                    "HOST": search_engine_key,
+                    "REGION": REGION,
+                    "SEARCH_ENGINE": SEARCH_ENGINE,
+                    "TABLE_NAME": job_table.table_name,
+                    "PRIMARY_KEY": PRIMARY_KEY
+            }
+            )
+
+            function_name = 'getIndexList',
+            get_indice_list_function = _lambda.Function(
+                self, 'getIndiceList',
+                function_name='getIndiceList',
+                runtime=_lambda.Runtime.PYTHON_3_9,
+                role=knowledge_base_handler_role,
+                layers=[self.langchain_processor_qa_layer],
+                code=_lambda.Code.from_asset('../lambda/knowledge_base_handler/indices'),
+                handler='lambda_function' + '.lambda_handler',
+                timeout=Duration.minutes(5),
+                reserved_concurrent_executions=20,
+                environment={
+                    "EMBEDDING_ENDPOINT_NAME": EMBEDDING_ENDPOINT_NAME,
+                    "BUCKET": self.bucket.bucket_name,
+                    "HOST": search_engine_key,
+                    "REGION": REGION,
+                    "SEARCH_ENGINE": SEARCH_ENGINE,
+                    "TABLE_NAME": job_table.table_name,
+                    "PRIMARY_KEY": PRIMARY_KEY
+            }
+            )
+
+            self.create_apigw_resource_method_for_knowledge_base_handler(
+                api=api,
+                create_job_function=create_job_function,
+                get_presignurl_function=get_presignurl_function,
+                list_jobs_function=list_jobs_function,
+                get_indice_list_function=get_indice_list_function,
+            )
