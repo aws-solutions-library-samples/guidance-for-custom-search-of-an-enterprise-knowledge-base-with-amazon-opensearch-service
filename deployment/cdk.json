@@ -31,7 +31,7 @@
       "aws",
       "aws-cn"
     ],
-    "vpc_deployment": true,
+    "vpc_deployment": false,
     "vpc_name": "smart_search-vpc",
     "subnet_name": "smart_search-subnet-private1-us-east-1a",
     "subnet_id": "subnet-1234",
