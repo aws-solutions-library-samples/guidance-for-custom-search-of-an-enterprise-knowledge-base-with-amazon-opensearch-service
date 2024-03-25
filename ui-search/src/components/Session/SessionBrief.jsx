@@ -110,7 +110,7 @@ const SessionBrief = ({ configs, expanded }) => {
           <SpaceBetween size={SIZE}>
             <ValueWithLabel label="Engine">{searchEngine}</ValueWithLabel>
             <ValueWithLabel label="Language Model Strategy">
-              {llmData?.modelName}
+              {llmData?.strategyName}
             </ValueWithLabel>
             <ValueWithLabel label="Language">{language}</ValueWithLabel>
             {isKendra ? (
@@ -161,10 +161,10 @@ const SessionBrief = ({ configs, expanded }) => {
           )}
 
           <SpaceBetween size="xs">
-            <BoolState bool={isCheckedGenerateReport} text="Generate Report" />
-            <BoolState bool={isCheckedContext} text="Context" />
+            {/* <BoolState bool={isCheckedGenerateReport} text="Generate Report" /> */}
+            {/* <BoolState bool={isCheckedContext} text="Context" /> */}
             <BoolState bool={isCheckedKnowledgeBase} text="Knowledge Base" />
-            <BoolState bool={isCheckedMapReduce} text="Map Reduce" />
+            {/* <BoolState bool={isCheckedMapReduce} text="Map Reduce" /> */}
             {!isKendra && (
               <>
                 <BoolState

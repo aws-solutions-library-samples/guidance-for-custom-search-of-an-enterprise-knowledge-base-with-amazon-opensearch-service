@@ -1,10 +1,11 @@
-// @ts-nocheck
 import {
+  Autosuggest,
   Box,
   Button,
   Container,
   Form,
   FormField,
+  Grid,
   Header,
   Input,
   SpaceBetween,
@@ -18,13 +19,14 @@ import useInput from 'src/hooks/useInput';
 import useLsLanguageModelList from 'src/hooks/useLsLanguageModelList';
 import useToggle from 'src/hooks/useToggle';
 import { genRandomNum } from 'src/utils/genUID';
+import useEndpointList from 'src/hooks/useEndpointList';
 
 const SIZE = 'l';
 
 const TYPE = { sagemaker: 'sagemaker_endpoint', thirdParty: 'third_party_api' };
 const SAGEMAKER_MODEL_TYPE = [
-  { label: 'llama2', value: 'llama2' },
   { label: 'non-llama2', value: 'non_llama2' },
+  { label: 'llama2', value: 'llama2' },
 ];
 const THIRD_PARTY_API_MODEL_TYPES = [
   { label: 'Bedrock', value: 'bedrock' },
@@ -37,6 +39,11 @@ const THIRD_PARTY_API_MODEL_NAMES = [
   {
     label: 'anthropic.claude-v2',
     value: 'anthropic.claude-v2',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
+    label: 'anthropic.claude-v2:1',
+    value: 'anthropic.claude-v2:1',
     modelType: ['bedrock', 'bedrock_api'],
   },
   {
@@ -54,13 +61,43 @@ const THIRD_PARTY_API_MODEL_NAMES = [
     value: 'meta.llama2-13b-chat-v1',
     modelType: ['bedrock', 'bedrock_api'],
   },
+  {
+    label: 'anthropic.claude-3-sonnet',
+    value: 'anthropic.claude-3-sonnet-20240229-v1:0',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
+    label: 'anthropic.claude-3-haiku',
+    value: 'anthropic.claude-3-haiku-20240307-v1:0',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
+    label: 'mistral.mistral-7b',
+    value: 'mistral.mistral-7b-instruct-v0:2',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
+    label: 'mistral.mixtral-8x7b',
+    value: 'mistral.mixtral-8x7b-instruct-v0:1',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
 ];
 
 const LanguageModelStrategy = () => {
   const [strategyName, bindStrategyName, resetStrategyName] = useInput('');
   const [type, setType] = useState(TYPE.sagemaker);
+  const [
+    OptionsSagemakerEndpoint,
+    OptionsEmbeddingEndpoint,
+    loadingEndpointList,
+  ] = useEndpointList();
   const [sagemakerEndpoint, bindSagemakerEndpoint, resetSagemakerEndpoint] =
     useInput('');
+  const [
+    isSagemakerStreaming,
+    bindIsSagemakerStreaming,
+    resetIsSagemakerStreaming,
+  ] = useToggle(true);
   const [embeddingEndpoint, bindEmbeddingEndpoint, resetEmbeddingEndpoint] =
     useInput('');
   const [
@@ -104,19 +141,25 @@ const LanguageModelStrategy = () => {
     resetThirdPartySecretKey();
   }, [thirdPartyModelType]);
 
-  const [
-    isCheckedTitanEmbedding,
-    bindIsCheckedTitanEmbedding,
-    resetTitanEmbedding,
-  ] = useToggle(false);
+  const [isCheckedLlama2Switch, bindLlama2Switch, resetLlama2Switch] =
+    useToggle(false);
+
+  useEffect(() => {
+    if (isCheckedLlama2Switch) {
+      setSagemakerModelType('llama2');
+    } else {
+      setSagemakerModelType('non_llama2');
+    }
+  }, [isCheckedLlama2Switch]);
 
   const resetForm = useCallback(() => {
     resetStrategyName();
-    resetTitanEmbedding();
     resetSagemakerEndpoint();
+    resetIsSagemakerStreaming();
     resetEmbeddingEndpoint();
     resetThirdPartyEmbeddingEmbeddingEndpoint();
     setThirdPartyModelType(THIRD_PARTY_API_MODEL_TYPES[0].value);
+    resetLlama2Switch();
     setSagemakerModelType(SAGEMAKER_MODEL_TYPE[0].value);
     resetThirdPartyApiUrl();
     resetThirdPartyApiKey();
@@ -188,10 +231,11 @@ const LanguageModelStrategy = () => {
                   id: 'embeddingEndpoint',
                   header: 'EmbeddingEndpoint',
                   width: 200,
-                  cell: (item) =>
-                    item.embeddingEndpoint ||
-                    item.thirdPartyEmbeddingEndpoint ||
-                    'n/a',
+                  cell: (item) => {
+                    if (item.isCheckedTitanEmbedding)
+                      return 'Use Titan Embedding';
+                    return item.embeddingEndpoint || 'n/a';
+                  },
                 },
                 {
                   id: 'apiUrl',
@@ -273,7 +317,7 @@ const LanguageModelStrategy = () => {
                           recordId: `${sagemakerEndpoint}-${genRandomNum()}`,
                           // *** different items
                           sagemakerEndpoint,
-                          isCheckedTitanEmbedding,
+                          streaming: isSagemakerStreaming,
                         };
                       } else {
                         // Third Party APIs
@@ -338,45 +382,46 @@ const LanguageModelStrategy = () => {
               </FormField>
 
               {type === TYPE.sagemaker ? (
+                // **** SageMaker *************************************************************
                 <>
-                  <FormField label="Model Type">
-                    <Tiles
-                      columns={4}
-                      onChange={({ detail }) =>
-                        setSagemakerModelType(detail.value)
-                      }
-                      value={sagemakerModelType}
-                      items={SAGEMAKER_MODEL_TYPE}
-                    />
-                    {/* <Select
-                      selectedOption={{ value: sagemakerModelType }}
-                      onChange={({ detail }) =>
-                        setSagemakerModelType(detail.selectedOption.value)
-                      }
-                      options={SAGEMAKER_MODEL_TYPE}
-                    /> */}
-                  </FormField>
-                  <FormField label="SageMaker Endpoint">
-                    <Input
-                      {...bindSagemakerEndpoint}
-                      placeholder="Please provide SageMaker Endpoint"
-                    />
-                  </FormField>
                   <FormField>
-                    <Toggle {...bindIsCheckedTitanEmbedding}>
-                      Use Titan Embedding
+                    <Toggle {...bindLlama2Switch}>
+                      LLama2 model deployed through Jumpstart
                     </Toggle>
                   </FormField>
-                  {isCheckedTitanEmbedding ? null : (
-                    <FormField label="Embedding Endpoint">
-                      <Input
-                        {...bindEmbeddingEndpoint}
-                        placeholder="Please provide embedding endpoint"
+                  <Grid gridDefinition={[{ colspan: 8 }, { colspan: 4 }]}>
+                    <FormField stretch label="SageMaker Endpoint">
+                      <Autosuggest
+                        enteredTextLabel={(v) => `Use: "${v}"`}
+                        {...bindSagemakerEndpoint}
+                        loadingText="loading endpoint list"
+                        statusType={
+                          loadingEndpointList ? 'loading' : 'finished'
+                        }
+                        options={OptionsSagemakerEndpoint}
+                        placeholder="Search or enter value"
+                        empty="No matches found"
                       />
                     </FormField>
-                  )}
+                    <FormField label="Switch for Streaming">
+                      <Toggle {...bindIsSagemakerStreaming}>Streaming</Toggle>
+                    </FormField>
+                  </Grid>
+
+                  <FormField label="Embedding Endpoint">
+                    <Autosuggest
+                      enteredTextLabel={(v) => `Use: "${v}"`}
+                      {...bindEmbeddingEndpoint}
+                      loadingText="loading endpoint list"
+                      statusType={loadingEndpointList ? 'loading' : 'finished'}
+                      options={OptionsEmbeddingEndpoint}
+                      placeholder="Search or enter value"
+                      empty="No matches found"
+                    />
+                  </FormField>
                 </>
               ) : (
+                // **** Third Party ***********************************************************
                 <>
                   <FormField label="Model Type" stretch>
                     <Tiles
@@ -387,13 +432,6 @@ const LanguageModelStrategy = () => {
                       value={thirdPartyModelType}
                       items={THIRD_PARTY_API_MODEL_TYPES}
                     />
-                    {/* <Select
-                      selectedOption={{ value: thirdPartyModelType }}
-                      onChange={({ detail }) =>
-                        setThirdPartyModelType(detail.selectedOption.value)
-                      }
-                      options={THIRD_PARTY_API_MODEL_TYPES}
-                    /> */}
                   </FormField>
                   <FormField label="Model Name" stretch>
                     <Tiles
@@ -404,18 +442,17 @@ const LanguageModelStrategy = () => {
                       value={thirdPartyModelName}
                       items={thirdPartyModelNameOpts}
                     />
-                    {/* <Select
-                      selectedOption={{ value: thirdPartyModelName }}
-                      onChange={({ detail }) =>
-                        setThirdPartyModelName(detail.selectedOption.value)
-                      }
-                      options={thirdPartyModelNameOpts}
-                    /> */}
                   </FormField>
+
                   <FormField label="Embedding Endpoint">
-                    <Input
+                    <Autosuggest
+                      enteredTextLabel={(v) => `Use: "${v}"`}
                       {...bindThirdPartyEmbeddingEndpoint}
-                      placeholder="Please provide embedding endpoint"
+                      loadingText="loading endpoint list"
+                      statusType={loadingEndpointList ? 'loading' : 'finished'}
+                      options={OptionsEmbeddingEndpoint}
+                      placeholder="Search or enter value"
+                      empty="No matches found"
                     />
                   </FormField>
                   {thirdPartyModelType ===

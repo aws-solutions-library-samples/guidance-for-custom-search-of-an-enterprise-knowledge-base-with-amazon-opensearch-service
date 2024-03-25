@@ -19,20 +19,12 @@ const Session = () => {
       (item) => item.sessionId === sessionId
     );
     if (sessionData) {
-      // simple verification that the data is created by the user (already in the localStorage)
+      // console.log(sessionData.conversations.at(-1).content.text);
       setData(sessionData);
     } else {
-      // try to visit other sessions in the database (e.g. not created by the user)
       // navigate back to landing page
       navigate('/');
     }
-
-    // TODO?
-    // sync data with server
-    // services.session
-    //   .getById(sessionId)
-    //   .then((res) => res.json())
-    //   .then((data) => setData(data));
   }, [lsSessionList, navigate, sessionId]);
 
   return (

@@ -17,6 +17,7 @@ const SessionChatsAI = ({
     contentCheckLabel,
     contentCheckSuggestion,
     sourceData,
+    answerTook,
   },
 }) => {
   return (
@@ -64,6 +65,13 @@ const SessionChatsAI = ({
                 </Badge>
               </Popover>
             </div>
+            {Number(answerTook) ? (
+              <div style={{ float: 'right' }}>
+                <span style={{ display: 'block', padding: '8px 0' }}>
+                  {`${Number(answerTook) / 1000} s`}
+                </span>
+              </div>
+            ) : null}
           </Box>
         </div>
       </StyledQ>

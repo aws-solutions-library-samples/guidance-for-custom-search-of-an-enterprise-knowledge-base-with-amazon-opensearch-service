@@ -462,7 +462,11 @@ class OpenSearchVectorSearch(VectorStore):
             text_field: Document field the text of the document is stored in. Defaults
             to "text".
         """
-        embeddings = self.embedding_function.embed_documents(list(texts))
+        embedding_type = kwargs.get("embedding_type", "sagemaker")
+        if embedding_type == 'bedrock':
+            embeddings = self.embedding_function.embed_documents(list(texts))
+        else:
+            embeddings = self.embedding_function.embed_documents(list(texts),chunk_size=10)
         return self.__add(
             texts,
             embeddings,
@@ -472,6 +476,46 @@ class OpenSearchVectorSearch(VectorStore):
             **kwargs,
         )
 
+    def add_texts_sentence_in_metadata(
+        self,
+        texts: Iterable[str],
+        metadatas: Optional[List[dict]] = None,
+        ids: Optional[List[str]] = None,
+        bulk_size: int = 500,
+        **kwargs: Any,
+    ) -> List[str]:
+        """Run more texts through the embeddings and add to the vectorstore.
+
+        Args:
+            texts: Iterable of strings to add to the vectorstore.
+            metadatas: Optional list of metadatas associated with the texts.
+            ids: Optional list of ids to associate with the texts.
+            bulk_size: Bulk API request count; Default: 500
+
+        Returns:
+            List of ids from adding the texts into the vectorstore.
+
+        Optional Args:
+            vector_field: Document field embeddings are stored in. Defaults to
+            "vector_field".
+
+            text_field: Document field the text of the document is stored in. Defaults
+            to "text".
+        """
+        embedding_type = kwargs.get("embedding_type", "sagemaker")
+        if embedding_type == 'bedrock':
+            embeddings = self.embedding_function.embed_documents(list([metadata["sentence"] for metadata in metadatas]))
+        else:
+            embeddings = self.embedding_function.embed_documents(list([metadata["sentence"] for metadata in metadatas]),chunk_size=10)
+        return self.__add(
+            texts,
+            embeddings,
+            metadatas=metadatas,
+            ids=ids,
+            bulk_size=bulk_size,
+            **kwargs,
+        )        
+   
     def add_embeddings(
         self,
         text_embeddings: Iterable[Tuple[str, List[float]]],
@@ -588,8 +632,9 @@ class OpenSearchVectorSearch(VectorStore):
         if len(vec_docs+aos_docs) > 0:
             new_vec_docs = []
             new_aos_docs = []
-            if search_method != "text" and len(vec_docs) > 0 and vec_docs_score_thresholds > 0:              
+            if search_method != "text" and len(vec_docs) > 0:              
                 for doc in vec_docs:
+                    doc[1] = float(doc[1]) if float(doc[1]) < 1 else float(doc[1])/100
                     if float(doc[1]) >= vec_docs_score_thresholds:
                         new_vec_docs.append(doc)
             else:
@@ -639,7 +684,7 @@ class OpenSearchVectorSearch(VectorStore):
         hits = self._raw_similarity_search_with_score(query=query, k=k, **kwargs)
 
         documents_with_scores = [
-            (
+            [
                 Document(
                     page_content=hit["_source"][text_field][0] if isinstance(hit["_source"][text_field],list)  else hit["_source"][text_field],
                     metadata=hit["_source"]
@@ -647,7 +692,7 @@ class OpenSearchVectorSearch(VectorStore):
                     else hit["_source"][metadata_field],
                 ),
                 hit["_score"] * 100  if embedding_type == 'bedrock' else hit["_score"],
-            )
+            ]
             for hit in hits
         ]
         return documents_with_scores
