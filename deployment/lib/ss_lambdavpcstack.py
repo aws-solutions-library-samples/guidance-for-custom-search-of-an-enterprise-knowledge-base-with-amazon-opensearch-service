@@ -229,10 +229,10 @@ class LambdaVPCStack(Stack):
             api=api,
             func=content_moderation_func
         )
+        self.create_knowledge_base_handler(api, search_engine_key, vpc, vpc_subnets_selection)
 
         self.apigw = api
 
-    
     def create_apigw_resource_method_for_content_moderation(self, api, func):
 
         content_moderation_resource = api.root.add_resource(
@@ -1323,7 +1323,7 @@ class LambdaVPCStack(Stack):
             #GET knowledge_base_handler/indices
             create_api_integration(get_indice_list_function,indices,"GET")
 
-    def create_knowledge_base_handler(self, api, search_engine_key):
+    def create_knowledge_base_handler(self, api, search_engine_key, vpc, vpc_subnets_selection):
 
             REGION = os.getenv('AWS_REGION', '')
             EMBEDDING_ENDPOINT_NAME = "bedrock-titan-embed"
@@ -1340,7 +1340,10 @@ class LambdaVPCStack(Stack):
                     'bedrock:*',
                     'dynamodb:AmazonDynamoDBFullAccess',
                     'logs:*',
-                    'glue:*'
+                    'glue:*',
+                    'ec2:CreateNetworkInterface',
+                    'ec2:DescribeNetworkInterfaces',
+                    'ec2:DeleteNetworkInterface',
                 ],
                 resources=['*']  # 可根据需求进行更改
             )
@@ -1361,20 +1364,36 @@ class LambdaVPCStack(Stack):
                 stream=dynamodb.StreamViewType.NEW_IMAGE
             )
         
+            ACCOUNT = os.getenv('AWS_ACCOUNT_ID', '')
+            REGION = os.getenv('AWS_REGION', '')
+            bucket_for_configs = "intelligent-search-config-bucket" + "-" + ACCOUNT + "-" + REGION
+
+            _bucket_name = bucket_for_configs
+
+            _conifg_bucket = s3.Bucket(self,
+                                id=_bucket_name,
+                                bucket_name=_bucket_name,
+                                block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+                                encryption=s3.BucketEncryption.S3_MANAGED,
+                                enforce_ssl=True,
+                                versioned=False,
+                                removal_policy=RemovalPolicy.DESTROY
+                                )
+
             deployment = s3deploy.BucketDeployment(self, "extraPythonFiles",
                 sources=[s3deploy.Source.asset("../lambda/knowledge_base_handler/job")],
                 destination_key_prefix="glue_job_assets",
-                destination_bucket=self.bucket
+                destination_bucket=_conifg_bucket
             )
 
-            GlueS3Prefix = f"s3://{self.bucket.bucket_name}/glue_job_assets",
+            GlueS3Prefix = f"s3://{bucket_for_configs}/glue_job_assets",
 
             knowledge_base_handler_glue_role = _iam.Role(
                 self, 'knowledge_base_handler_rolev3',
                 assumed_by=_iam.ServicePrincipal('glue.amazonaws.com')
             )
             knowledge_base_handler_glue_role.add_to_policy(_knowledge_base_role_policy)
-            self.bucket.grant_read_write(knowledge_base_handler_glue_role)
+            _conifg_bucket.grant_read_write(knowledge_base_handler_glue_role)
             job_table.grant_full_access(knowledge_base_handler_glue_role)
 
             glue_job = glue.CfnJob(
@@ -1387,18 +1406,18 @@ class LambdaVPCStack(Stack):
                 command=glue.CfnJob.JobCommandProperty(
                     name="pythonshell",
                     python_version="3.9",
-                    script_location=f"s3://{self.bucket.bucket_name}/glue_job_assets/glue-job-script.py",
+                    script_location=f"s3://{bucket_for_configs}/glue_job_assets/glue-job-script.py",
                 ),
                 default_arguments={
-                    "--TempDir": f"s3://{self.bucket.bucket_name}/temporary",
-                    "--extra-py-files": f"s3://{self.bucket.bucket_name}/glue_job_assets/smart_search_dataload.py,s3://{self.bucket.bucket_name}/glue_job_assets/bedrock.py,s3://{self.bucket.bucket_name}/glue_job_assets/chinese_text_splitter.py,s3://{self.bucket.bucket_name}/glue_job_assets/opensearch_vector_search.py",
+                    "--TempDir": f"s3://{bucket_for_configs}/temporary",
+                    "--extra-py-files": f"s3://{bucket_for_configs}/glue_job_assets/smart_search_dataload.py,s3://{bucket_for_configs}/glue_job_assets/bedrock.py,s3://{bucket_for_configs}/glue_job_assets/chinese_text_splitter.py,s3://{bucket_for_configs}/glue_job_assets/opensearch_vector_search.py",
                     "--additional-python-modules": "tiktoken,tqdm==4.65.0,boto3==1.28.72,langchain==0.0.325,opensearch-py==2.3.2,docx2txt==0.8,pypdf==3.16.4,numexpr==2.8.4",
                 },
                 glue_version="3.0",
                 max_capacity=1.0,
                 )
             
-            self.bucket.grant_read_write(knowledge_base_handler_role)
+            _conifg_bucket.grant_read_write(knowledge_base_handler_role)
             job_table.grant_full_access(knowledge_base_handler_role)
 
             function_name = 'createJob',
@@ -1411,9 +1430,11 @@ class LambdaVPCStack(Stack):
                 code=_lambda.Code.from_asset(f"../lambda/knowledge_base_handler/job"),
                 handler='lambda_function' + '.lambda_handler',
                 timeout=Duration.minutes(5),
+                vpc=vpc,
+                vpc_subnets=vpc_subnets_selection,
                 environment={
                     "EMBEDDING_ENDPOINT_NAME": EMBEDDING_ENDPOINT_NAME,
-                    "BUCKET": self.bucket.bucket_name,
+                    "BUCKET": bucket_for_configs,
                     "HOST": search_engine_key,
                     "REGION": REGION,
                     "SEARCH_ENGINE": SEARCH_ENGINE,
@@ -1432,9 +1453,11 @@ class LambdaVPCStack(Stack):
                 code=_lambda.Code.from_asset(f"../lambda/knowledge_base_handler/crud"),
                 handler='get-all' + '.handler',
                 timeout=Duration.minutes(5),
+                vpc=vpc,
+                vpc_subnets=vpc_subnets_selection,
                 environment={
                     "EMBEDDING_ENDPOINT_NAME": EMBEDDING_ENDPOINT_NAME,
-                    "BUCKET": self.bucket.bucket_name,
+                    "BUCKET": bucket_for_configs,
                     "HOST": search_engine_key,
                     "REGION": REGION,
                     "SEARCH_ENGINE": SEARCH_ENGINE,
@@ -1453,9 +1476,11 @@ class LambdaVPCStack(Stack):
                 code=_lambda.Code.from_asset(f"../lambda/knowledge_base_handler/s3action"),
                 handler='get-presign-url' + '.handler',
                 timeout=Duration.minutes(5),
+                vpc=vpc,
+                vpc_subnets=vpc_subnets_selection,
                 environment={
                     "EMBEDDING_ENDPOINT_NAME": EMBEDDING_ENDPOINT_NAME,
-                    "BUCKET": self.bucket.bucket_name,
+                    "BUCKET": bucket_for_configs,
                     "HOST": search_engine_key,
                     "REGION": REGION,
                     "SEARCH_ENGINE": SEARCH_ENGINE,
@@ -1475,9 +1500,11 @@ class LambdaVPCStack(Stack):
                 handler='lambda_function' + '.lambda_handler',
                 timeout=Duration.minutes(5),
                 reserved_concurrent_executions=20,
+                vpc=vpc,
+                vpc_subnets=vpc_subnets_selection,
                 environment={
                     "EMBEDDING_ENDPOINT_NAME": EMBEDDING_ENDPOINT_NAME,
-                    "BUCKET": self.bucket.bucket_name,
+                    "BUCKET": bucket_for_configs,
                     "HOST": search_engine_key,
                     "REGION": REGION,
                     "SEARCH_ENGINE": SEARCH_ENGINE,
