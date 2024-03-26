@@ -906,6 +906,18 @@ class LambdaVPCStack(Stack):
                             versioned=False,
                             removal_policy=RemovalPolicy.DESTROY
                             )
+        
+        _bucket.add_cors_rule(
+            allowed_headers=["*"],
+            allowed_methods=[
+                             s3.HttpMethods.GET,
+                             s3.HttpMethods.PUT,
+                             s3.HttpMethods.POST
+                             ],
+            allowed_origins=["*"]
+            )
+        
+        self.bucket = _bucket
 
         """
         2. Create Execution Role for Uploading file to S3
@@ -1341,9 +1353,7 @@ class LambdaVPCStack(Stack):
                     'dynamodb:AmazonDynamoDBFullAccess',
                     'logs:*',
                     'glue:*',
-                    'ec2:CreateNetworkInterface',
-                    'ec2:DescribeNetworkInterfaces',
-                    'ec2:DeleteNetworkInterface',
+                    'ec2:*'
                 ],
                 resources=['*']  # 可根据需求进行更改
             )
@@ -1394,7 +1404,20 @@ class LambdaVPCStack(Stack):
             )
             knowledge_base_handler_glue_role.add_to_policy(_knowledge_base_role_policy)
             _conifg_bucket.grant_read_write(knowledge_base_handler_glue_role)
+            self.bucket.grant_read_write(knowledge_base_handler_glue_role)
             job_table.grant_full_access(knowledge_base_handler_glue_role)
+
+            #cfn_connection = glue.CfnConnection(self, "MyCfnConnection",
+            #    catalog_id="catalogId",
+            #    connection_input=glue.CfnConnection.ConnectionInputProperty(
+            #        connection_type="NETWORK",
+            #        # the properties below are optional
+            #        physical_connection_requirements=glue.CfnConnection.PhysicalConnectionRequirementsProperty(
+            #            availability_zone=self.node.try_get_context("zone_id"),
+            #            subnet_id=self.node.try_get_context("subnet_id"),
+            #        )
+            #    )
+            #)
 
             glue_job = glue.CfnJob(
                 self, "MyGlueJob",
@@ -1414,10 +1437,14 @@ class LambdaVPCStack(Stack):
                     "--additional-python-modules": "tiktoken,tqdm==4.65.0,boto3==1.28.72,langchain==0.0.325,opensearch-py==2.3.2,docx2txt==0.8,pypdf==3.16.4,numexpr==2.8.4",
                 },
                 glue_version="3.0",
-                max_capacity=1.0,
+                max_capacity=1.0, 
+                #connections=glue.CfnJob.ConnectionsListProperty(
+                #    connections=["MyCfnConnection"]
+                #),
                 )
             
             _conifg_bucket.grant_read_write(knowledge_base_handler_role)
+            self.bucket.grant_read_write(knowledge_base_handler_role)
             job_table.grant_full_access(knowledge_base_handler_role)
 
             function_name = 'createJob',
@@ -1434,7 +1461,7 @@ class LambdaVPCStack(Stack):
                 vpc_subnets=vpc_subnets_selection,
                 environment={
                     "EMBEDDING_ENDPOINT_NAME": EMBEDDING_ENDPOINT_NAME,
-                    "BUCKET": bucket_for_configs,
+                    "BUCKET": self.bucket.bucket_name,
                     "HOST": search_engine_key,
                     "REGION": REGION,
                     "SEARCH_ENGINE": SEARCH_ENGINE,
@@ -1457,7 +1484,7 @@ class LambdaVPCStack(Stack):
                 vpc_subnets=vpc_subnets_selection,
                 environment={
                     "EMBEDDING_ENDPOINT_NAME": EMBEDDING_ENDPOINT_NAME,
-                    "BUCKET": bucket_for_configs,
+                    "BUCKET": self.bucket.bucket_name,
                     "HOST": search_engine_key,
                     "REGION": REGION,
                     "SEARCH_ENGINE": SEARCH_ENGINE,
@@ -1480,7 +1507,7 @@ class LambdaVPCStack(Stack):
                 vpc_subnets=vpc_subnets_selection,
                 environment={
                     "EMBEDDING_ENDPOINT_NAME": EMBEDDING_ENDPOINT_NAME,
-                    "BUCKET": bucket_for_configs,
+                    "BUCKET": self.bucket.bucket_name,
                     "HOST": search_engine_key,
                     "REGION": REGION,
                     "SEARCH_ENGINE": SEARCH_ENGINE,
@@ -1504,7 +1531,7 @@ class LambdaVPCStack(Stack):
                 vpc_subnets=vpc_subnets_selection,
                 environment={
                     "EMBEDDING_ENDPOINT_NAME": EMBEDDING_ENDPOINT_NAME,
-                    "BUCKET": bucket_for_configs,
+                    "BUCKET": self.bucket.bucket_name,
                     "HOST": search_engine_key,
                     "REGION": REGION,
                     "SEARCH_ENGINE": SEARCH_ENGINE,
