@@ -29,7 +29,7 @@ def get_upload_url(event):
     s3_params = {
         'Bucket': os.environ['BUCKET'],
         'Key': key,
-        'Expires': URL_EXPIRATION_SECONDS,
+        'ExpiresIn': URL_EXPIRATION_SECONDS,
         'ContentType': filetype,
         # This ACL makes the uploaded object publicly readable. You must also uncomment
         # the extra permission for the Lambda function in the SAM template.
