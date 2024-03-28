@@ -29,7 +29,7 @@ def get_upload_url(event):
     s3_params = {
         'Bucket': os.environ['BUCKET'],
         'Key': key,
-        'ExpiresIn': URL_EXPIRATION_SECONDS,
+        #'ExpiresIn': URL_EXPIRATION_SECONDS,
         'ContentType': filetype,
         # This ACL makes the uploaded object publicly readable. You must also uncomment
         # the extra permission for the Lambda function in the SAM template.
@@ -39,7 +39,7 @@ def get_upload_url(event):
     print('Params: ', s3_params)
 
     try:
-        upload_url = s3.generate_presigned_url('put_object', Params=s3_params)
+        upload_url = s3.generate_presigned_url('put_object', Params=s3_params, ExpiresIn=URL_EXPIRATION_SECONDS)
     except NoCredentialsError:
         print("No AWS credentials found")
         return None
