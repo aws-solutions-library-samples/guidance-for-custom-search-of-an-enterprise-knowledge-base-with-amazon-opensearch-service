@@ -1,0 +1,11 @@
+../../bin/pymupdf,sha256=LtFJEkkL-c3DFSH9VAQ1v9o8RLWvPz8HLbLurrds0y8,257
+PyMuPDFb-1.24.0.dist-info/COPYING,sha256=4Fv7ClDSjhDuQgCg-BeJPyaVMFWkyVp40FN4tIg7QBM,18
+PyMuPDFb-1.24.0.dist-info/INSTALLER,sha256=zuuue4knoyJ-UwPPXg8fezS7VCrXJQrAP7zeNuwvFQg,4
+PyMuPDFb-1.24.0.dist-info/METADATA,sha256=H5idAH-hV2FERFywiWtCO9i247qp0LMTH94Rq9z_Vt4,1417
+PyMuPDFb-1.24.0.dist-info/README.md,sha256=BMCV5RBV5a5euEhXbggwrGp0q44razM5fM6jvrtYCmc,289
+PyMuPDFb-1.24.0.dist-info/RECORD,,
+PyMuPDFb-1.24.0.dist-info/WHEEL,sha256=LyC2D1hBHpF2HFjzv6f1bqg6GHmnTYjHEeWEZAAixKw,131
+PyMuPDFb-1.24.0.dist-info/entry_points.txt,sha256=lMJDwh9FVvNeyzF-3H1MKONB_Tj-zAd4ndh5eHCfyMw,48
+fitz/libmupdf.so.24.0,sha256=WyG_ziV6iWVXexDbftkBcBfvB-mKG4gijyOZrOo58y4,27215792
+fitz/libmupdfcpp.so.24.0,sha256=lBHCa-Sk77bU7PEkxWgngQ3Egrnn2v6pT7HIVkWpUcc,2567720
+fitz_old/libmupdf.so.24.0,sha256=WyG_ziV6iWVXexDbftkBcBfvB-mKG4gijyOZrOo58y4,27215792

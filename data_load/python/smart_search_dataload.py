@@ -19,7 +19,7 @@ from langchain import SagemakerEndpoint
 from langchain.llms.sagemaker_endpoint import ContentHandlerBase
 from langchain.llms.sagemaker_endpoint import LLMContentHandler
 from langchain.vectorstores import Zilliz
-from bedrock import BedrockEmbeddings
+from bedrock_embedding import BedrockEmbeddings
 from chinese_text_splitter import ChineseTextSplitter
 import json
 from typing import Dict, List, Tuple, Optional,Any
@@ -312,11 +312,8 @@ class SmartSearchDataload:
         self.language = language
         self.embedding_type = 'sagemaker'
             
-        if embedding_endpoint_name == 'bedrock-titan-embed':
-            self.embeddings = init_embeddings_bedrock()
-            self.embedding_type = 'bedrock'
-        elif embedding_endpoint_name == 'bedrock-cohere-embed':
-            self.embeddings = init_embeddings_bedrock('cohere.embed-multilingual-v3')
+        if embedding_endpoint_name.find('amazon.titan-embed') >=0 or embedding_endpoint_name.find('cohere.embed') >=0:
+            self.embeddings = init_embeddings_bedrock(embedding_endpoint_name)
             self.embedding_type = 'bedrock'
         else:
             self.embeddings = init_embeddings(embedding_endpoint_name,region,self.language)
@@ -350,8 +347,8 @@ class SmartSearchDataload:
         loaded_files = []
         failed_files = []
         pdf_to_html = False if not split_to_sentence_paragraph else pdf_to_html
-        print('split_to_sentence_paragraph:',split_to_sentence_paragraph)
-        print('pdf_to_html:',pdf_to_html)
+        # print('split_to_sentence_paragraph:',split_to_sentence_paragraph)
+        # print('pdf_to_html:',pdf_to_html)
         if isinstance(filepath, str):
             if not os.path.exists(filepath):
                 print("Path does not exist")
