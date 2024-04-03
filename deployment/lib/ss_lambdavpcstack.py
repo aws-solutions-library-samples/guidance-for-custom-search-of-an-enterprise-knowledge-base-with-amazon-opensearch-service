@@ -806,40 +806,6 @@ class LambdaVPCStack(Stack):
 
         return content_moderation_func
     
-    def create_apigw_resource_method_for_knowledge_base_handler(self, api, knowledge_base_handler_function):
-
-        knowledge_base_handler_resource = api.root.add_resource(
-            'knowledge_base_handler',
-            default_cors_preflight_options=apigw.CorsOptions(
-                allow_methods=['GET', 'OPTIONS'],
-                allow_origins=apigw.Cors.ALL_ORIGINS)
-        )
-
-        knowledge_base_handler_integration = apigw.LambdaIntegration(
-            knowledge_base_handler_function,
-            proxy=True,
-            integration_responses=[
-                apigw.IntegrationResponse(
-                    status_code="200",
-                    response_parameters={
-                        'method.response.header.Access-Control-Allow-Origin': "'*'"
-                    }
-                )
-            ]
-        )
-
-        knowledge_base_handler_resource.add_method(
-            'GET',
-            knowledge_base_handler_integration,
-            method_responses=[
-                apigw.MethodResponse(
-                    status_code="200",
-                    response_parameters={
-                        'method.response.header.Access-Control-Allow-Origin': True
-                    }
-                )
-            ]
-        )
     def create_apigw_resource_method_for_endpoint_list(self, api, endpoint_list_function):
 
         endpoint_list_resource = api.root.add_resource(
