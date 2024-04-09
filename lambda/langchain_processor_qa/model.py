@@ -18,6 +18,17 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from langchain.callbacks.manager import CallbackManagerForChainRun
 import inspect 
 
+import time
+time_seq=1
+last_time=time.time()
+init_time=last_time
+def printTime(title):
+    global time_seq
+    global last_time
+    current_time=time.time()
+    print(f"printTime{time_seq}:{title}:{current_time}:{current_time-init_time}:{current_time-last_time}")
+    time_seq=time_seq+1
+    last_time=current_time
 def init_embeddings(endpoint_name,region_name,language: str = "chinese"):
     
     class ContentHandler(EmbeddingsContentHandler):
@@ -43,25 +54,41 @@ def init_embeddings(endpoint_name,region_name,language: str = "chinese"):
         content_handler=content_handler
     )
     return embeddings
-
+global_embedding_bedrock=None
 def init_embeddings_bedrock(model_id: str = 'amazon.titan-embed-text-v1'):
+    global global_embedding_bedrock
+    if global_embedding_bedrock is not None:
+        return global_embedding_bedrock
+
     embeddings = BedrockEmbeddings(model_id=model_id)
+    global_embedding_bedrock=embeddings
     return embeddings
 
+
+# zpf: 优化初始化逻辑：在函数外部定义一个全局变量来跟踪vector_store的状态
+global_vector_store = None
 def init_vector_store(embeddings,
-             index_name,
-             opensearch_host,
-             opensearch_port,
-             opensearch_user_name,
-             opensearch_user_password):
+                      index_name,
+                      opensearch_host,
+                      opensearch_port,
+                      opensearch_user_name,
+                      opensearch_user_password):
+    global global_vector_store
+
+    # 检查vector_store是否已经被初始化
+    if global_vector_store is not None:
+        return global_vector_store
 
     vector_store = OpenSearchVectorSearch(
         index_name=index_name,
-        embedding_function=embeddings, 
+        embedding_function=embeddings,
         opensearch_url="aws-opensearch-url",
-        hosts = [{'host': opensearch_host, 'port': opensearch_port}],
-        http_auth = (opensearch_user_name, opensearch_user_password),
+        hosts=[{'host': opensearch_host, 'port': opensearch_port}],
+        http_auth=(opensearch_user_name, opensearch_user_password),
     )
+
+    # 将新初始化的vector_store保存到全局变量中
+    global_vector_store = vector_store
     return vector_store
 
 
@@ -226,18 +253,23 @@ def init_model_llama2(endpoint_name,region_name,temperature):
         return llm
     except Exception as e:
         return None
-    
+
 def init_model_bedrock(model_id):
     try:
         llm = Bedrock(model_id=model_id)
         return llm
     except Exception as e:
         return None
+global_llm_bedrock_streaming=None
 def init_model_bedrock_withstreaming(model_id,callbackHandler):
+    global global_llm_bedrock_streaming
+    if global_llm_bedrock_streaming is not None:
+        return global_llm_bedrock_streaming
     try:
         llm = Bedrock(model_id=model_id,
                       streaming=True,
                      callbacks=[callbackHandler],)
+        global_llm_bedrock_streaming=llm
         return llm
     except Exception as e:
         return None
@@ -269,11 +301,12 @@ def new_conversational_call(
         inputs: Dict[str, Any],
         run_manager: Optional[CallbackManagerForChainRun] = None,
     ) -> Dict[str, Any]:
+    printTime("begin get_chat_history")
     _run_manager = run_manager or CallbackManagerForChainRun.get_noop_manager()
     question = inputs["question"]
     get_chat_history = self.get_chat_history or _get_chat_history
     chat_history_str = get_chat_history(inputs["chat_history"])
-
+    printTime("begin rewrite")
     if chat_history_str:
         callbacks = _run_manager.get_child()
         new_question = self.question_generator.run(
@@ -284,6 +317,7 @@ def new_conversational_call(
     accepts_run_manager = (
         "run_manager" in inspect.signature(self._get_docs).parameters
     )
+    printTime("begin retrieve")
     if accepts_run_manager:
         docs = self._get_docs(new_question, inputs, run_manager=_run_manager)
     else:
@@ -296,7 +330,7 @@ def new_conversational_call(
         if self.rephrase_question:
             new_inputs["question"] = new_question
         new_inputs["chat_history"] = chat_history_str
-        
+        printTime("begin llm")
         docs_without_score = [doc[0] for doc in docs]
         answer = self.combine_docs_chain.run(
             input_documents=docs_without_score, callbacks=_run_manager.get_child(), **new_inputs

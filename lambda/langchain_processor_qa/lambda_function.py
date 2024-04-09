@@ -9,7 +9,9 @@ import ast
 from smart_search_qa import SmartSearchQA
 from prompt import *
 from streaming_callback_handler import MyStreamingHandler
-
+from model import init_vector_store
+from model import printTime
+printTime('init-time')
 lam = boto3.client('lambda')
 
 EMBEDDING_ENDPOINT_NAME = os.environ.get('embedding_endpoint_name')
@@ -24,6 +26,11 @@ table_name = os.environ.get('dynamodb_table_name')
 search_engine_opensearch = True if str(os.environ.get('search_engine_opensearch')).lower() == 'true' else False
 search_engine_kendra = True if str(os.environ.get('search_engine_kendra')).lower() == 'true' else False
 search_engine_zilliz = True if str(os.environ.get('search_engine_zilliz')).lower() == 'true' else False
+#init the master_user of opensearch
+sm_client = boto3.client('secretsmanager')
+master_user = sm_client.get_secret_value(SecretId='opensearch-master-user')['SecretString']
+
+#init the vector store
 
 port = 443
 
@@ -43,7 +50,7 @@ response = {
 def lambda_handler(event, context):
     contentCheckLabel = "Pass"
     contentCheckSuggestion = "Pass"
-
+    printTime('enter handler')
     try:
         print("event:",event)
         # print("region:",region)
@@ -219,10 +226,9 @@ def lambda_handler(event, context):
         username = None
         password = None
         host = HOST
+
+        printTime('before opensearch init')
         if searchEngine == "opensearch":
-            # retrieve secret manager value by key using boto3
-            sm_client = boto3.client('secretsmanager')
-            master_user = sm_client.get_secret_value(SecretId='opensearch-master-user')['SecretString']
             data = json.loads(master_user)
             username = data.get('username')
             password = data.get('password')
@@ -230,7 +236,7 @@ def lambda_handler(event, context):
             if "kendraIndexId" in evt_body.keys():
                 host = evt_body['kendraIndexId']
         print("host:", host)
-
+        printTime("before init_cfg")
         connectionId = str(event.get('requestContext', {}).get('connectionId'))
         search_qa = SmartSearchQA()
         search_qa.init_cfg(index,
@@ -257,7 +263,7 @@ def lambda_handler(event, context):
                            )
 
         QUERY_VERIFIED_RESULT = None
-
+        printTime("after init_cfg")
         # Verify if Query is illegal
         if _enable_content_moderation:
             moderated_result = moderate_content(
@@ -416,6 +422,7 @@ def lambda_handler(event, context):
                     _moderation_reason = "NOT APPLICABLE"
 
                 else:
+                    printTime("before search_qa.get_answer_from_conversational")
                     result = search_qa.get_answer_from_conversational(query,
                                                                       sessionId,
                                                                       table_name,

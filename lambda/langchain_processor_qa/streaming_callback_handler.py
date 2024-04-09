@@ -6,6 +6,8 @@ import boto3
 import json
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.schema import Generation, LLMResult
+
+from model import *
 class MyStreamingHandler(StreamingStdOutCallbackHandler ):
     def __init__(self, connectionId: str, domainName: str, region: str,stage:str):
 
@@ -18,9 +20,20 @@ class MyStreamingHandler(StreamingStdOutCallbackHandler ):
         self.answer=''
         self.connectionId=connectionId
         self.last_post_time = 0  # 初始化上次发送时间为0
+        printTime("init stream handler")
 
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
+        global time_seq
+        global last_time
+        global init_time
+        if self.answer=='':
+            printTime("first token")
+            time_seq=1
+            last_time=time.time()
+            init_time=last_time
+
+
         self.answer=f"{self.answer}{token}"
 
         #控制向前端发送消息的频率
