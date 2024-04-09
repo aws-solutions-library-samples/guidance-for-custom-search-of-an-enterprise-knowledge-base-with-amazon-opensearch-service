@@ -9,8 +9,8 @@ import ast
 from smart_search_qa import SmartSearchQA
 from prompt import *
 from streaming_callback_handler import MyStreamingHandler
-from model import init_vector_store
-from model import printTime
+
+from model import *
 printTime('init-time')
 lam = boto3.client('lambda')
 

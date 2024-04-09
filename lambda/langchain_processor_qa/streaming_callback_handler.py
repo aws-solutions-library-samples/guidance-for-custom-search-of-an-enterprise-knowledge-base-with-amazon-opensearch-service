@@ -24,14 +24,10 @@ class MyStreamingHandler(StreamingStdOutCallbackHandler ):
 
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
-        global time_seq
-        global last_time
-        global init_time
+
         if self.answer=='':
             printTime("first token")
-            time_seq=1
-            last_time=time.time()
-            init_time=last_time
+            clearTime()
 
 
         self.answer=f"{self.answer}{token}"
