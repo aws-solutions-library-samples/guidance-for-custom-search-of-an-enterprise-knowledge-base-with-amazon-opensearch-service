@@ -81,7 +81,8 @@ def main():
     qa_title_name = body.get('qa_title_name', '标题')
     split_to_sentence_paragraph = body.get('split_to_sentence_paragraph', True)
     paragraph_include_sentence_num = body.get('paragraph_include_sentence_num', 3)
-    text_max_length = body.get('text_max_length', 350)
+    default_text_max_length = 1500 if EMBEDDING_ENDPOINT_NAME.find('cohere') >=0 or EMBEDDING_ENDPOINT_NAME.find('titan') >=0 else 350
+    text_max_length = body.get('text_max_length', default_text_max_length)
     pdf_to_html = body.get('pdf_to_html', False)
     text_field = body.get('text_field', 'paragraph')
     vector_field = body.get('vector_field', 'sentence_vector')

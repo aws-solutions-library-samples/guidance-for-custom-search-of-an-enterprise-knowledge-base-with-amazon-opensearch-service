@@ -129,6 +129,8 @@ def lambda_handler(event, context):
             paragraph_include_sentence_num = 3  
             #需要向量化文本的最大字数，使用SageMaker部署的向量模型时使用
             text_max_length = 350   
+            if EMBEDDING_ENDPOINT_NAME.find('cohere') >=0 or EMBEDDING_ENDPOINT_NAME.find('titan') >=0:
+                text_max_length = 1500
             #PDF格式的文件使用，设置为true时会先将PDF文件转换为HTML文件进行逻辑段落的拆分,在split_to_sentence_paragraph=True时使用
             pdf_to_html = False  
             #写入AOS的文本字段名称，langchain默认为text

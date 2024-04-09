@@ -172,6 +172,7 @@ def lambda_handler(event, context):
             streaming = ast.literal_eval(str(evt_body['streaming']).title())
         print('streaming:',streaming)
 
+        isCheckedTitanEmbedding = False
         if "llmData" in evt_body.keys():
             llmData = dict(evt_body['llmData'])
             if "embeddingEndpoint" in llmData.keys():
@@ -191,7 +192,6 @@ def lambda_handler(event, context):
                 apiKey = llmData['apiKey']
             if "secretKey" in llmData.keys():
                 secretKey = llmData['secretKey']
-            isCheckedTitanEmbedding = False
             if "isCheckedTitanEmbedding" in llmData.keys():
                 isCheckedTitanEmbedding = ast.literal_eval(str(llmData['isCheckedTitanEmbedding']).title())
             print('isCheckedTitanEmbedding:', isCheckedTitanEmbedding)

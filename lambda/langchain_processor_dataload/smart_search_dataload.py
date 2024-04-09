@@ -417,7 +417,7 @@ class SmartSearchDataload:
                         texts_length = len(texts)
                         for i in range(0, texts_length):
                             metadata = metadatas[i]
-                            metadata['sentence'] = truncate_text(texts[i],text_max_length) if self.embedding_type=='sagemaker' else texts[i]
+                            metadata['sentence'] = truncate_text(texts[i],text_max_length) if len(texts[i]) > text_max_length else texts[i]
                             if len(metadata['sentence']) > 0:
                                 paragraph = assemble_paragraph(texts,i,paragraph_include_sentence_num).strip()
                                 new_texts.append(paragraph)
@@ -426,7 +426,7 @@ class SmartSearchDataload:
                     print('new metadatas len:',len(new_metadatas))
                     ids = self.vector_store.add_texts_sentence_in_metadata(new_texts, new_metadatas, bulk_size=bulk_size, text_field=text_field,vector_field=vector_field,embedding_type=self.embedding_type)
                 else:
-                    new_texts = [truncate_text(text,text_max_length) for text in texts] if self.embedding_type=='sagemaker' else texts
+                    new_texts = [truncate_text(text,text_max_length) for text in texts]
                     ids = self.vector_store.add_texts(new_texts, metadatas, bulk_size=bulk_size,text_field=text_field,vector_field=vector_field,embedding_type=self.embedding_type)
                 return loaded_files
             else:
