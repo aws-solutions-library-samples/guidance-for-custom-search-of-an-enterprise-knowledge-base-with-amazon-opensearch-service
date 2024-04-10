@@ -310,7 +310,8 @@ class SmartSearchQA:
 #         result = chain({"question": query, "chat_history": history})
         result = chain({
             "question": query, 
-            "chat_history": history
+            "chat_history": history,
+            "search_engine": self.search_engine
         })
 
         
