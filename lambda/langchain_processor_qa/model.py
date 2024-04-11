@@ -25,17 +25,17 @@ init_time=last_time
 def printTime(title):
     global time_seq
     global last_time
-    current_time=time.time()
-    print(f"printTime{time_seq}:{title}:{current_time}:{current_time-init_time}:{current_time-last_time}")
+    global init_time
+    #重置时间
+    if time_seq==1:
+        last_time=round(time.time(), 3)
+        init_time=last_time
+    current_time=round(time.time(), 3)
+    print(f"printTime{time_seq}:{title}:{current_time}:{round(current_time-init_time,3)}:{round(current_time-last_time,3)}")
     time_seq=time_seq+1
     last_time=current_time
 def clearTime():
     global time_seq
-    global last_time
-    global init_time
-    now=time.time()
-    last_time=now
-    init_time=now
     time_seq=1
 
 
