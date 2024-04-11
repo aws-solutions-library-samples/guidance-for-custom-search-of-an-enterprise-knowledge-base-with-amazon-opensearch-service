@@ -11,7 +11,7 @@ from lib.ss_notebook import NotebookStack
 from lib.ss_botstack import BotStack
 from lib.ss_kendrastack import KendraStack
 from lib.ss_bedrockstack import BedrockStack
-
+from lib.ss_asr_stack import ASRStack
 ACCOUNT =  os.environ.get('AWS_ACCOUNT_ID')
 REGION = os.environ.get('AWS_REGION')
 
@@ -64,11 +64,10 @@ else:
     if REGION.find('cn') == -1: 
         bedrockstack = BedrockStack( app, "BedrockStack", env=env)
 notebookstack = NotebookStack(app, "NotebookStack", search_engine_key=search_engine_key, env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
-# notebookstack.add_dependency(searchstack)
-
 
 if('bot' in app.node.try_get_context("extension")):
     botstack = BotStack(app, "BotStack", env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
     botstack.add_dependency(lambdastack)
-
+if app.node.try_get_context("enable_asr"):
+    asrstack = ASRStack(app, "ASRStack", env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
 app.synth()

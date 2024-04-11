@@ -54,6 +54,7 @@
     "index": "smart_search_qa_test",
     "embedding_endpoint_name": "huggingface-inference-eb",
     "llm_endpoint_name": "pytorch-inference-llm-v1",
+    "enable_asr": false,
     "language": "chinese",
     "model_type":"other",
     "enable_content_moderation": false,
