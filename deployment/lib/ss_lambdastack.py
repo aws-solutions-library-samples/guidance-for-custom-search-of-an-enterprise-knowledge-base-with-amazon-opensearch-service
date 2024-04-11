@@ -144,7 +144,11 @@ class LambdaStack(Stack):
         websocketsearch.add_environment("DIR_NAME", "search")
 
         #publish a new version
-        version = websocketsearch.add_version(name="v1")
+        version = _lambda.Version(
+            self, "websocketsearchVersion",
+            lambda_=websocketsearch,
+            description="v1"
+        )
 
         # create an alias and provision concurrency=1
         websocketsearchAlias = _lambda.Alias(
@@ -336,7 +340,11 @@ class LambdaStack(Stack):
         langchain_processor_qa_function.add_environment("zilliz_token", str(zilliz_token))
 
         #publish a new version
-        version = langchain_processor_qa_function.add_version(name="v1")
+        version = _lambda.Version(
+            self, "LangChainProcessorVersion",
+            lambda_=langchain_processor_qa_function,
+            description="v1"
+        )
 
         # create an alias and provision concurrency=1
         alias = _lambda.Alias(
