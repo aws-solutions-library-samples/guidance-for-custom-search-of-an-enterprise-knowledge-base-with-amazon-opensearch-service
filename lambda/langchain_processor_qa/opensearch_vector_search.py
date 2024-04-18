@@ -44,14 +44,18 @@ def _import_not_found_error() -> Any:
     except ImportError:
         raise ImportError(IMPORT_OPENSEARCH_PY_ERROR)
     return NotFoundError
-
+global_opensearch_client=None
 def _get_opensearch_client(opensearch_url: str, **kwargs: Any) -> Any:
     """Get OpenSearch client from the opensearch_url, otherwise raise error."""
+    global global_opensearch_client
+    if global_opensearch_client is not None:
+        return global_opensearch_client
     try:
         opensearch = _import_opensearch()
         hosts = kwargs.get("hosts",[])
         http_auth = kwargs.get("http_auth",[])
         client = opensearch(hosts=hosts,http_auth=http_auth,use_ssl = True,timeout=600)
+        global_opensearch_client=client
     except ValueError as e:
         raise ImportError(
             f"OpenSearch client string provided is not in proper format. "

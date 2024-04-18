@@ -143,6 +143,21 @@ class LambdaStack(Stack):
         websocketsearch.add_environment("TABLE_NAME", table_name)
         websocketsearch.add_environment("DIR_NAME", "search")
 
+        #publish a new version
+        version = _lambda.Version(
+            self, "websocketsearchVersion",
+            lambda_=websocketsearch,
+            description="v1"
+        )
+
+        # create an alias and provision concurrency=1
+        websocketsearchAlias = _lambda.Alias(
+            self, "websocketsearchAlias",
+            alias_name="prod",
+            version=version,
+            provisioned_concurrent_executions=1
+        )
+
         web_socket_api = apigwv2.WebSocketApi(self, "websocketapi")
         apigwv2.WebSocketStage(self, "prod",
                                web_socket_api=web_socket_api,
@@ -150,7 +165,7 @@ class LambdaStack(Stack):
                                auto_deploy=True
                                )
         web_socket_api.add_route("search",
-                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketsearch)
+                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketsearchAlias)
                                  )
         web_socket_api.add_route("$connect",
                                  integration=WebSocketLambdaIntegration("SearchIntegration", websocketconnect)
@@ -323,6 +338,21 @@ class LambdaStack(Stack):
         langchain_processor_qa_function.add_environment("search_engine_zilliz", str(search_engine_zilliz))
         langchain_processor_qa_function.add_environment("zilliz_endpoint", str(zilliz_endpoint))
         langchain_processor_qa_function.add_environment("zilliz_token", str(zilliz_token))
+
+        #publish a new version
+        version = _lambda.Version(
+            self, "LangChainProcessorVersion",
+            lambda_=langchain_processor_qa_function,
+            description="v1"
+        )
+
+        # create an alias and provision concurrency=1
+        alias = _lambda.Alias(
+            self, "LangChainProcessorQAAlias",
+            alias_name="prod",
+            version=version,
+            provisioned_concurrent_executions=1
+        )
         
 
         return langchain_processor_qa_function

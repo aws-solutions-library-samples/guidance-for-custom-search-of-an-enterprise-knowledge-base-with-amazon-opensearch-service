@@ -16,7 +16,7 @@ def lambda_handler(event, context):
     logger.debug("sendmessage: %s" % event)
     evt_body = json.loads(event.get('body', '{}'))
     # _function_name = evt_body['process_function_name']
-    _function_name = 'langchain_processor_qa'
+    _function_name = 'langchain_processor_qa:prod'
     try:
         lam.invoke(
             FunctionName=_function_name,
