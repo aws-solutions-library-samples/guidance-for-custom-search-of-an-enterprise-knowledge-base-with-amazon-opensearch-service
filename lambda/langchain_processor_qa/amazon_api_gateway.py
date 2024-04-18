@@ -203,7 +203,7 @@ class AmazonAPIGateway(LLM):
                 print('******')
                 print('bedrock prompt:',prompt)
                 print('*******')
-                url = self.api_url + ('prompt='+prompt)
+                url = self.api_url + '/bedrock?' + ('prompt='+prompt)
                 parameters = payload['parameters']
                 print('parameters:',parameters)
                 for key in parameters.keys():

@@ -8,6 +8,7 @@ import botocore
 # module_path = ".."
 # sys.path.append(os.path.abspath(module_path))
 from utils import bedrock
+from bedrockAdapter import BedrockAdapter
 
 if('BEDROCK_ASSUME_ROLE' in os.environ):
     boto3_bedrock = bedrock.get_bedrock_client(
@@ -46,32 +47,17 @@ def lambda_handler(event, context):
         temperature = float(event['queryStringParameters']['temperature'])
     print('temperature:',temperature)
     
-    
-    if modelId.find('claude') >=0:
-        body = json.dumps({"prompt": prompt, "max_tokens_to_sample": max_tokens,"temperature": temperature})
-    elif modelId == 'amazon.titan-tg1-large':
-        body = json.dumps({"inputText": prompt,  
-        "textGenerationConfig" : { 
-                "maxTokenCount": max_tokens,
-                "stopSequences": [],
-                "temperature":temperature,
-                "topP":0.9
-            }
-        })
-    elif modelId == 'amazon.titan-e1t-medium':
-        body = json.dumps({"inputText": prompt})
-    elif modelId.find('meta.llama2') >= 0:
-        body = json.dumps({
-                        "prompt": prompt,
-                        "max_gen_len": max_tokens,
-		                "temperature": temperature,
-		                 "top_p": 0.9
-                         })
+    provider = modelId.split(".")[0]
+    params = {"max_tokens": max_tokens,"temperature": temperature}
+    params["modelId"] = modelId
+    input_body = BedrockAdapter.prepare_input(provider, prompt, params)
+    body = json.dumps(input_body)
         
     accept = "application/json"
-    if modelId.find('meta.llama2') >= 0:
+    if modelId == 'meta.llama2-13b-chat-v1':
         accept = "*/*"
     contentType = "application/json"
+
     result = boto3_bedrock.invoke_model(
         body=body, modelId=modelId, accept=accept, contentType=contentType
     )
@@ -80,7 +66,9 @@ def lambda_handler(event, context):
     
     answer = ''
     embedding = []
-    if modelId.find('claude') >=0:
+    if modelId.find('claude-3') >=0:
+        answer = result_body.get("content")[0].get("text")
+    elif modelId.find('claude') >=0:
         answer = result_body.get("completion")
     elif modelId.find('llama') >=0:
         answer = result_body.get("generation")
