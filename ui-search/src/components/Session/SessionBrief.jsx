@@ -19,7 +19,7 @@ import Divider from '../Divider';
 import { DEFAULT_WORK_FLOW, DEFAULT_WORK_MODE } from 'src/constants';
 
 const SIZE = 'l';
-const SessionBrief = ({ configs, expanded }) => {
+const SessionBrief = ({ configs }) => {
   const { delSession } = useSessionStore((s) => [s.delSession]);
   const navigate = useNavigate();
   const [displayDetails, setDisplayDetails] = useState(false);

@@ -16,18 +16,10 @@ const Session = () => {
   const [streamingText, setStreamingText] = useState('');
   const [streaming, setStreaming] = useState(false);
 
-  // const data = useLoaderData();
-
   useEffect(() => {
-    const sessionData = lsSessionList.find(
-      (item) => item.sessionId === sessionId
-    );
-    if (sessionData) {
-      setData(sessionData);
-    } else {
-      // navigate back to landing page
-      navigate('/');
-    }
+    const sessionData = lsSessionList.find((s) => s.sessionId === sessionId);
+    if (sessionData) setData(sessionData);
+    else navigate('/');
   }, [lsSessionList, navigate, sessionId]);
 
   return (
@@ -35,14 +27,9 @@ const Session = () => {
       value={{ streamingText, setStreamingText, streaming, setStreaming }}
     >
       <SpaceBetween size="l">
-        <SessionBrief
-          configs={data?.configs}
-          expanded={data?.conversations.length === 0}
-        />
-        {data?.conversations.length ? (
-          <SessionChats conversations={data?.conversations} />
-        ) : null}
-        {!data ? null : <SessionInput />}
+        <SessionBrief configs={data?.configs} />
+        <SessionChats conversations={data?.conversations} />
+        {data ? <SessionInput /> : null}
       </SpaceBetween>
     </StreamingContext.Provider>
   );

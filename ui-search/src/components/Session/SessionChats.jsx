@@ -43,5 +43,5 @@ const SessionChats = ({ conversations }) => {
 export default SessionChats;
 
 function ConversationPlaceholder() {
-  return <Box></Box>;
+  return <Box>Please enter your query below ⬇️</Box>;
 }
