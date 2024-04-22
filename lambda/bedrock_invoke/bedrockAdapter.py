@@ -94,17 +94,9 @@ class BedrockAdapter:
             messages['role'] = 'user'
             messages['content'] = []
 
-            if 'image' in model_kwargs.keys():
-                image_dic = {"type": "image"}
-                source = {"type": "base64","media_type": "image/jpeg"}
-                source["data"] = model_kwargs['image']
-                image_dic["source"] = source
-                messages["content"].append(image_dic)
+            text_template = '"type": "text","text": "{text}"'
+            image_template = '"type": "base64","media_type": "image/jpeg","data": "{image}"'
 
-            if len(prompt) > 0:
-                text_dic = {"type":"text"}
-                text_dic["text"] = prompt
-                messages['content'].append(text_dic)
             if 'related_docs' in model_kwargs.keys():
                 docs = model_kwargs['related_docs']
                 for doc in docs:
@@ -112,22 +104,19 @@ class BedrockAdapter:
                         doc_str = '相关文档信息为：'
                         if language == 'english':
                             doc_str = 'Related documentation information are:'
-                        text_dic = {"type":"text"}
-                        text_dic["text"] = doc_str + doc['text']
+                        text_dic = json.loads('{' +  text_template.format(text=doc_str + doc['text']) + '}')
                         messages['content'].append(text_dic)
                     if 'image' in doc.keys():
-                        image_dic = {"type": "image"}
-                        source = {"type": "base64","media_type": "image/jpeg"}
-                        source["data"] = doc['image']
-                        image_dic["source"] = source
+                        image_dic = json.loads('{"type": "image","source":""}')
+                        image_content = json.loads('{'+image_template.format(image=doc['image']) +'}')
+                        image_dic['source'] = image_content
                         messages['content'].append(image_dic)
 
             if 'history' in model_kwargs.keys():
                 history_str = '历史记录为：'
                 if language == 'english':
                     history_str = 'history records are:'
-                text_dic = {"type":"text"}
-                text_dic["text"] = history_str +  model_kwargs['history']
+                text_dic = json.loads('{' +  text_template.format(text = history_str + model_kwargs['history']) + '}')
                 messages['content'].append(text_dic)
 
             if 'input_docs' in model_kwargs.keys():
@@ -137,14 +126,12 @@ class BedrockAdapter:
                         doc_str = '用户输入为：'
                         if language == 'english':
                             doc_str = 'User input are:'
-                        text_dic = {"type":"text"}
-                        text_dic["text"] = doc_str + doc['text']
+                        text_dic = json.loads('{' +  text_template.format(text=doc_str + doc['text']) + '}')
                         messages['content'].append(text_dic)
                     if 'image' in doc.keys():
-                        image_dic = {"type": "image"}
-                        source = {"type": "base64","media_type": "image/jpeg"}
-                        source["data"] = doc['image']
-                        image_dic["source"] = source
+                        image_dic = json.loads('{"type": "image","source":""}')
+                        image_content = json.loads('{'+image_template.format(image=doc['image']) +'}')
+                        image_dic['source'] = image_content
                         messages['content'].append(image_dic)
 
             input_body['messages'].append(messages)

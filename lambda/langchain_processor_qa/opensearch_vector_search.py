@@ -317,6 +317,8 @@ def _get_aos_docs(question,
                   host,
                   docs_num,
                   text_field,
+                  image_field,
+                  work_mode,
                   metadata_field
                   ) -> List[Document]:
     import json
@@ -353,11 +355,21 @@ def _get_aos_docs(question,
            #Remove duplicate paragraph
             clean.append(document_paragraph)
             document_paragraph = "\n".join(document_paragraph)
-            aos_docs.append(
-                            (Document(page_content=document_paragraph,metadata=document_metadata),
-                             document_score
-                            )
-                           )
+            if work_mode == 'multi-modal':
+                image = hit['_source'][image_field]
+                aos_docs.append(
+                    (Document(page_content=document_paragraph,metadata=document_metadata),
+                     document_score,
+                     image
+                    )
+                   )
+            
+            else:
+                aos_docs.append(
+                                (Document(page_content=document_paragraph,metadata=document_metadata),
+                                 document_score
+                                )
+                               )
     aos_docs = sorted(aos_docs, key=lambda x: x[1], reverse=True)
     aos_docs = aos_docs[:docs_num]
     return aos_docs
@@ -620,6 +632,9 @@ class OpenSearchVectorSearch(VectorStore):
         txt_docs_num = int(kwargs.get("txt_docs_num", "0"))
         vec_docs_score_thresholds = float(kwargs.get("vec_docs_score_thresholds", "0"))
         txt_docs_score_thresholds = float(kwargs.get("txt_docs_score_thresholds", "0"))
+        
+        work_mode = kwargs.get("work_mode", "text-modal")
+        image_field = kwargs.get("image_field", "image_base64")
  
         vec_docs = []
         aos_docs = []
@@ -631,7 +646,7 @@ class OpenSearchVectorSearch(VectorStore):
             aos_host = self.hosts[0]['host']
             text_field = kwargs.get("text_field", "text")
             metadata_field = kwargs.get("metadata_field", "metadata")
-            aos_docs = _get_aos_docs(query,self.index_name,self.http_auth,aos_host,txt_docs_num,text_field,metadata_field)
+            aos_docs = _get_aos_docs(query,self.index_name,self.http_auth,aos_host,txt_docs_num,text_field,image_field,work_mode,metadata_field)
      
         if len(vec_docs+aos_docs) > 0:
             new_vec_docs = []
@@ -684,21 +699,39 @@ class OpenSearchVectorSearch(VectorStore):
         text_field = kwargs.get("text_field", "text")
         metadata_field = kwargs.get("metadata_field", "metadata")
         embedding_type = kwargs.get("embedding_type", "sagemaker")
+        work_mode = kwargs.get("work_mode", "text-modal")
+        image_field = kwargs.get("image_field", "image_base64")
 
         hits = self._raw_similarity_search_with_score(query=query, k=k, **kwargs)
-
-        documents_with_scores = [
-            [
-                Document(
-                    page_content=hit["_source"][text_field][0] if isinstance(hit["_source"][text_field],list)  else hit["_source"][text_field],
-                    metadata=hit["_source"]
-                    if metadata_field == "*" or metadata_field not in hit["_source"]
-                    else hit["_source"][metadata_field],
-                ),
-                hit["_score"] * 100  if embedding_type == 'bedrock' else hit["_score"],
+        
+        if work_mode == 'multi-modal':
+            documents_with_scores = [
+                [
+                    Document(
+                        page_content=hit["_source"][text_field][0] if isinstance(hit["_source"][text_field],list)  else hit["_source"][text_field],
+                        metadata=hit["_source"]
+                        if metadata_field == "*" or metadata_field not in hit["_source"]
+                        else hit["_source"][metadata_field],
+                    ),
+                    hit["_score"] * 100  if embedding_type == 'bedrock' else hit["_score"],
+                    hit["_source"][image_field][0] if isinstance(hit["_source"][image_field],list)  else hit["_source"][image_field]
+                ]
+                for hit in hits
             ]
-            for hit in hits
-        ]
+            
+        else:
+            documents_with_scores = [
+                [
+                    Document(
+                        page_content=hit["_source"][text_field][0] if isinstance(hit["_source"][text_field],list)  else hit["_source"][text_field],
+                        metadata=hit["_source"]
+                        if metadata_field == "*" or metadata_field not in hit["_source"]
+                        else hit["_source"][metadata_field],
+                    ),
+                    hit["_score"] * 100  if embedding_type == 'bedrock' else hit["_score"],
+                ]
+                for hit in hits
+            ]
         return documents_with_scores
 
     def _raw_similarity_search_with_score(

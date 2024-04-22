@@ -111,6 +111,13 @@ Human: Based on {history}, answer the question：{human_input}
 Assistant:
 """
 
+CLAUDE3_MULTIMODEL_CN="请根据上面的文本或图像信息，回答{question}"
+
+CLAUDE3_MULTIMODEL_TC="請根據上面的文字或圖像訊息，回答{question}"
+
+CLAUDE3_MULTIMODEL_EN="Please based on the text or image information above, answer the question: {question}"
+
+
 CLAUDE_RAG_PROMPT_CN= """
 Human: 基于以下已知信息，简洁和专业的来回答用户的问题，如果无法从中得到答案，请说 "根据已知信息无法回答该问题" 或 "没有提供足够的相关信息"，不允许在答案中添加编造成分，答案请使用中文。
     

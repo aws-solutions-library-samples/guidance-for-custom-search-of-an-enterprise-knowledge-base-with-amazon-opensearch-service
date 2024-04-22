@@ -42,7 +42,9 @@ stage = 'prod'
 response = {
     "statusCode": 200,
     "headers": {
-        "Access-Control-Allow-Origin": '*'
+        "Access-Control-Allow-Headers":'Content-Type',
+        "Access-Control-Allow-Origin": '*',
+        "Access-Control-Allow-Methods":'OPTIONS,GET,POST'
     },
     "isBase64Encoded": False
 }
@@ -50,6 +52,7 @@ response = {
 def lambda_handler(event, context):
     contentCheckLabel = "Pass"
     contentCheckSuggestion = "Pass"
+
     printTime('enter handler')
     try:
         print("event:",event)
@@ -63,6 +66,7 @@ def lambda_handler(event, context):
         requestType = 'websocket'
         if isinstance(evt_para, dict) and "requestType" in evt_para.keys():
             requestType = evt_para['requestType']
+        print('requestType:',requestType)
 
         evt_body = {}
         if 'body' in event.keys() and requestType == 'websocket':
@@ -77,16 +81,36 @@ def lambda_handler(event, context):
         elif "q" in evt_body.keys():
             query = evt_body['q'].strip()
         print('query:', query)
-
-        task = "search"
+        
+        question = []
+        if "question" in evt_body.keys():
+            question = ast.literal_eval(evt_body['question'])
+        print('question:',question)
+            
+        task = "qa"
         if "task" in evt_body.keys():
             task = evt_body['task']
         elif "action" in evt_body.keys():
             task = evt_body['action']
         print('task:', task)
 
+        # if ('body' in event.keys() and requestType == 'websocket') or requestType == 'restful':
+        #     evt_body = evt_body['configs']
+        
         if 'body' in event.keys() and requestType == 'websocket':
             evt_body = evt_body['configs']
+        elif requestType == 'restful':
+            evt_body = json.loads(evt_body['configs'])
+            
+        chatSystemPrompt = ""
+        if "chatSystemPrompt" in evt_body.keys():
+            chatSystemPrompt = evt_body['chatSystemPrompt'].strip()
+        print('chatSystemPrompt:',chatSystemPrompt)
+
+        workMode = "text-modal"
+        if "workMode" in evt_body.keys():
+            workMode = evt_body['workMode']
+        print('workMode:',workMode)
 
         index = INDEX
         if "index" in evt_body.keys():
@@ -178,9 +202,15 @@ def lambda_handler(event, context):
         if "streaming" in evt_body.keys():
             streaming = ast.literal_eval(str(evt_body['streaming']).title())
         print('streaming:',streaming)
+        
+        contextRounds = 3
+        if "contextRounds" in evt_body.keys():
+            contextRounds = int(evt_body['contextRounds'])
+        print('contextRounds:', contextRounds)
 
         isCheckedTitanEmbedding = False
         if "llmData" in evt_body.keys():
+            print('in the llmData')
             llmData = dict(evt_body['llmData'])
             if "embeddingEndpoint" in llmData.keys():
                 embeddingEndpoint = llmData['embeddingEndpoint']
@@ -226,7 +256,7 @@ def lambda_handler(event, context):
         username = None
         password = None
         host = HOST
-
+        
         printTime('before opensearch init')
         if searchEngine == "opensearch":
             data = json.loads(master_user)
@@ -236,6 +266,7 @@ def lambda_handler(event, context):
             if "kendraIndexId" in evt_body.keys():
                 host = evt_body['kendraIndexId']
         print("host:", host)
+
         printTime("before init_cfg")
         connectionId = str(event.get('requestContext', {}).get('connectionId'))
         search_qa = SmartSearchQA()
@@ -264,6 +295,7 @@ def lambda_handler(event, context):
 
         QUERY_VERIFIED_RESULT = None
         printTime("after init_cfg")
+
         # Verify if Query is illegal
         if _enable_content_moderation:
             moderated_result = moderate_content(
@@ -297,35 +329,54 @@ def lambda_handler(event, context):
 
             if task == "chat" or not isCheckedKnowledgeBase:
 
-                if modelName.find("anthropic") >= 0:
+                if workMode == 'multi-modal':
                     if language == "chinese":
-                        prompt_template = CLAUDE_CHAT_PROMPT_CN
+                        prompt_template = CLAUDE3_MULTIMODEL_CN
                     elif language == "chinese-tc":
-                        prompt_template = CLAUDE_CHAT_PROMPT_TC
+                        prompt_template = CLAUDE3_MULTIMODEL_TC
                     elif language == "english":
-                        prompt_template = CLAUDE_CHAT_PROMPT_EN
+                        prompt_template = CLAUDE3_MULTIMODEL_EN
                 else:
-                    if language == "chinese":
-                        prompt_template = CHINESE_CHAT_PROMPT_TEMPLATE
-                    elif language == "chinese-tc":
-                        prompt_template = CHINESE_TC_CHAT_PROMPT_TEMPLATE
-                    elif language == "english":
-                        prompt_template = ENGLISH_CHAT_PROMPT_TEMPLATE
-                        if modelType == 'llama2':
-                            prompt_template = EN_CHAT_PROMPT_LLAMA2
-                # if "prompt" in evt_body.keys() and len(evt_body['prompt']) > 0:
-                #     prompt_template = evt_body['prompt']
+                    if modelName.find("anthropic") >= 0:
+                        if language == "chinese":
+                            prompt_template = CLAUDE_CHAT_PROMPT_CN
+                        elif language == "chinese-tc":
+                            prompt_template = CLAUDE_CHAT_PROMPT_TC
+                        elif language == "english":
+                            prompt_template = CLAUDE_CHAT_PROMPT_EN
+                    else:
+                        if language == "chinese":
+                            prompt_template = CHINESE_CHAT_PROMPT_TEMPLATE
+                        elif language == "chinese-tc":
+                            prompt_template = CHINESE_TC_CHAT_PROMPT_TEMPLATE
+                        elif language == "english":
+                            prompt_template = ENGLISH_CHAT_PROMPT_TEMPLATE
+                            if modelType == 'llama2':
+                                prompt_template = EN_CHAT_PROMPT_LLAMA2
+                if "prompt" in evt_body.keys() and len(evt_body['prompt']) > 0:
+                    prompt_template = evt_body['prompt']
 
                 if modelType == 'llama2':
                     result = search_qa.get_answer_from_chat_llama2(query, prompt_template, table_name, sessionId)
                 else:
-                    result = search_qa.get_chat(query,
-                                                language,
-                                                prompt_template,
-                                                table_name,
-                                                sessionId,
-                                                modelType
-                                                )
+                    if workMode == 'multi-modal':
+                        result = search_qa.get_answer_from_multimodel(query,
+                                                                      question,
+                                                                      task,
+                                                                      isCheckedKnowledgeBase,
+                                                                      chatSystemPrompt,
+                                                                      sessionId,
+                                                                      table_name,
+                                                                      context_rounds=contextRounds,
+                                                                      )
+                    else:
+                        result = search_qa.get_chat(query,
+                                                    language,
+                                                    prompt_template,
+                                                    table_name,
+                                                    sessionId,
+                                                    modelType
+                                                    )
 
                 # print('chat result:',result)
 
@@ -388,15 +439,15 @@ def lambda_handler(event, context):
                     txtDocsScoreThresholds = float(evt_body['txtDocsScoreThresholds'])
                 print('txtDocsScoreThresholds:', txtDocsScoreThresholds)
 
-                contextRounds = 3
-                if "contextRounds" in evt_body.keys():
-                    contextRounds = int(evt_body['contextRounds'])
-                print('contextRounds:', contextRounds)
-
                 textField = "paragraph"
                 if "textField" in evt_body.keys():
                     textField = evt_body['textField']
                 print('textField:', textField)
+                
+                imageField = "image_base64"
+                if "imageField" in evt_body.keys():
+                    imageField = evt_body['imageField']
+                print('imageField:', imageField)
 
                 vectorField = "sentence_vector"
                 if "vectorField" in evt_body.keys():
@@ -423,21 +474,41 @@ def lambda_handler(event, context):
 
                 else:
                     printTime("before search_qa.get_answer_from_conversational")
-                    result = search_qa.get_answer_from_conversational(query,
+                    if workMode == 'multi-modal':
+                        result = search_qa.get_answer_from_multimodel(query,
+                                                                      question,
+                                                                      task,
+                                                                      isCheckedKnowledgeBase,
+                                                                      chatSystemPrompt,
                                                                       sessionId,
                                                                       table_name,
-                                                                      prompt_template=prompt_template,
-                                                                      condense_question_prompt=condense_question_prompt,
-                                                                      search_method=searchMethod,
                                                                       top_k=topK,
+                                                                      search_method=searchMethod,
                                                                       txt_docs_num=txtDocsNum,
                                                                       response_if_no_docs_found=responseIfNoDocsFound,
                                                                       vec_docs_score_thresholds=vecDocsScoreThresholds,
                                                                       txt_docs_score_thresholds=txtDocsScoreThresholds,
-                                                                      contextRounds=contextRounds,
+                                                                      context_rounds=contextRounds,
                                                                       text_field=textField,
                                                                       vector_field=vectorField,
+                                                                      image_field=imageField,
                                                                       )
+                    else:
+                        result = search_qa.get_answer_from_conversational(query,
+                                                                          sessionId,
+                                                                          table_name,
+                                                                          prompt_template=prompt_template,
+                                                                          condense_question_prompt=condense_question_prompt,
+                                                                          search_method=searchMethod,
+                                                                          top_k=topK,
+                                                                          txt_docs_num=txtDocsNum,
+                                                                          response_if_no_docs_found=responseIfNoDocsFound,
+                                                                          vec_docs_score_thresholds=vecDocsScoreThresholds,
+                                                                          txt_docs_score_thresholds=txtDocsScoreThresholds,
+                                                                          contextRounds=contextRounds,
+                                                                          text_field=textField,
+                                                                          vector_field=vectorField,
+                                                                          )
 
                 print('result:', result)
 

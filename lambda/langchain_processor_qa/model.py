@@ -296,6 +296,11 @@ def new_conversational_call(
     get_chat_history = self.get_chat_history or _get_chat_history
     chat_history_str = get_chat_history(inputs["chat_history"])
     printTime("begin rewrite")
+    
+    search_engine = "opensearch"
+    if "search_engine" in inputs.keys():
+        search_engine = inputs["search_engine"]   
+    
     if chat_history_str:
         callbacks = _run_manager.get_child()
         new_question = self.question_generator.run(
@@ -320,9 +325,14 @@ def new_conversational_call(
             new_inputs["question"] = new_question
         new_inputs["chat_history"] = chat_history_str
         printTime("begin llm")
-        docs_without_score = [doc[0] for doc in docs]
+        
+        if search_engine == "kendra":
+            docs_to_llm = docs
+        else:
+            docs_to_llm = [doc[0] for doc in docs]        
+        
         answer = self.combine_docs_chain.run(
-            input_documents=docs_without_score, callbacks=_run_manager.get_child(), **new_inputs
+            input_documents=docs_to_llm, callbacks=_run_manager.get_child(), **new_inputs
         )
         output[self.output_key] = answer
 
