@@ -14,22 +14,29 @@ const useRecorder = ({
   const [mediaRecorder, setMediaRecorder] = useState(null);
   // the audio stream from the browser, which is used to initiate the recorder
   const [mediaStream, setMediaStream] = useState(null);
+  const [waiting, setWaiting] = useState(false);
 
   const sendAudioToBackend = useCallback(
     async (audioBlob) => {
+      setWaiting(true);
       try {
-        const formData = new FormData();
-        formData.append('audio', audioBlob, 'recording.mp3');
-        formData.append('language', language);
-
-        const res = await fetch(url, {
-          method: 'POST',
-          body: formData,
-        });
+        let res = null;
+        if (base64) {
+          const base64 = await blobToBase64(audioBlob);
+          res = await fetch(url, {
+            method: 'POST',
+            body: JSON.stringify({ audio: base64, language }),
+          });
+        } else {
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'recording.mp3');
+          formData.append('language', language);
+          res = await fetch(url, { method: 'POST', body: formData });
+        }
 
         if (res.ok) {
-          console.log('Audio sent successfully');
-          const data = res.json();
+          console.info('Audio sent successfully');
+          const data = await res.json();
           processData(data);
         } else {
           throw new Error(res.statusText);
@@ -40,9 +47,21 @@ const useRecorder = ({
           'Error sending audio: check browser console for more error info!'
         );
         setIsRecording(false);
+      } finally {
+        setWaiting(false);
+      }
+
+      function blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(blob);
+          // @ts-ignore
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = (error) => reject(error);
+        });
       }
     },
-    [url, processData, setIsRecording, language]
+    [language, base64, url, processData, setIsRecording]
   );
 
   const startRecording = useCallback(async () => {
@@ -100,7 +119,7 @@ const useRecorder = ({
     if (!isRecording) mediaRecorder?.stop();
   }, [isRecording, mediaRecorder]);
 
-  return { startRecording, stopRecording };
+  return { startRecording, stopRecording, waiting };
 };
 
 export default useRecorder;
