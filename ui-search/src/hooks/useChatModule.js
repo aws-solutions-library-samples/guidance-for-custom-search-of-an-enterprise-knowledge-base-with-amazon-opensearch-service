@@ -6,8 +6,6 @@ const useChatModule = () => {
   const [chatModuleResult, setChatModuleResult] = useState();
   const { urlApiGateway } = useLsAppConfigs();
 
-  // https://o3whwqjb3e.execute-api.us-west-2.amazonaws.com/prod/langchain_processor_qa?query=what is the safety preparation?&task=qa&session_id=qa1713510282.083172&top_k=1&textField=text&imageField=image_base64&vectorField=vector_field&requestType=http&streaming=False&modelType=bedrock&modelName=anthropic.claude-3-sonnet-20240229-v1:0&workMode=multi-model&language=english&embeddingEndpoint=cohere.embed-multilingual-v3&sagemakerEndpoint=anthropic.claude-3-sonnet-20240229-v1:0&index=multi-model-test-0419
-
   /**
    * Promise<a query string>
    */
