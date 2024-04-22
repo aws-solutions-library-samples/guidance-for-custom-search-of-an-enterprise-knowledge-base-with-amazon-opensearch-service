@@ -19,7 +19,7 @@ const useIndexNameList = (fetchNow = true) => {
         if (res.ok) return res.json();
         throw new Error('Network response was not ok.');
       })
-      .then((data) => setList(data.map((item) => item.name)))
+      .then((data) => setList(data.map((item) => item.name).sort()))
       .catch((error) => {
         toast.error('Error fetching knowledge base index names');
         setList([]);
