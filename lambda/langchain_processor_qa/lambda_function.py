@@ -84,7 +84,10 @@ def lambda_handler(event, context):
         
         question = []
         if "question" in evt_body.keys():
-            question = ast.literal_eval(evt_body['question'])
+            if isinstance(evt_body['question'],str):
+                question = ast.literal_eval(evt_body['question'])
+            else:
+                question = evt_body['question']
         print('question:',question)
             
         task = "qa"
@@ -93,9 +96,6 @@ def lambda_handler(event, context):
         elif "action" in evt_body.keys():
             task = evt_body['action']
         print('task:', task)
-
-        # if ('body' in event.keys() and requestType == 'websocket') or requestType == 'restful':
-        #     evt_body = evt_body['configs']
         
         if 'body' in event.keys() and requestType == 'websocket':
             evt_body = evt_body['configs']
