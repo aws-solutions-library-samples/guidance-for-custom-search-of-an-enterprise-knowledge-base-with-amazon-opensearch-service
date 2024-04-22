@@ -27,7 +27,9 @@ const Session = () => {
       value={{ streamingText, setStreamingText, streaming, setStreaming }}
     >
       <SpaceBetween size="l">
+        {/* @ts-ignore */}
         <SessionBrief configs={data?.configs} />
+        {/* @ts-ignore */}
         <SessionChats conversations={data?.conversations} />
         {data ? <SessionInput /> : null}
       </SpaceBetween>
