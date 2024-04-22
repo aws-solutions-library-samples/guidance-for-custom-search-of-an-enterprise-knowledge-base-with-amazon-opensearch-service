@@ -12,15 +12,17 @@ IMPORT_OPENSEARCH_PY_ERROR = (
 def get_opensearch_client() -> Any:
     sm_client = boto3.client('secretsmanager')
     
-    master_user = sm_client.get_secret_value(SecretId='opensearch-host-url')['SecretString']
-    data= json.loads(master_user)
-    es_host_name = data.get('host')
-    if es_host_name.find('http') >=0:
-        host = es_host_name+'/' if es_host_name[-1] != '/' else es_host_name
-        host = host[8:-1]
-    else:
-        host = es_host_name
+    # master_user = sm_client.get_secret_value(SecretId='product-opensearch-host-url')['SecretString']
+    # data= json.loads(master_user)
+    # es_host_name = data.get('host')
+    # if es_host_name.find('http') >=0:
+    #     host = es_host_name+'/' if es_host_name[-1] != '/' else es_host_name
+    #     host = host[8:-1]
+    # else:
+    #     host = es_host_name
     region = boto3.Session().region_name # e.g. cn-north-1
+    
+    host = 'search-smartsearch-5xgqh6z5jl2y5uszqwlr7nbyxe.us-west-2.es.amazonaws.com'
 
     master_user = sm_client.get_secret_value(SecretId='opensearch-master-user')['SecretString']
     data= json.loads(master_user)
@@ -58,8 +60,8 @@ def _bulk_ingest_embeddings(
     images: Iterable[str],
     metadatas: Optional[List[dict]] = None,
     ids: Optional[List[str]] = None,
-    vector_field: str = "vector_field",
-    text_field: str = "text",
+    vector_field: str = "sentence_vector",
+    text_field: str = "paragraph",
     image_field: str = "image_base64",
     mapping: Optional[Dict] = None,
     max_chunk_bytes: Optional[int] = 1 * 1024 * 1024
