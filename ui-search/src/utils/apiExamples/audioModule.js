@@ -1,3 +1,3 @@
-const audioModuleRequest = new FormData();
+const audioModuleRequest = { audio: 'base64...', language: 'chinese' };
 
-const audioModuleResponse = { text: "What's in this image?" };
+const audioModuleResponse = "What's in this image?";
