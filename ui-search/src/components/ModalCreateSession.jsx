@@ -15,6 +15,12 @@ import Modal from '@cloudscape-design/components/modal';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import {
+  DEFAULT_WORK_FLOW,
+  DEFAULT_WORK_MODE,
+  OPTIONS_SEARCH_ENGINE,
+  OPTIONS_WORK_MODE,
+} from 'src/constants';
 import useIndexNameList from 'src/hooks/useIndexNameList';
 import useInput from 'src/hooks/useInput';
 import useLsAppConfigs from 'src/hooks/useLsAppConfigs';
@@ -30,22 +36,7 @@ const OPTIONS_LANGUAGE = [
   { label: '繁体中文', value: 'chinese-tc' },
   { label: 'English', value: 'english' },
 ];
-export const OPTIONS_SEARCH_ENGINE = [
-  {
-    value: 'opensearch',
-    label: 'Open Search',
-    description:
-      'OpenSearch is an open source, distributed search and analytics suite derived from Elasticsearch.',
-  },
-  {
-    value: 'kendra',
-    label: 'Kendra',
-    description:
-      'Amazon Kendra is an intelligent search service powered by machine learning (ML)',
-  },
-];
 const KENDRA = OPTIONS_SEARCH_ENGINE[1].value;
-
 const SEARCH_METHOD = [
   { label: 'vector', value: 'vector' },
   { label: 'text', value: 'text' },
@@ -55,10 +46,31 @@ const SEARCH_METHOD = [
 export default function ModalCreateSession({ dismissModal, modalVisible }) {
   const { addSession } = useSessionStore();
   const { lsLanguageModelList } = useLsLanguageModelList();
-  const { lsSessionList, lsGetSessionItem } = useLsSessionList();
+  const { lsSessionList, lsGetOneSession } = useLsSessionList();
   const { appConfigs } = useLsAppConfigs();
   const [name, bindName, resetName] = useInput('');
   const [sessionTemplateOpt, setSessionTemplateOpt] = useState();
+
+  // CHAT Module
+  const [
+    chatSystemPrompt,
+    bindChatSystemPrompt,
+    resetChatSystemPrompt,
+    setChatSystemPrompt,
+  ] = useInput();
+  const [workFlow, setWorkFlow] = useState(DEFAULT_WORK_FLOW);
+  const [workMode, bindWorkMode, resetWorkMode, setWorkMode] = useInput(
+    DEFAULT_WORK_MODE,
+    (chosenWorkMode) => {
+      setWorkFlow(
+        OPTIONS_WORK_MODE.find((mode) => mode.value === chosenWorkMode).workFlow
+      );
+      if (chosenWorkMode === DEFAULT_WORK_MODE) {
+        // @ts-ignore
+        setChatSystemPrompt(undefined);
+      }
+    }
+  );
 
   const [searchEngine, bindSearchEngine, resetSearchEngine, setSearchEngine] =
     useInput(OPTIONS_SEARCH_ENGINE[0].value);
@@ -150,6 +162,9 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     // NOTE: add code when adding new inputs
     resetName();
     resetSearchEngine();
+    resetWorkMode();
+    setWorkFlow(DEFAULT_WORK_FLOW);
+    resetChatSystemPrompt();
     setLLMData();
     resetRole();
     resetTaskDefinition();
@@ -186,6 +201,9 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
         configs: {
           name,
           searchEngine,
+          workMode,
+          workFlow,
+          chatSystemPrompt,
           llmData,
           role,
           language,
@@ -209,10 +227,20 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
           isCheckedEditPrompt,
           prompt,
         },
-      } = lsGetSessionItem(sessionTemplateOpt.value, lsSessionList);
+      } = lsGetOneSession(sessionTemplateOpt.value, lsSessionList);
 
       // setName(name);
+      // NOTE: add code when adding new inputs
       if (searchEngine !== undefined) setSearchEngine(searchEngine);
+      if (workMode !== undefined) setWorkMode(workMode);
+      if (workFlow !== undefined) setWorkFlow(workFlow);
+      if (chatSystemPrompt !== undefined) {
+        if (workMode === DEFAULT_WORK_MODE) {
+          setChatSystemPrompt(undefined);
+        } else {
+          setChatSystemPrompt(chatSystemPrompt);
+        }
+      }
       if (llmData !== undefined) setLLMData(llmData);
       if (role !== undefined) setRole(role);
       if (language !== undefined) setLanguage(language);
@@ -273,9 +301,13 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                   setLoading(true);
                   setValidating(true);
 
+                  // NOTE: add code when adding new inputs
                   const sessionData = {
                     name,
                     searchEngine,
+                    workMode,
+                    workFlow,
+                    chatSystemPrompt,
                     llmData,
                     role,
                     language,
@@ -301,6 +333,11 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                     tokenContentCheck: appConfigs.tokenContentCheck,
                     responseIfNoDocsFound: appConfigs.responseIfNoDocsFound,
                   };
+
+                  if (!llmData?.strategyName) {
+                    return toast.error('Please select language model strategy');
+                  }
+
                   if (isKendra) {
                     delete sessionData.indexName;
                     delete sessionData.topK;
@@ -319,7 +356,6 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                       return toast.error('Please provide Index Name');
                     }
                   }
-                  // console.log(sessionData);
                   await addSession(sessionData);
                   dismissModal();
                   resetAllFields();
@@ -368,6 +404,30 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
 
             <FormField
               stretch
+              label="Work Mode"
+              description="Please select a work mode"
+            >
+              <Tiles columns={2} {...bindWorkMode} items={OPTIONS_WORK_MODE} />
+            </FormField>
+
+            {workMode !== OPTIONS_WORK_MODE[0].value && (
+              <FormField
+                stretch
+                label="System Prompt for CHAT module"
+                description="Please provide your system prompt for CHAT module"
+              >
+                <Textarea
+                  {...bindChatSystemPrompt}
+                  rows={4}
+                  placeholder="System prompt for CHAT module"
+                />
+              </FormField>
+            )}
+
+            <Divider />
+
+            <FormField
+              stretch
               label="Search Engine"
               description="Please select a search engine"
             >
@@ -379,6 +439,11 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                 <FormField
                   label="Language Model Strategy"
                   description="Please select a strategy"
+                  errorText={
+                    validating &&
+                    !llmData?.strategyName &&
+                    'Please provide Index Name'
+                  }
                 >
                   <Select
                     empty="Add llm if no options present"

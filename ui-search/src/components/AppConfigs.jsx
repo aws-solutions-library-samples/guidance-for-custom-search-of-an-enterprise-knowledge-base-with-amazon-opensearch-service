@@ -55,7 +55,7 @@ function FormInputWithDebounceAndToast({
 }
 
 const AppConfigs = () => {
-  const { setLsSessionList, lsAddSessionItem } = useLsSessionList();
+  const { setLsSessionList, lsAddOneSession } = useLsSessionList();
   const { appConfigs, setAConfig, setAppConfigs } = useLsAppConfigs();
 
   return (
@@ -183,7 +183,7 @@ const AppConfigs = () => {
                 onClick={(e) => {
                   e.preventDefault();
                   PROMPT_TEMPLATES.forEach((session) =>
-                    lsAddSessionItem(session)
+                    lsAddOneSession(session)
                   );
                   toast.success(
                     'Default session templates successfully imported!'

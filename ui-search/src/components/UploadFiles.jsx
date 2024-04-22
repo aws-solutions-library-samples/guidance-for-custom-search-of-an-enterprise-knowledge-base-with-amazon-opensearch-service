@@ -17,12 +17,12 @@ import {
 } from '@cloudscape-design/components';
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { OPTIONS_SEARCH_ENGINE } from 'src/constants';
+import useEndpointList from 'src/hooks/useEndpointList';
 import useIndexNameList from 'src/hooks/useIndexNameList';
 import useInput from 'src/hooks/useInput';
 import useLsAppConfigs from 'src/hooks/useLsAppConfigs';
-import { OPTIONS_SEARCH_ENGINE } from './ModalCreateSession';
-import useEndpointList from 'src/hooks/useEndpointList';
-import genUID, { genUIDWithPrefix, genUUID } from 'src/utils/genUID';
+import { genUUID } from 'src/utils/genUID';
 
 const SIZE = 'l';
 const OPTIONS_FILE_LANG = [
@@ -113,7 +113,6 @@ const UploadFiles = () => {
                   onClick={async (e) => {
                     e.preventDefault();
                     setUploading(true);
-                    // console.log({ selectedFiles });
                     try {
                       const file = selectedFiles[0];
                       const formData = new FormData();

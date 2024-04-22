@@ -28,14 +28,14 @@ const useLsArray = (
       ),
 
     // Operate by ID
-    getById: (id, currentValue) =>
-      currentValue.find((item) => item[idName] === id),
+    getById: (id, arr) => arr.find((item) => item[idName] === id),
     delById: (id) =>
       setValue((prev) => prev.filter((item) => item[idName] !== id)),
-    updateById: (id, newValue) =>
-      setValue((prev) =>
-        prev.map((item) => (item[idName] === id ? newValue : item))
-      ),
+    updateById: (id, newValue) => {
+      setValue((prev) => {
+        return prev.map((item) => (item[idName] === id ? newValue : item));
+      });
+    },
   };
 };
 

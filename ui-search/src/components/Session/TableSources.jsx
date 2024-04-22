@@ -95,7 +95,7 @@ function ButtonFeedback({ id, isPositive = false }) {
       <Button
         iconName={isPositive ? 'thumbs-up-filled' : 'thumbs-down'}
         variant="icon"
-        onClick={() => console.log(id)}
+        onClick={() => console.info(id)}
       />
     </Popover>
   );

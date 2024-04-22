@@ -8,71 +8,53 @@ const useLsSessionList = () => {
   const {
     value: lsSessionList,
     setValue: setLsSessionList,
-    add: lsAddSessionItem,
+    add: lsAddOneSession,
     clear: lsClearSessionList,
-    getById: lsGetSessionItem,
-    delById: lsDelSessionItem,
-    updateById: lsUpdateSessionItem,
+    getById: lsGetOneSession,
+    delById: lsDelOneSession,
+    updateById: lsUpdateOneSession,
   } = useLsArray(LSK.sessionList, 'sessionId', PROMPT_TEMPLATES);
   // } = useLsArray(LSK.sessionList, 'sessionId', backup_convo);
 
-  const lsGetCurSessionConfig = useCallback((sessionId, sessionList) => {
-    let configs = null;
-    const curSession = lsGetSessionItem(sessionId, sessionList);
-    if (curSession) configs = curSession.configs;
-    return configs;
-  }, []);
-
-  const lsAddContentToSessionItem = useCallback(
+  const lsAddContentToOneSession = useCallback(
     (sessionId, sessionList, newConvo) => {
-      const curSession = lsGetSessionItem(sessionId, sessionList);
-      if (curSession) {
-        curSession.conversations = curSession.conversations.concat(newConvo);
-        lsUpdateSessionItem(sessionId, curSession);
-      } else {
-        throw new Error(`No session found with ID: ${sessionId}`);
-      }
+      const newSessionList = sessionList.map((s) => {
+        if (s.sessionId === sessionId) {
+          s.conversations = s.conversations.concat(newConvo);
+        }
+        return s;
+      });
+      setLsSessionList(newSessionList);
+      return newSessionList;
     },
     []
   );
 
-  const lsUpdateContentOfLastConvoInOneSessionItem = useCallback(
-    (sessionId, sessionList, data, flagFirstStream = false) => {
-      const curSession = lsGetSessionItem(sessionId, sessionList);
-      // validate whether this sessionId exists
-      if (curSession) {
-        if (flagFirstStream) {
-          // if streaming and it is the first stream, add a new robot convo to the session item
-          curSession.conversations = curSession.conversations.concat({
-            type: 'robot',
-            content: data,
-          });
-        } else {
-          // otherwise, update the last robot convo in the session item
-          curSession.conversations[
-            curSession.conversations.length - 1
-          ].content = data;
+  const lsUpdateContentOfLastConvoInOneSession = useCallback(
+    (sessionId, sessionList, data) => {
+      const newSessionList = sessionList.map((s) => {
+        if (s.sessionId === sessionId) {
+          s.conversations[s.conversations.length - 1].content = data;
         }
-        lsUpdateSessionItem(sessionId, curSession);
-      } else {
-        throw new Error(`No session found with ID: ${sessionId}`);
-      }
+        return s;
+      });
+      setLsSessionList(newSessionList);
+      return newSessionList;
     },
     []
   );
 
   return {
     // NOTE (CAUTION: these functions have to be pure functions wrapped in useCallback WITHOUT any dependencies
-    lsGetCurSessionConfig,
-    lsAddContentToSessionItem,
+    lsAddContentToOneSession,
     lsSessionList,
     setLsSessionList,
-    lsAddSessionItem,
+    lsAddOneSession,
     lsClearSessionList,
-    lsGetSessionItem,
-    lsDelSessionItem,
-    lsUpdateSessionItem,
-    lsUpdateContentOfLastConvoInOneSessionItem,
+    lsGetOneSession,
+    lsDelOneSession,
+    lsUpdateOneSession,
+    lsUpdateContentOfLastConvoInOneSession,
   };
 };
 

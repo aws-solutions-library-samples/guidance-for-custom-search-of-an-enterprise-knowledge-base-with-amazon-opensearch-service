@@ -2,23 +2,27 @@ import {
   Box,
   Button,
   ColumnLayout,
+  Grid,
   Container,
   Header,
   Popover,
   SpaceBetween,
   StatusIndicator,
+  ExpandableSection,
 } from '@cloudscape-design/components';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSessionStore } from 'src/stores/session';
 import StateLoading from '../StateLoading';
 import ValueWithLabel from '../ValueWithLabel';
+import Divider from '../Divider';
+import { DEFAULT_WORK_FLOW, DEFAULT_WORK_MODE } from 'src/constants';
 
 const SIZE = 'l';
 const SessionBrief = ({ configs, expanded }) => {
   const { delSession } = useSessionStore((s) => [s.delSession]);
   const navigate = useNavigate();
-  const [displayDetails, setDisplayDetails] = useState(true);
+  const [displayDetails, setDisplayDetails] = useState(false);
 
   if (!configs) return <StateLoading headerText="Loading Session Configs..." />;
 
@@ -26,6 +30,9 @@ const SessionBrief = ({ configs, expanded }) => {
     name,
     searchEngine,
     llmData,
+    workMode = DEFAULT_WORK_MODE,
+    workFlow = DEFAULT_WORK_FLOW,
+    chatSystemPrompt,
     role,
     language,
     taskDefinition,
@@ -106,9 +113,10 @@ const SessionBrief = ({ configs, expanded }) => {
       }
     >
       {!displayDetails ? null : (
-        <ColumnLayout columns={isKendra ? 3 : 4} variant="text-grid">
+        <Grid gridDefinition={[{ colspan: 3 }, { colspan: 6 }, { colspan: 3 }]}>
           <SpaceBetween size={SIZE}>
             <ValueWithLabel label="Engine">{searchEngine}</ValueWithLabel>
+            <ValueWithLabel label="Work Mode">{workMode}</ValueWithLabel>
             <ValueWithLabel label="Language Model Strategy">
               {llmData?.strategyName}
             </ValueWithLabel>
@@ -126,45 +134,44 @@ const SessionBrief = ({ configs, expanded }) => {
               </ValueWithLabel>
             )}
             <ValueWithLabel label="Context Rounds">
-              {contextRounds || 3}
+              {contextRounds ?? 3}
             </ValueWithLabel>
           </SpaceBetween>
 
           <SpaceBetween size={SIZE}>
-            {/* <ValueWithLabel label="Output Format">
-              {outputFormat}
-            </ValueWithLabel>
-            <ValueWithLabel label="Task Definition">
-              {taskDefinition}
-            </ValueWithLabel> */}
-            <ValueWithLabel label="Prompt">
-              <p style={{ marginTop: 0 }}>{prompt}</p>
+            {chatSystemPrompt ? (
+              <ValueWithLabel label="CHAT System Prompt">
+                <ExpandableSection defaultExpanded headerText="view details">
+                  {chatSystemPrompt}
+                </ExpandableSection>
+              </ValueWithLabel>
+            ) : null}
+            <ValueWithLabel label="RAG System Prompt">
+              <ExpandableSection defaultExpanded headerText="view details">
+                {prompt}
+              </ExpandableSection>
             </ValueWithLabel>
           </SpaceBetween>
 
-          {!isKendra && (
-            <SpaceBetween size={SIZE}>
-              {/* <ValueWithLabel label="Role">{role}</ValueWithLabel> */}
-              <ValueWithLabel label="Number of doc for vector search">
-                {topK}
-              </ValueWithLabel>
-              <ValueWithLabel label="Number of doc for text search">
-                {txtDocsNum}
-              </ValueWithLabel>
-              <ValueWithLabel label="Threshold for vector search">
-                {vecDocsScoreThresholds}
-              </ValueWithLabel>
-              <ValueWithLabel label="Threshold for text search">
-                {txtDocsScoreThresholds}
-              </ValueWithLabel>
-            </SpaceBetween>
-          )}
-
           <SpaceBetween size="xs">
-            {/* <BoolState bool={isCheckedGenerateReport} text="Generate Report" /> */}
-            {/* <BoolState bool={isCheckedContext} text="Context" /> */}
+            {!isKendra && (
+              <>
+                <ValueWithLabel label="Number of doc for vector search">
+                  {topK}
+                </ValueWithLabel>
+                <ValueWithLabel label="Number of doc for text search">
+                  {txtDocsNum}
+                </ValueWithLabel>
+                <ValueWithLabel label="Threshold for vector search">
+                  {vecDocsScoreThresholds}
+                </ValueWithLabel>
+                <ValueWithLabel label="Threshold for text search">
+                  {txtDocsScoreThresholds}
+                </ValueWithLabel>
+              </>
+            )}
+            <Divider />
             <BoolState bool={isCheckedKnowledgeBase} text="Knowledge Base" />
-            {/* <BoolState bool={isCheckedMapReduce} text="Map Reduce" /> */}
             {!isKendra && (
               <>
                 <BoolState
@@ -177,7 +184,7 @@ const SessionBrief = ({ configs, expanded }) => {
             )}
             <BoolState bool={!!tokenContentCheck} text="Content Check" />
           </SpaceBetween>
-        </ColumnLayout>
+        </Grid>
       )}
     </Container>
   );

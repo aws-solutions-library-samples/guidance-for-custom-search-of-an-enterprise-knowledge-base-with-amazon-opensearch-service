@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import ModalCreateSession from './ModalCreateSession';
 import useLsSessionList from 'src/hooks/useLsSessionList';
+import useLsLanguageModelList from 'src/hooks/useLsLanguageModelList';
 
 export default function NavSide() {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ export default function NavSide() {
   const [modalVisible, setModalVisible] = useState(false);
   const { lsSessionList } = useLsSessionList();
   const { sessionId } = useParams();
+  const { lsLanguageModelList } = useLsLanguageModelList();
 
   useEffect(() => {
     setActiveHref(location.pathname);
@@ -49,11 +51,17 @@ export default function NavSide() {
           info: (
             <SpaceBetween size="s">
               <Button
-                onClick={() => setModalVisible(true)}
+                onClick={() =>
+                  lsLanguageModelList?.length
+                    ? setModalVisible(true)
+                    : navigate('/add-language-model-strategies')
+                }
                 iconName="insert-row"
                 iconAlign="right"
               >
-                Create a new session
+                {lsLanguageModelList?.length
+                  ? 'Create a new session'
+                  : 'Create an llm strategy'}
               </Button>
               <ModalCreateSession
                 dismissModal={() => setModalVisible(false)}
