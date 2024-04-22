@@ -50,86 +50,105 @@ class BedrockAdapter:
     def prepare_input(
             cls, provider: str, prompt: str, model_kwargs: Dict[str, Any]
     ) -> Dict[str, Any]:
-        input_body = {**model_kwargs}
-        if provider == "anthropic":
-            input_body["prompt"] = cls._human_assistant_format(prompt)
-        elif provider == "ai21" or provider == "cohere":
-            input_body["prompt"] = prompt
-        elif provider == "amazon":
-            input_body = dict()
-            input_body["inputText"] = prompt
-            input_body["textGenerationConfig"] = {**model_kwargs}
-        else:
-            input_body["prompt"] = prompt
-
-        if provider == "anthropic" and "max_tokens_to_sample" not in input_body:
-            input_body["max_tokens_to_sample"] = 256
-
-        if "prompt" in input_body.keys():
-            prompt = input_body['prompt']
-
+        kwargs = {**model_kwargs}
 
         max_tokens=512
-        if "max_tokens" in input_body.keys():
-            max_tokens = int(input_body['max_tokens'])
+        if "max_tokens" in kwargs.keys():
+            max_tokens = int(kwargs['max_tokens'])
         print('max_tokens:',max_tokens)
 
         modelId = 'anthropic.claude-v2'
-        if "modelId" in input_body.keys():
-            modelId = input_body['modelId']
+        if "modelId" in kwargs.keys():
+            modelId = kwargs['modelId']
         print('modelId:',modelId)
 
         temperature=0.01
-        if "temperature" in input_body.keys():
-            temperature = float(input_body['temperature'])
+        if "temperature" in kwargs.keys():
+            temperature = float(kwargs['temperature'])
         print('temperature:',temperature)
-
+        
+        language='chinese'
+        if "language" in kwargs.keys():
+            language = kwargs['language']
+        print('language:',language)
 
         if modelId.find('claude-v2') >=0 or modelId.find('claude-instant') >=0:
+            prompt = cls._human_assistant_format(prompt)
             input_body = {"prompt": prompt, "max_tokens_to_sample": max_tokens,"temperature": temperature}
         elif modelId.find('claude-3') >=0:
+
+            input_body = {
+                "anthropic_version": "bedrock-2023-05-31"
+            }
+            if int(max_tokens) > 0:
+                input_body['max_tokens'] = max_tokens
+            if float(temperature) > 0:
+                input_body['temperature'] = temperature
+
+            if 'system' in model_kwargs.keys():
+                input_body['system'] = model_kwargs['system']
+
+            input_body['messages'] = []
+
+            messages = {}
+            messages['role'] = 'user'
+            messages['content'] = []
+
             if 'image' in model_kwargs.keys():
-                input_body = {
-                    "anthropic_version": "bedrock-2023-05-31",
-                    "max_tokens": max_tokens,
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "image",
-                                    "source": {
-                                      "type": "base64",
-                                      "media_type": "image/jpeg",
-                                      "data": model_kwargs['image']
-                                    }
-                                },
-                                {
-                                    "type": "text",
-                                    "text": prompt
-                                }
-                            ]
-                        }
-                    ],
-                    "temperature":temperature
-                }
-            else:
-                input_body = {
-                    "anthropic_version": "bedrock-2023-05-31",
-                    "max_tokens": max_tokens,
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": prompt
-                                }
-                            ]
-                        }
-                    ],
-                    "temperature":temperature
-                }
+                image_dic = {"type": "image"}
+                source = {"type": "base64","media_type": "image/jpeg"}
+                source["data"] = model_kwargs['image']
+                image_dic["source"] = source
+                messages["content"].append(image_dic)
+
+            if len(prompt) > 0:
+                text_dic = {"type":"text"}
+                text_dic["text"] = prompt
+                messages['content'].append(text_dic)
+            if 'related_docs' in model_kwargs.keys():
+                docs = model_kwargs['related_docs']
+                for doc in docs:
+                    if 'text' in doc.keys():
+                        doc_str = '相关文档信息为：'
+                        if language == 'english':
+                            doc_str = 'Related documentation information are:'
+                        text_dic = {"type":"text"}
+                        text_dic["text"] = doc_str + doc['text']
+                        messages['content'].append(text_dic)
+                    if 'image' in doc.keys():
+                        image_dic = {"type": "image"}
+                        source = {"type": "base64","media_type": "image/jpeg"}
+                        source["data"] = doc['image']
+                        image_dic["source"] = source
+                        messages['content'].append(image_dic)
+
+            if 'history' in model_kwargs.keys():
+                history_str = '历史记录为：'
+                if language == 'english':
+                    history_str = 'history records are:'
+                text_dic = {"type":"text"}
+                text_dic["text"] = history_str +  model_kwargs['history']
+                messages['content'].append(text_dic)
+
+            if 'input_docs' in model_kwargs.keys():
+                docs = model_kwargs['input_docs']
+                for doc in docs:
+                    if 'text' in doc.keys():
+                        doc_str = '用户输入为：'
+                        if language == 'english':
+                            doc_str = 'User input are:'
+                        text_dic = {"type":"text"}
+                        text_dic["text"] = doc_str + doc['text']
+                        messages['content'].append(text_dic)
+                    if 'image' in doc.keys():
+                        image_dic = {"type": "image"}
+                        source = {"type": "base64","media_type": "image/jpeg"}
+                        source["data"] = doc['image']
+                        image_dic["source"] = source
+                        messages['content'].append(image_dic)
+
+            input_body['messages'].append(messages)
+
         elif modelId == 'amazon.titan-tg1-large':
             input_body = {"inputText": prompt,
                                      "textGenerationConfig" : {
@@ -155,4 +174,22 @@ class BedrockAdapter:
                 "temperature": temperature,
                 "top_p": 0.9
             }
+        else:
+            input_body = {**model_kwargs}
+            if provider == "anthropic":
+                input_body["prompt"] = cls._human_assistant_format(prompt)
+            elif provider == "ai21" or provider == "cohere":
+                input_body["prompt"] = prompt
+            elif provider == "amazon":
+                input_body = dict()
+                input_body["inputText"] = prompt
+                input_body["textGenerationConfig"] = {**model_kwargs}
+            else:
+                input_body["prompt"] = prompt
+
+            if provider == "anthropic" and "max_tokens_to_sample" not in input_body:
+                input_body["max_tokens_to_sample"] = 256
+
+            if "prompt" in input_body.keys():
+                prompt = input_body['prompt']
         return input_body
