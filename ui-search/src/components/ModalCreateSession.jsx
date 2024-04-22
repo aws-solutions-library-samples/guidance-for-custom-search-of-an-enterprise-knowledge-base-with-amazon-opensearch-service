@@ -28,6 +28,7 @@ import useLsLanguageModelList from 'src/hooks/useLsLanguageModelList';
 import useLsSessionList from 'src/hooks/useLsSessionList';
 import useToggle from 'src/hooks/useToggle';
 import { useSessionStore } from 'src/stores/session';
+import { exampleChatSystemPrompt } from 'src/utils/apiExamples/chatModule';
 import Divider from './Divider';
 
 const SIZE = 's';
@@ -57,7 +58,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     bindChatSystemPrompt,
     resetChatSystemPrompt,
     setChatSystemPrompt,
-  ] = useInput();
+  ] = useInput(exampleChatSystemPrompt);
   const [workFlow, setWorkFlow] = useState(DEFAULT_WORK_FLOW);
   const [workMode, bindWorkMode, resetWorkMode, setWorkMode] = useInput(
     DEFAULT_WORK_MODE,
