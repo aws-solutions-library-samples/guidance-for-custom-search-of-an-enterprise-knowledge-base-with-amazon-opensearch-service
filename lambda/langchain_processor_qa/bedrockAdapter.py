@@ -115,7 +115,7 @@ class BedrockAdapter:
                         text_dic = {"type":"text"}
                         text_dic["text"] = doc_str + doc['text']
                         messages['content'].append(text_dic)
-                    if 'image' in doc.keys():
+                    if 'image' in doc.keys() and len(doc['image']) > 0:
                         image_dic = {"type": "image"}
                         source = {"type": "base64","media_type": "image/jpeg"}
                         source["data"] = doc['image']

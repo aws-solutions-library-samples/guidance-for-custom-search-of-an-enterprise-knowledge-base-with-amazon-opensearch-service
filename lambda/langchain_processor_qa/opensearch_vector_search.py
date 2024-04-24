@@ -714,7 +714,7 @@ class OpenSearchVectorSearch(VectorStore):
                         else hit["_source"][metadata_field],
                     ),
                     hit["_score"] * 100  if embedding_type == 'bedrock' else hit["_score"],
-                    hit["_source"][image_field][0] if isinstance(hit["_source"][image_field],list)  else hit["_source"][image_field]
+                    hit["_source"][image_field][0] if image_field in hit["_source"].keys() and isinstance(hit["_source"][image_field],list)  else (hit["_source"][image_field] if image_field in hit["_source"].keys() else '') 
                 ]
                 for hit in hits
             ]

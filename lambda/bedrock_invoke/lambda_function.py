@@ -5,9 +5,6 @@ import json
 import boto3
 import botocore
 
-# module_path = ".."
-# sys.path.append(os.path.abspath(module_path))
-from utils import bedrock
 from bedrockAdapter import BedrockAdapter
 
 boto3_bedrock = boto3.client(
