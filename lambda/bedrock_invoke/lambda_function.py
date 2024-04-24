@@ -5,20 +5,12 @@ import json
 import boto3
 import botocore
 
-# module_path = ".."
-# sys.path.append(os.path.abspath(module_path))
-from utils import bedrock
 from bedrockAdapter import BedrockAdapter
 
-if('BEDROCK_ASSUME_ROLE' in os.environ):
-    boto3_bedrock = bedrock.get_bedrock_client(
-        assumed_role=os.environ.get('BEDROCK_ASSUME_ROLE', None),
-        region=os.environ.get("AWS_REGION", None)
-    )
-else:
-    boto3_bedrock = bedrock.get_bedrock_client(
-        region=os.environ.get("AWS_REGION", None)
-    )
+    
+boto3_bedrock = boto3.client(
+        service_name="bedrock-runtime", region_name=os.environ.get("AWS_REGION")
+)
 
 
 def lambda_handler(event, context):
