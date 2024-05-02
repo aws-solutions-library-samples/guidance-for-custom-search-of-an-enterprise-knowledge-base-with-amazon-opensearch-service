@@ -62,13 +62,9 @@ class SmartSearchQA:
             self.llm = AmazonAPIGateway(api_url=api_url)
             parameters={
                 "modelId":model_name,
-                "temperature":temperature
-            }
-            provider = model_name.split(".")[0]
-            if provider == "anthropic":
-                parameters['max_tokens_to_sample'] = max_tokens
-            elif provider == "meta":
-                parameters['max_gen_len'] = max_tokens        
+                "temperature":temperature,
+                "max_tokens":max_tokens
+            }       
             self.llm.model_kwargs = parameters
         elif model_type == "bedrock":
             if streaming:
@@ -77,15 +73,9 @@ class SmartSearchQA:
             else:
                 self.llm = init_model_bedrock(model_name)
             parameters={
-                "temperature":temperature
+                "temperature":temperature,
+                "max_tokens":max_tokens
             }
-            provider = model_name.split(".")[0]
-            if provider == "anthropic":
-                parameters['max_tokens_to_sample'] = max_tokens
-            elif provider == "meta":
-                parameters['max_gen_len'] = max_tokens
-            elif provider == "mistral":
-                parameters['max_tokens'] = max_tokens
             self.llm.model_kwargs = parameters
         elif model_type == 'llm_api':
             if model_name.find('Baichuan2') >= 0:
