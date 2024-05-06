@@ -568,6 +568,17 @@ class OpenSearchVectorSearch(VectorStore):
             bulk_size=bulk_size,
             **kwargs,
         )
+        
+    def doc_filter_by_source(self, docs:List[Document],k:int = 4)-> List[Document]:
+        source_set = set()
+        new_docs = []
+        for doc in docs:
+            if 'source' in doc[0].metadata.keys() and doc[0].metadata['source'] not in source_set:
+                source_set.add(doc[0].metadata['source'])
+                new_docs.append(doc)
+                if len(new_docs) >= k:
+                    break
+        return new_docs
 
     def similarity_search(
         self, query: str, k: int = 4, **kwargs: Any
@@ -635,6 +646,8 @@ class OpenSearchVectorSearch(VectorStore):
         
         work_mode = kwargs.get("work_mode", "text-modal")
         image_field = kwargs.get("image_field", "image_base64")
+        
+        source_filter = kwargs.get("source_filter", False)
  
         vec_docs = []
         aos_docs = []
@@ -667,11 +680,20 @@ class OpenSearchVectorSearch(VectorStore):
                 new_aos_docs = aos_docs
             
             if search_method == "text":
-                docs_with_scores = new_aos_docs
+                if source_filter:
+                    docs_with_scores = self.doc_filter_by_source(new_aos_docs,txt_docs_num) 
+                else:
+                    docs_with_scores = new_aos_docs
             elif search_method == "mix":
-                docs_with_scores = new_vec_docs + new_aos_docs
+                if source_filter:
+                    docs_with_scores = self.doc_filter_by_source(new_vec_docs + new_aos_docs,k + txt_docs_num)
+                else:
+                    docs_with_scores = new_vec_docs + new_aos_docs
             else:
-                docs_with_scores = new_vec_docs     
+                if source_filter:
+                    docs_with_scores = self.doc_filter_by_source(new_vec_docs,k)
+                else:
+                    docs_with_scores = new_vec_docs     
         
         return docs_with_scores        
         # return [doc[0] for doc in docs_with_scores]
