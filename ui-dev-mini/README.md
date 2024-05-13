@@ -33,3 +33,5 @@ yarn start
 ### Notes
 
 - Please checkout the key logic of websocket in the file `/src/hooks/useRAGWebSocket.js`
+- Websocket debug method: please checkout [User Guide v3.3](https://quip-amazon.com/4YEBAuvWd3GQ/Intelligent-Search-V33) in section `Websocket 前端 Debug 方法`, OR many answers online such as [this one on stack-overflow](https://stackoverflow.com/questions/5751495/debugging-websocket-in-google-chrome)
+- Please checkout [User Guide v3.3](https://quip-amazon.com/4YEBAuvWd3GQ/Intelligent-Search-V33) API section for more details re how to configure each value.
