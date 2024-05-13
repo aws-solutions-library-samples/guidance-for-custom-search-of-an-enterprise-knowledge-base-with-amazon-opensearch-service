@@ -1,6 +1,9 @@
 const sessionId = process.env.REACT_APP_DEFAULT_SESSION_ID
 const indexName = process.env.REACT_APP_KB_INDEX_NAME
 
+/**
+ * Please checkout [User Guide v3.3](https://quip-amazon.com/4YEBAuvWd3GQ/Intelligent-Search-V33) API section for more details re how to configure each value.
+ */
 const DEFAULT_SESSION = {
   sessionId: sessionId ?? 'default_session_0',
   conversations: [],
