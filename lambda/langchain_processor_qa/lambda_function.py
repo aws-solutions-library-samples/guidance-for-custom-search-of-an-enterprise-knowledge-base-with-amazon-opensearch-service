@@ -59,6 +59,11 @@ def lambda_handler(event, context):
         # print("region:",region)
         # print('table name:',table_name)
 
+        httpMethod = 'GET'
+        if 'httpMethod' in event.keys():
+            httpMethod = event['httpMethod']
+        print('httpMethod')
+
         evt_para = {}
         if 'queryStringParameters' in event.keys():
             evt_para = event['queryStringParameters']
@@ -66,15 +71,18 @@ def lambda_handler(event, context):
         requestType = 'websocket'
         if isinstance(evt_para, dict) and "requestType" in evt_para.keys():
             requestType = evt_para['requestType']
-        print('requestType:',requestType)
-
+        
         evt_body = {}
-        if 'body' in event.keys() and requestType == 'websocket':
+        if 'body' in event.keys() and (requestType == 'websocket' or httpMethod == 'POST'):
             if event['body'] != 'None':
                 evt_body = json.loads(event['body'])
         else:
             evt_body = evt_para
 
+        if httpMethod == 'POST' and "requestType" in evt_body.keys():
+            requestType = evt_body['requestType']
+        print('requestType:',requestType)
+            
         query = "hello"
         if "query" in evt_body.keys():
             query = evt_body['query'].strip()
@@ -100,7 +108,10 @@ def lambda_handler(event, context):
         if 'body' in event.keys() and requestType == 'websocket':
             evt_body = evt_body['configs']
         elif requestType == 'restful':
-            evt_body = json.loads(evt_body['configs'])
+            if httpMethod == 'POST':
+                evt_body = evt_body['configs']
+            else:
+                evt_body = json.loads(evt_body['configs'])
             
         chatSystemPrompt = ""
         if "chatSystemPrompt" in evt_body.keys():
@@ -691,6 +702,7 @@ def buildSourceList(searchEngine, source_docs, query_docs_scores, answer_docs_sc
         source = {}
         source["id"] = i
         source["title"] = ''
+        source["source"] = source_docs[i].metadata
         if searchEngine == "opensearch" or searchEngine == "zilliz":
             if 'source' in source_docs[i].metadata.keys():
                 source["title"] = os.path.split(source_docs[i].metadata['source'])[-1]

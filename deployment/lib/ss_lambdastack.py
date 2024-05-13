@@ -391,6 +391,19 @@ class LambdaStack(Stack):
                 )
             ]
         )
+        
+        langchain_processor_qa_resource.add_method(
+            'POST',
+            langchain_processor_qa_integration,
+            method_responses=[
+                apigw.MethodResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': True
+                    }
+                )
+            ]
+        )
 
         chat_table = dynamodb.Table(self, "ChatSessionRecord",
                                     partition_key=dynamodb.Attribute(name="session-id",
