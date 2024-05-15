@@ -48,7 +48,7 @@ const useRAGWebSocket = (resetQuery, setLoading, answerTimer) => {
 
         lsUpdateContentOfLastConvoInOneSession(sessionId, newSessionList, {
           ...data,
-          answerTook: Date.now() - answerTimer,
+          answerTook: Date.now() - answerTimer.current,
         });
         setLoading(false);
 
@@ -129,7 +129,7 @@ const useRAGWebSocket = (resetQuery, setLoading, answerTimer) => {
           onSocketMessage(event.data, newSessionList)
         );
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        answerTimer = Date.now();
+        // answerTimer = Date.now();
         socket.current?.send(
           JSON.stringify({ action: 'search', configs, query, question })
         );

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { DEFAULT_WORK_FLOW, DEFAULT_WORK_MODE } from 'src/constants';
@@ -9,6 +9,7 @@ import useRAGWebSocket from './useRAGWebSocket';
 let answerTimer = Date.now();
 
 const useApiOrchestration = (sessionId, resetQuery) => {
+  const answerTimer = useRef(Date.now());
   const {
     lsSessionList,
     lsGetOneSession,
@@ -52,6 +53,7 @@ const useApiOrchestration = (sessionId, resetQuery) => {
         return toast('Please enter a query to search', { icon: '⚠️' });
       }
       setLoading(true);
+      answerTimer.current = Date.now();
 
       const newConvos = [
         {
