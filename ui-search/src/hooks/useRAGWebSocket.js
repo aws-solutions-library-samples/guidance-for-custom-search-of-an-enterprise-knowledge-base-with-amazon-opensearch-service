@@ -7,8 +7,6 @@ import { useParams } from 'react-router-dom';
 
 const GENERAL_WSS_ERROR_MSG = 'Error on receiving Websocket data';
 
-let flagFirstStream = true;
-
 const useRAGWebSocket = (resetQuery, setLoading, answerTimer) => {
   const { urlWss } = useLsAppConfigs();
   const socket = useRef(null);

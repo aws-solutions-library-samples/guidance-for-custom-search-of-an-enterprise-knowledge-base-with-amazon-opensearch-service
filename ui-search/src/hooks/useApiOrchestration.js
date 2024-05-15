@@ -68,6 +68,13 @@ const useApiOrchestration = (sessionId, resetQuery) => {
         lsSessionList,
         newConvos
       );
+
+      // TESTING: bypassing multi-modal process by checking if there's any image in the question
+      const isMultiModalQuery = question.some((q) => q.type === 'image');
+      if (!isMultiModalQuery) {
+        return socketSendSearch(query, question, configs, newSessionList);
+      }
+
       let newQuery = '';
 
       // TODO: dynamic work flow
