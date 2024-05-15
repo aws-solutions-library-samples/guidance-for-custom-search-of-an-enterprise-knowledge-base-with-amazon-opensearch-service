@@ -648,6 +648,9 @@ class OpenSearchVectorSearch(VectorStore):
         image_field = kwargs.get("image_field", "image_base64")
         
         source_filter = kwargs.get("source_filter", False)
+        if source_filter:
+            k = 3*k
+            txt_docs_num = 3*txt_docs_num
  
         vec_docs = []
         aos_docs = []
@@ -693,7 +696,10 @@ class OpenSearchVectorSearch(VectorStore):
                 if source_filter:
                     docs_with_scores = self.doc_filter_by_source(new_vec_docs,k)
                 else:
-                    docs_with_scores = new_vec_docs     
+                    docs_with_scores = new_vec_docs   
+                    
+                print('new_vec_docs:',new_vec_docs)
+                print('docs_with_scores:',docs_with_scores)
         
         return docs_with_scores        
         # return [doc[0] for doc in docs_with_scores]

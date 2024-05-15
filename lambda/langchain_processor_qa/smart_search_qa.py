@@ -291,6 +291,9 @@ class SmartSearchQA:
                         history.append((item[0],item[1]))
         
         print('history:',history)
+        if len(history) > 0:
+            self.llm.model_kwargs['history'] = history
+        
         retriever = self.get_retriever(top_k,search_method,txt_docs_num,vec_docs_score_thresholds,txt_docs_score_thresholds,text_field,vector_field)
         
         ConversationalRetrievalChain._call = new_conversational_call
@@ -505,7 +508,7 @@ class SmartSearchQA:
             self.llm.model_kwargs['history'] = history_str
         
         result = {}
-        if task == 'qa' and isCheckedKnowledgeBase:
+        if (task == 'qa' or task == 'search') and isCheckedKnowledgeBase:
             work_mode = "multi-modal"
             retriever = self.get_retriever(top_k,search_method,txt_docs_num,vec_docs_score_thresholds,txt_docs_score_thresholds,text_field,vector_field,image_field,work_mode)
             docs = retriever.get_relevant_documents(query)
@@ -518,6 +521,10 @@ class SmartSearchQA:
                 for doc in docs:
                     related_doc = {}
                     related_doc['text'] = doc[0].page_content
+                    if 'sources' in  doc[0].metadata.keys():
+                        related_doc['title'] = doc[0].metadata['sources'].split('/')[-1]
+                    elif 'source' in  doc[0].metadata.keys():
+                        related_doc['title'] = doc[0].metadata['source'].split('/')[-1]
                     if len(doc) == 3:
                         related_doc['image'] = doc[2]
                     if len(related_doc) > 0:

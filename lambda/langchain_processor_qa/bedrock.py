@@ -113,7 +113,7 @@ class LLMInputOutputAdapter:
         if provider == "ai21":
             return response_body.get("completions")[0].get("data").get("text")
         elif provider == "cohere":
-            return response_body.get("generations")[0].get("text")
+            return response_body.get("text")
         elif provider == "meta":
             return response_body.get("generation")
         elif provider == "mistral":

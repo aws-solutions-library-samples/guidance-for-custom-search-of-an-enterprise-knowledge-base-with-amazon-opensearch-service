@@ -62,7 +62,7 @@ def lambda_handler(event, context):
         httpMethod = 'GET'
         if 'httpMethod' in event.keys():
             httpMethod = event['httpMethod']
-        print('httpMethod')
+        print('httpMethod:',httpMethod)
 
         evt_para = {}
         if 'queryStringParameters' in event.keys():
@@ -103,6 +103,9 @@ def lambda_handler(event, context):
             task = evt_body['task']
         elif "action" in evt_body.keys():
             task = evt_body['action']
+        
+        if httpMethod == 'POST':
+            task = "chat"
         print('task:', task)
         
         if 'body' in event.keys() and requestType == 'websocket':
@@ -119,9 +122,14 @@ def lambda_handler(event, context):
         print('chatSystemPrompt:',chatSystemPrompt)
 
         workMode = "text-modal"
+        #workMode = 'multi-modal'
         if "workMode" in evt_body.keys():
             workMode = evt_body['workMode']
         print('workMode:',workMode)
+        
+        if workMode == 'multi-modal' and len(question) == 0 and len(query) > 0:
+            question = [{'type': 'text', 'text': query}]
+            print('trans question:',question)
 
         index = INDEX
         if "index" in evt_body.keys():
@@ -212,6 +220,8 @@ def lambda_handler(event, context):
         streaming = True
         if "streaming" in evt_body.keys():
             streaming = ast.literal_eval(str(evt_body['streaming']).title())
+        if requestType != 'websocket' or httpMethod == 'POST':
+            streaming = False
         print('streaming:',streaming)
         
         contextRounds = 3
@@ -338,7 +348,7 @@ def lambda_handler(event, context):
             contentCheckLabel = "Pass"
             contentCheckSuggestion = "Pass"
 
-            if task == "chat" or not isCheckedKnowledgeBase:
+            if httpMethod == 'POST' or task == "chat" or not isCheckedKnowledgeBase:
 
                 if workMode == 'multi-modal':
                     if language == "chinese":
@@ -522,20 +532,25 @@ def lambda_handler(event, context):
                                                                           )
 
                 print('result:', result)
-
-                answer = result['answer']
+                if len(result) > 0 and 'answer' in result.keys():
+                    answer = result['answer']
+                else:
+                    answer = responseIfNoDocsFound
                 print('answer:', answer)
 
-                source_documents = result['source_documents']
-                if searchEngine == "opensearch":
-                    source_docs = [doc[0] for doc in source_documents]
-                    query_docs_scores = [doc[1] for doc in source_documents]
-                    # sentences = [doc[2] for doc in source_documents]
-                elif searchEngine == "kendra":
-                    source_docs = source_documents
-                elif searchEngine == "zilliz":
-                    source_docs = [doc[0] for doc in source_documents]
-                    query_docs_scores = [doc[1] for doc in source_documents]
+                source_docs = []
+                query_docs_scores = []
+                if len(result) > 0 and 'source_documents' in result.keys():
+                    source_documents = result['source_documents']
+                    if searchEngine == "opensearch":
+                        source_docs = [doc[0] for doc in source_documents]
+                        query_docs_scores = [doc[1] for doc in source_documents]
+                        # sentences = [doc[2] for doc in source_documents]
+                    elif searchEngine == "kendra":
+                        source_docs = source_documents
+                    elif searchEngine == "zilliz":
+                        source_docs = [doc[0] for doc in source_documents]
+                        query_docs_scores = [doc[1] for doc in source_documents]
                     # sentences = [doc[2] for doc in source_documents]
 
                 #if enable streaming， return the souce docs before caculating the scores
