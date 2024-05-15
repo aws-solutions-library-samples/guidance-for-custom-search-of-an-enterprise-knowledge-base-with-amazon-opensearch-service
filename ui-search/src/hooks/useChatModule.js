@@ -28,9 +28,12 @@ const useChatModule = () => {
           toast.error(msg);
           throw new Error(msg);
         }
+        if (data?.text && !data.text.includes('query')) {
+          toast(data.text, { icon: '🤔', duration: 10000 });
+          return '';
+        }
         // data example: the result of JSON.stringify({query:'xxxx'}), hence ⬇️
         const parsedData = JSON.parse(data.text);
-
         // TODO: regex match in case of llm error outputs
         // const match = parsedData.match(/"?({.*})"?/);
         // if (match?.length === 2) {
@@ -41,10 +44,8 @@ const useChatModule = () => {
         //   throw new Error(`Error matching chat module response ${data.query}`);
         //   //...
         // }
-
-        if (!parsedData.query)
+        if (!parsedData?.query)
           throw new Error('LLM output error: no "query" in LLM response');
-
         setChatModuleResult(parsedData.query);
         return parsedData.query;
       } catch (error) {

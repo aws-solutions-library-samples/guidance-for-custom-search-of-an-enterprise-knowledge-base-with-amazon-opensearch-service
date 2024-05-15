@@ -6,8 +6,6 @@ import useChatModule from './useChatModule';
 import useLsSessionList from './useLsSessionList';
 import useRAGWebSocket from './useRAGWebSocket';
 
-let answerTimer = Date.now();
-
 const useApiOrchestration = (sessionId, resetQuery) => {
   const answerTimer = useRef(Date.now());
   const {
@@ -71,11 +69,11 @@ const useApiOrchestration = (sessionId, resetQuery) => {
         newConvos
       );
 
-      // TESTING: bypassing multi-modal process by checking if there's any image in the question
-      const isMultiModalQuery = question.some((q) => q.type === 'image');
-      if (!isMultiModalQuery) {
-        return socketSendSearch(query, question, configs, newSessionList);
-      }
+      // // TESTING: bypassing multi-modal process by checking if there's any image in the question
+      // const isMultiModalQuery = question.some((q) => q.type === 'image');
+      // if (!isMultiModalQuery) {
+      //   return socketSendSearch(query, question, configs, newSessionList);
+      // }
 
       let newQuery = '';
 
