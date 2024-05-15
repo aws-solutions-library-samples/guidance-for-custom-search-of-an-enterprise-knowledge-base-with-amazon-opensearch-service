@@ -24,18 +24,17 @@ const TEMP_STR = '_#<placeholder>#_';
 const SessionInput = () => {
   const { sessionId } = useParams();
   const [query, setQuery] = useState('');
-  const resetQuery = useCallback(() => setQuery(''), []);
   const [imgArr, setImgArr] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
 
+  const resetQuery = useCallback(() => {
+    setQuery('');
+    setImgArr([]);
+  }, []);
   const { handleOnEnterSearch, configs, loading, isWssConnected } =
     useApiOrchestration(sessionId, resetQuery);
-
   useEffect(() => {
-    return () => {
-      resetQuery();
-      setImgArr([]);
-    };
+    return resetQuery;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
