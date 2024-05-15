@@ -52,6 +52,39 @@ const SessionInput = () => {
 
   const inputRef = useRef(null);
 
+  const search = useCallback(() => {
+    let tempQ = query?.trim();
+    if (!tempQ) return toast('Please enter your query first!', { icon: '🦥' });
+
+    const question = [];
+    if (imgArr.length) {
+      // if images involved: dissect query
+      imgArr.forEach(({ base64, fileName }) => {
+        let [item0, item1] = [null, null];
+        if (tempQ) {
+          [item0, item1] = tempQ
+            .replace(genFileNameTag(fileName), TEMP_STR)
+            .split(TEMP_STR);
+
+          item0 = item0?.trim();
+          item1 = item1?.trim();
+        }
+        if (item0) {
+          question.push({ type: 'text', text: item0.trim() });
+          question.push({ type: 'image', base64 });
+        } else {
+          question.push({ type: 'image', base64 });
+        }
+        tempQ = item1;
+      });
+    }
+
+    if (tempQ) question.push({ type: 'text', text: tempQ });
+
+    console.warn({ query, question });
+    handleOnEnterSearch(query, question);
+  }, [handleOnEnterSearch, imgArr, query]);
+
   return (
     <Container>
       <AutoScrollToDiv />
@@ -72,10 +105,10 @@ const SessionInput = () => {
                 setQuery(detail.value);
               }}
               data-corner-style="rounded"
-              placeholder="Search Input"
-              // onKeyUp={(e) =>
-              //   e.detail.key === 'Enter' ? handleOnEnterSearch(query) : null
-              // }
+              placeholder="⇧ + Enter to search"
+              onKeyDown={({ detail: { key, shiftKey } }) =>
+                shiftKey && key === 'Enter' ? search() : null
+              }
             />
             <div
               style={{
@@ -155,39 +188,7 @@ const SessionInput = () => {
             variant="primary"
             disabled={!isWssConnected || isRecording}
             loading={loading}
-            onClick={() => {
-              let tempQ = query?.trim();
-              if (!tempQ)
-                return toast('Please enter your query first!', { icon: '🦥' });
-
-              const question = [];
-              if (imgArr.length) {
-                // if images involved: dissect query
-                imgArr.forEach(({ base64, fileName }) => {
-                  let [item0, item1] = [null, null];
-                  if (tempQ) {
-                    [item0, item1] = tempQ
-                      .replace(genFileNameTag(fileName), TEMP_STR)
-                      .split(TEMP_STR);
-
-                    item0 = item0?.trim();
-                    item1 = item1?.trim();
-                  }
-                  if (item0) {
-                    question.push({ type: 'text', text: item0.trim() });
-                    question.push({ type: 'image', base64 });
-                  } else {
-                    question.push({ type: 'image', base64 });
-                  }
-                  tempQ = item1;
-                });
-              }
-
-              if (tempQ) question.push({ type: 'text', text: tempQ });
-
-              console.warn({ query, question });
-              handleOnEnterSearch(query, question);
-            }}
+            onClick={search}
           >
             {loading ? 'Searching' : 'Search'}
           </Button>
