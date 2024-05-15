@@ -68,11 +68,12 @@ const useApiOrchestration = (sessionId, resetQuery) => {
         lsSessionList,
         newConvos
       );
+      let newQuery = '';
 
       // TODO: dynamic work flow
       // @ts-ignore
       if (configs?.workFlow?.length > 1) {
-        const newQuery = await getChatModuleResult({ configs, question });
+        newQuery = await getChatModuleResult({ configs, question });
         if (newQuery) {
           // TODO: add newQuery text to existing user query text
           newSessionList = newSessionList.map((s) => {
@@ -86,7 +87,7 @@ const useApiOrchestration = (sessionId, resetQuery) => {
           setLsSessionList(newSessionList);
         }
       }
-      socketSendSearch(query, question, configs, newSessionList);
+      socketSendSearch(newQuery || query, question, configs, newSessionList);
     },
     [
       lsAddContentToOneSession,
