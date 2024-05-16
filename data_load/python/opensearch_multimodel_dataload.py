@@ -162,14 +162,14 @@ def add_multimodel_documents(
         **kwargs: Any,
     ) -> List[str]:
         _validate_embeddings_and_bulk_size(len(embeddings), bulk_size)
-        text_field = kwargs.get("text_field", "text")
+        text_field = kwargs.get("text_field", "paragraph")
         dim = len(embeddings[0])
         engine = kwargs.get("engine", "nmslib")
         space_type = kwargs.get("space_type", "l2")
         ef_search = kwargs.get("ef_search", 512)
         ef_construction = kwargs.get("ef_construction", 512)
         m = kwargs.get("m", 16)
-        vector_field = kwargs.get("vector_field", "vector_field")
+        vector_field = kwargs.get("vector_field", "sentence_vector")
         image_field = kwargs.get("image_field", "image_base64")
         max_chunk_bytes = kwargs.get("max_chunk_bytes", 1 * 1024 * 1024)
 
