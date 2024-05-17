@@ -87,7 +87,7 @@ const useApiOrchestration = (sessionId, resetQuery) => {
             if (s.sessionId === sessionId) {
               s.conversations[
                 s.conversations.length - 2
-              ].content.text = `${query}\n[ Query processed by CHAT Module: ${newQuery} ]`;
+              ].content.text = `${query}\n\nQuery processed by CHAT Module:\n${newQuery}`;
             }
             return s;
           });
@@ -107,7 +107,7 @@ const useApiOrchestration = (sessionId, resetQuery) => {
     ]
   );
 
-  return { handleOnEnterSearch, loading, isWssConnected, configs };
+  return { handleOnEnterSearch, loading, setLoading, isWssConnected, configs };
 };
 
 export default useApiOrchestration;

@@ -31,10 +31,13 @@ const SessionInput = () => {
     setQuery('');
     setImgArr([]);
   }, []);
-  const { handleOnEnterSearch, configs, loading, isWssConnected } =
+  const { handleOnEnterSearch, configs, loading, setLoading, isWssConnected } =
     useApiOrchestration(sessionId, resetQuery);
   useEffect(() => {
-    return resetQuery;
+    return () => {
+      resetQuery();
+      setLoading(false);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 

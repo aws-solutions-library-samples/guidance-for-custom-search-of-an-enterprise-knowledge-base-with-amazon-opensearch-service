@@ -29,7 +29,7 @@ import useLsLanguageModelList from 'src/hooks/useLsLanguageModelList';
 import useLsSessionList from 'src/hooks/useLsSessionList';
 import useToggle from 'src/hooks/useToggle';
 import { useSessionStore } from 'src/stores/session';
-import { exampleChatSystemPrompt } from 'src/utils/apiExamples/chatModule';
+import { DEFAULT_CHAT_SYSTEM_PROMPT } from 'src/utils/PROMPT_TEMPLATES';
 import Divider from './Divider';
 
 const SIZE = 's';
@@ -59,20 +59,9 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     bindChatSystemPrompt,
     resetChatSystemPrompt,
     setChatSystemPrompt,
-  ] = useInput(exampleChatSystemPrompt);
+  ] = useInput(DEFAULT_CHAT_SYSTEM_PROMPT);
   const [workFlow, setWorkFlow] = useState(DEFAULT_WORK_FLOW);
-  const [workMode, bindWorkMode, resetWorkMode, setWorkMode] = useInput(
-    DEFAULT_WORK_MODE,
-    (chosenWorkMode) => {
-      setWorkFlow(
-        OPTIONS_WORK_MODE.find((mode) => mode.value === chosenWorkMode).workFlow
-      );
-      if (chosenWorkMode === DEFAULT_WORK_MODE) {
-        // @ts-ignore
-        setChatSystemPrompt(undefined);
-      }
-    }
-  );
+  const [workMode, _, resetWorkMode, setWorkMode] = useInput(DEFAULT_WORK_MODE);
 
   const [searchEngine, bindSearchEngine, resetSearchEngine, setSearchEngine] =
     useInput(OPTIONS_SEARCH_ENGINE[0].value);
@@ -409,10 +398,23 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
               label="Work Mode"
               description="Please select a work mode"
             >
-              <Tiles columns={2} {...bindWorkMode} items={OPTIONS_WORK_MODE} />
+              <Tiles
+                columns={2}
+                value={workMode}
+                items={OPTIONS_WORK_MODE}
+                onChange={({ detail: { value } }) => {
+                  setWorkMode(value);
+                  setWorkFlow(
+                    OPTIONS_WORK_MODE.find((m) => m.value === value).workFlow
+                  );
+                  if (value === DEFAULT_WORK_MODE) {
+                    setChatSystemPrompt(undefined);
+                  }
+                }}
+              />
             </FormField>
 
-            {workMode !== OPTIONS_WORK_MODE[0].value && (
+            {workMode !== DEFAULT_WORK_MODE && (
               <FormField
                 stretch
                 label="System Prompt for CHAT module"
