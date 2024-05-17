@@ -106,6 +106,7 @@ def lambda_handler(event, context):
         
         if httpMethod == 'POST':
             task = "chat"
+            question = [{"type": "text", "text": "<user inputs>"}] + question + [{"type": "text", "text": "</user inputs>"}]
         print('task:', task)
         
         if 'body' in event.keys() and requestType == 'websocket':
@@ -119,6 +120,8 @@ def lambda_handler(event, context):
         chatSystemPrompt = ""
         if "chatSystemPrompt" in evt_body.keys():
             chatSystemPrompt = evt_body['chatSystemPrompt'].strip()
+        if httpMethod == 'GET':
+            chatSystemPrompt = evt_body['prompt']
         print('chatSystemPrompt:',chatSystemPrompt)
 
         workMode = "text-modal"
