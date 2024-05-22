@@ -20,6 +20,7 @@ import useLsLanguageModelList from 'src/hooks/useLsLanguageModelList';
 import useToggle from 'src/hooks/useToggle';
 import { genRandomNum } from 'src/utils/genUID';
 import useEndpointList from 'src/hooks/useEndpointList';
+import { DEMO_SESSION_1 } from 'src/utils/PROMPT_TEMPLATES';
 
 const SIZE = 'l';
 
@@ -289,6 +290,9 @@ const LanguageModelStrategy = () => {
                           );
                           if (bool) lsDelLanguageModelItem(item.recordId);
                         }}
+                        disabled={[
+                          DEMO_SESSION_1.configs.llmData.recordId,
+                        ].includes(item.recordId)}
                       />
                     </SpaceBetween>
                   ),

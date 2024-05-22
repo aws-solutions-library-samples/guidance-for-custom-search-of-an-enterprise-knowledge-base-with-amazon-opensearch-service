@@ -192,11 +192,11 @@ const TEMPLATE_4 = {
   },
 };
 
-const TEMPLATE_1_MULTI_MODAL = {
-  text: 'Template_1_Multi_Modal_文档型内部知识库问答',
-  sessionId: 'template_1_multi_modal',
+const TEMPLATE_5_MULTI_MODAL = {
+  text: 'Template_5_Multi_Modal_文档型内部知识库问答',
+  sessionId: 'template_5_multi_modal',
   configs: {
-    sessionId: 'template_1_multi_modal',
+    sessionId: 'template_5_multi_modal',
     searchEngine: 'opensearch',
     isCheckedKnowledgeBase: true,
     searchMethod: 'mix',
@@ -225,14 +225,162 @@ const TEMPLATE_1_MULTI_MODAL = {
   },
 };
 
-const PROMPT_TEMPLATES = [
-  TEMPLATE_1_MULTI_MODAL,
+let PROMPT_TEMPLATES = [
+  TEMPLATE_5_MULTI_MODAL,
   TEMPLATE_1,
   TEMPLATE_2,
   TEMPLATE_3,
   TEMPLATE_4,
 ];
 
+export const DEMO_SESSION_1 = {
+  type: 'link',
+  href: '/session/demo_session_1',
+  text: 'dishwasher (multi-modal)',
+  sessionId: 'demo_session_1',
+  configs: {
+    name: 'dishwasher (multi-modal)',
+    searchEngine: 'opensearch',
+    workMode: 'multi-modal',
+    workFlow: ['CHAT', 'RAG'],
+    llmData: {
+      strategyName: 'claude3_bge_strategy',
+      type: 'third_party_api',
+      embeddingEndpoint: 'bge-m3-2024-05-15-14-47-26-255-endpoint',
+      modelType: 'bedrock',
+      modelName: 'anthropic.claude-3-sonnet-20240229-v1:0',
+      recordId: 'anthropic.claude-3-sonnet-20240229-v1:0-98550',
+      apiUrl: '',
+      apiKey: '',
+      secretKey: '',
+    },
+    role: '',
+    language: 'english',
+    taskDefinition: '',
+    outputFormat: '',
+    isCheckedGenerateReport: false,
+    isCheckedContext: false,
+    isCheckedKnowledgeBase: true,
+    indexName: 'multi-model-dishwasher',
+    topK: '3',
+    searchMethod: 'vector',
+    txtDocsNum: '2',
+    vecDocsScoreThresholds: 0,
+    txtDocsScoreThresholds: 0,
+    isCheckedScoreQA: false,
+    isCheckedScoreQD: false,
+    isCheckedScoreAD: false,
+    contextRounds: 0,
+    isCheckedEditPrompt: true,
+    chatSystemPrompt: DEFAULT_CHAT_SYSTEM_PROMPT,
+    prompt:
+      '<任务定义>\n下面将给你一个“问题”和一些“已知信息”，请判断这个“问题”是否可以从“已知信息”中得到答案。\n1. 若可以从“已知信息”中获取答案，请直接简洁得输出最终答案，请不要输出推导或者思考过程。\n2. 若不可以从“已知信息”中获取答案，请直接回答“根据已知信息无法回答”，请不要输出其他信息\n</任务定义>\n<输出设定>\n1. 你是一个洗碗机客服人员，请尽可能礼貌得回答问题\n2. 不要输出推导过程，或者复述原始”已知信息“，请直接给出最终答案\n3. 回答开头使用“感谢你的提问”，在回答请一定杜绝使用类似“根据已知信息”的字眼，结尾使用一个笑脸\n4. 回答使用英文\n</输出设定>',
+    tokenContentCheck: '',
+    responseIfNoDocsFound: 'Cannot find the answer',
+    sessionId: 'demo_session_1',
+  },
+  conversations: [],
+};
+const DEMO_SESSION_2 = {
+  type: 'link',
+  href: '/session/demo_session_2',
+  text: 'dishwasher',
+  sessionId: 'demo_session_2',
+  configs: {
+    name: 'dishwasher',
+    searchEngine: 'opensearch',
+    workMode: 'text',
+    workFlow: ['RAG'],
+    llmData: {
+      strategyName: 'claude3_bge_strategy',
+      type: 'third_party_api',
+      embeddingEndpoint: 'bge-m3-2024-05-15-14-47-26-255-endpoint',
+      modelType: 'bedrock',
+      modelName: 'anthropic.claude-3-sonnet-20240229-v1:0',
+      recordId: 'anthropic.claude-3-sonnet-20240229-v1:0-98550',
+      apiUrl: '',
+      apiKey: '',
+      secretKey: '',
+    },
+    role: '',
+    language: 'english',
+    taskDefinition: '',
+    outputFormat: '',
+    isCheckedGenerateReport: false,
+    isCheckedContext: false,
+    isCheckedKnowledgeBase: true,
+    indexName: 'dishwasher',
+    topK: '3',
+    searchMethod: 'vector',
+    txtDocsNum: '2',
+    vecDocsScoreThresholds: 0,
+    txtDocsScoreThresholds: 0,
+    isCheckedScoreQA: false,
+    isCheckedScoreQD: false,
+    isCheckedScoreAD: false,
+    contextRounds: 0,
+    isCheckedEditPrompt: true,
+    prompt:
+      '<任务定义>\n下面将给你一个“问题”和一些“已知信息”，请判断这个“问题”是否可以从“已知信息”中得到答案。\n1. 若可以从“已知信息”中获取答案，请直接简洁得输出最终答案，请不要输出推导或者思考过程。\n2. 若不可以从“已知信息”中获取答案，请直接回答“根据已知信息无法回答”，请不要输出其他信息\n</任务定义>\n<输出设定>\n1. 你是一个洗碗机客服人员，请尽可能礼貌得回答问题\n2. 不要输出推导过程，或者复述原始”已知信息“，请直接给出最终答案\n3. 回答开头使用“感谢你的提问”，在回答请一定杜绝使用类似“根据已知信息”的字眼，结尾使用一个笑脸\n4. 回答使用英文\n</输出设定>',
+    tokenContentCheck: '',
+    responseIfNoDocsFound: 'Cannot find the answer',
+    sessionId: 'demo_session_2',
+  },
+  conversations: [],
+};
+const DEMO_SESSION_3 = {
+  type: 'link',
+  href: '/session/demo_session_3',
+  text: 'air compressor',
+  sessionId: 'demo_session_3',
+  configs: {
+    name: 'air compressor',
+    searchEngine: 'opensearch',
+    workMode: 'text',
+    workFlow: ['RAG'],
+    llmData: {
+      strategyName: 'claude3_bge_strategy',
+      type: 'third_party_api',
+      embeddingEndpoint: 'bge-m3-2024-05-15-14-47-26-255-endpoint',
+      modelType: 'bedrock',
+      modelName: 'anthropic.claude-3-sonnet-20240229-v1:0',
+      recordId: 'anthropic.claude-3-sonnet-20240229-v1:0-98550',
+      apiUrl: '',
+      apiKey: '',
+      secretKey: '',
+    },
+    role: '',
+    language: 'chinese',
+    taskDefinition: '',
+    outputFormat: '',
+    isCheckedGenerateReport: false,
+    isCheckedContext: false,
+    isCheckedKnowledgeBase: true,
+    indexName: 'air_compressor',
+    topK: '3',
+    searchMethod: 'vector',
+    txtDocsNum: '2',
+    vecDocsScoreThresholds: 0,
+    txtDocsScoreThresholds: 0,
+    isCheckedScoreQA: false,
+    isCheckedScoreQD: false,
+    isCheckedScoreAD: false,
+    contextRounds: 0,
+    isCheckedEditPrompt: true,
+    prompt:
+      '<任务定义>\n下面将给你一个“问题”和一些“已知信息”，请判断这个“问题”是否可以从“已知信息”中得到答案。\n1. 若可以从“已知信息”中获取答案，请直接简洁得输出最终答案，请不要输出推导或者思考过程。\n2. 若不可以从“已知信息”中获取答案，请直接回答“根据已知信息无法回答”，请不要输出其他信息\n</任务定义>\n<输出设定>\n1. 你是一个空压机维保助手，请尽可能礼貌得回答问题\n2. 不要输出推导过程，或者复述原始”已知信息“，请直接给出最终答案\n3. 回答开头使用“感谢你的提问”，在回答请一定杜绝使用类似“根据已知信息”的字眼，结尾使用一个笑脸\n</输出设定>',
+    tokenContentCheck: '',
+    responseIfNoDocsFound: 'Cannot find the answer',
+    sessionId: 'demo_session_3',
+  },
+  conversations: [],
+};
+
+const DEMO_SESSIONS = [DEMO_SESSION_1, DEMO_SESSION_2, DEMO_SESSION_3];
+if (JSON.parse(process.env.REACT_APP_DEMO)) {
+  // @ts-ignore
+  PROMPT_TEMPLATES = PROMPT_TEMPLATES.concat(DEMO_SESSIONS);
+}
 export default PROMPT_TEMPLATES;
 
 function fStr(str) {

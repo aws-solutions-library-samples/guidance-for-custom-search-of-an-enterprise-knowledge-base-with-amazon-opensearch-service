@@ -2,8 +2,12 @@ import { LSK } from 'src/constants';
 import useLocalStorage from 'use-local-storage';
 
 export const INIT_APP_CONFIGS = {
-  urlWss: '',
-  urlApiGateway: '',
+  urlWss: JSON.parse(process.env.REACT_APP_DEMO)
+    ? process.env.REACT_APP_URL_WSS
+    : '',
+  urlApiGateway: JSON.parse(process.env.REACT_APP_DEMO)
+    ? process.env.REACT_APP_URL_APIGATEWAY
+    : '',
   s3FileUpload: '',
   responseIfNoDocsFound: 'Cannot find the answer',
   mode: 'light',

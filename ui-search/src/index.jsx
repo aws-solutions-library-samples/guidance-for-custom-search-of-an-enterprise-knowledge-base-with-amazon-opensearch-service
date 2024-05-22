@@ -14,12 +14,14 @@ import Layout from './components/Layout';
 import Session from './components/Session';
 import UploadFiles from './components/UploadFiles';
 import './index.css';
-import reportWebVitals from './reportWebVitals';
 import AppConfigs from './components/AppConfigs';
 import { useRouteError } from 'react-router-dom';
 
 applyMode(Mode.Light);
 applyDensity(Density.Comfortable);
+
+const isEnvDemo = JSON.parse(process.env.REACT_APP_DEMO);
+if (isEnvDemo) console.info('[This is a demo environment]');
 
 const router = createBrowserRouter([
   {
@@ -30,7 +32,19 @@ const router = createBrowserRouter([
       { index: true, element: <Landing /> },
       {
         path: 'app-configs',
-        element: <AppConfigs />,
+        element: isEnvDemo ? (
+          <DemoRestricted pageName="App Configurations" />
+        ) : (
+          <AppConfigs />
+        ),
+      },
+      {
+        path: 'upload-files',
+        element: isEnvDemo ? (
+          <DemoRestricted pageName="Upload File" />
+        ) : (
+          <UploadFiles />
+        ),
       },
       {
         path: 'session/:sessionId',
@@ -39,10 +53,6 @@ const router = createBrowserRouter([
       {
         path: 'add-language-model-strategies',
         element: <LanguageModelStrategy />,
-      },
-      {
-        path: 'upload-files',
-        element: <UploadFiles />,
       },
       {
         path: 'about',
@@ -66,6 +76,18 @@ function Fallback() {
 function PageNotFound() {
   return <h4>404! Page Not Found...</h4>;
 }
+function DemoRestricted({ pageName }) {
+  return (
+    <>
+      <h1>Oops! Restricted Area</h1>
+      <h3>Page {pageName} is available but not on a demo site</h3>
+      <small>
+        This is a demo for Custom Search of an Enterprise Knowledge Base powered
+        by Amazon Web Services
+      </small>
+    </>
+  );
+}
 function ErrorPage() {
   const error = useRouteError();
   console.error(error);
@@ -80,7 +102,3 @@ function ErrorPage() {
     </div>
   );
 }
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();

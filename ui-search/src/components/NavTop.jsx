@@ -65,9 +65,7 @@ export default function TopNav() {
       i18nStrings={i18nStrings}
       identity={{
         href: '/',
-        title:
-          'Guidance for Custom Search of an Enterprise Knowledge Base on AWS',
-        // title: 'Smart Search Solution',
+        title: process.env.REACT_APP_WEB_HEADER,
         // logo: { src: logo, alt: 'Service name logo' },
       }}
       utilities={[

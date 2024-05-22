@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 import { LSK } from 'src/constants';
 import useLsArray from './useLsArray';
 import PROMPT_TEMPLATES from 'src/utils/PROMPT_TEMPLATES';
-import backup_convo from 'src/utils/backup';
 
 const useLsSessionList = () => {
   const {
@@ -14,7 +13,6 @@ const useLsSessionList = () => {
     delById: lsDelOneSession,
     updateById: lsUpdateOneSession,
   } = useLsArray(LSK.sessionList, 'sessionId', PROMPT_TEMPLATES);
-  // } = useLsArray(LSK.sessionList, 'sessionId', backup_convo);
 
   const lsAddContentToOneSession = useCallback(
     (sessionId, sessionList, newConvo) => {

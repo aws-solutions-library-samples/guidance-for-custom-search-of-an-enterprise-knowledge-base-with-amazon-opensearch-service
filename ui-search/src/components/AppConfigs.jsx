@@ -197,27 +197,10 @@ const AppConfigs = () => {
                 onClick={(e) => {
                   e.preventDefault();
                   const bool = window?.confirm(
-                    'Confirm to clear all sessions? (This will clear session templates as well, however, you can import the default session templates again)'
+                    'Confirm to clear all sessions?\nNOTE: This will clear session templates as well, however, you can import the default session templates again'
                   );
                   if (bool) {
-                    if (process.env.NODE_ENV === 'development') {
-                      // TESTING
-                      setLsSessionList((prev) =>
-                        prev.length > 0
-                          ? [
-                              {
-                                ...prev[0],
-                                conversations: prev[0].conversations.slice(
-                                  0,
-                                  10
-                                ),
-                              },
-                            ]
-                          : []
-                      );
-                    } else {
-                      setLsSessionList([]);
-                    }
+                    setLsSessionList([]);
                     toast.success('Sessions cleared');
                   }
                 }}
@@ -237,7 +220,7 @@ const AppConfigs = () => {
                   }
                 }}
               >
-                Reset All App Configs
+                Reset all app configs
               </Button>
             </SpaceBetween>
           </Box>

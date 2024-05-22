@@ -46,7 +46,7 @@ const Landing = ({ withConfigs = true }) => {
           }
           // actions={<Button variant="primary">Button</Button>}
         >
-          Guidance for Custom Search of an Enterprise Knowledge Base on AWS
+          {process.env.REACT_APP_WEB_HEADER}
         </Header>
       }
     >
