@@ -12,6 +12,7 @@ import {
   Table,
   Tiles,
   Toggle,
+  Slider,
 } from '@cloudscape-design/components';
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -114,6 +115,9 @@ const LanguageModelStrategy = () => {
   ] = useEndpointList();
   const [sagemakerEndpoint, bindSagemakerEndpoint, resetSagemakerEndpoint] =
     useInput('');
+  const [temperature, setTemperature] = useState(100);
+  const [maxTokens, setMaxTokens] = useState(2000);
+
   const [
     isSagemakerStreaming,
     bindIsSagemakerStreaming,
@@ -176,6 +180,8 @@ const LanguageModelStrategy = () => {
   const resetForm = useCallback(() => {
     resetStrategyName();
     resetSagemakerEndpoint();
+    setTemperature(100);
+    setMaxTokens(2000);
     resetIsSagemakerStreaming();
     resetEmbeddingEndpoint();
     resetThirdPartyEmbeddingEmbeddingEndpoint();
@@ -235,6 +241,18 @@ const LanguageModelStrategy = () => {
                   header: 'Type',
                   width: 120,
                   cell: (item) => item.type,
+                },
+                {
+                  id: 'temperature',
+                  header: 'Temperature',
+                  width: 120,
+                  cell: (item) => item.temperature || 'n/a',
+                },
+                {
+                  id: 'maxTokens',
+                  header: 'Max Tokens',
+                  width: 120,
+                  cell: (item) => item.maxTokens || 'n/a',
                 },
                 {
                   id: 'modelType',
@@ -339,6 +357,8 @@ const LanguageModelStrategy = () => {
                           embeddingEndpoint,
                           modelType: sagemakerModelType,
                           recordId: `${sagemakerEndpoint}-${genRandomNum()}`,
+                          temperature: temperature / 100,
+                          maxTokens,
                           // *** different items
                           sagemakerEndpoint,
                           streaming: isSagemakerStreaming,
@@ -352,6 +372,8 @@ const LanguageModelStrategy = () => {
                           modelType: thirdPartyModelType,
                           modelName: thirdPartyModelName,
                           recordId: `${thirdPartyModelName}-${genRandomNum()}`,
+                          temperature: temperature / 100,
+                          maxTokens,
                           // *** different items
                           apiUrl: thirdPartyApiUrl,
                           apiKey: thirdPartyApiKey,
@@ -405,32 +427,98 @@ const LanguageModelStrategy = () => {
                 />
               </FormField>
 
+              <Grid gridDefinition={[{ colspan: 6 }, { colspan: 6 }]}>
+                <FormField stretch label="Temperature">
+                  <Grid
+                    gridDefinition={[
+                      { colspan: { default: 6, xxs: 9 } },
+                      { colspan: { default: 6, xxs: 3 } },
+                    ]}
+                  >
+                    <Slider
+                      value={temperature}
+                      onChange={({ detail }) => setTemperature(detail.value)}
+                      max={100}
+                      min={0}
+                      // referenceValues={[50]}
+                      valueFormatter={(value) => (value / 100).toString()}
+                    />
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      value={(temperature / 100).toString()}
+                      step={0.01}
+                      onChange={({ detail }) => {
+                        setTemperature(() => {
+                          const n = Number(detail.value) * 100;
+                          if (n > 100) return 100;
+                          if (n < 0) return 0;
+                          return n;
+                        });
+                      }}
+                    />
+                  </Grid>
+                </FormField>
+                <FormField stretch label="Max Tokens">
+                  <Grid
+                    gridDefinition={[
+                      { colspan: { default: 6, xxs: 9 } },
+                      { colspan: { default: 6, xxs: 3 } },
+                    ]}
+                  >
+                    <Slider
+                      value={maxTokens}
+                      onChange={({ detail }) => setMaxTokens(detail.value)}
+                      max={8192}
+                      min={0}
+                      // referenceValues={[4096]}
+                      valueFormatter={(value) => value.toString()}
+                    />
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      value={maxTokens.toString()}
+                      step={1}
+                      onChange={({ detail }) => {
+                        setMaxTokens(() => {
+                          const n = Number(detail.value);
+                          if (n > 8192) return 8192;
+                          if (n < 0) return 0;
+                          return n;
+                        });
+                      }}
+                    />
+                  </Grid>
+                </FormField>
+              </Grid>
+
               {type === TYPE.sagemaker ? (
                 // **** SageMaker *************************************************************
                 <>
-                  <FormField>
-                    <Toggle {...bindLlama2Switch}>
-                      LLama2 model deployed through Jumpstart
-                    </Toggle>
-                  </FormField>
-                  <Grid gridDefinition={[{ colspan: 8 }, { colspan: 4 }]}>
-                    <FormField stretch label="SageMaker Endpoint">
-                      <Autosuggest
-                        enteredTextLabel={(v) => `Use: "${v}"`}
-                        {...bindSagemakerEndpoint}
-                        loadingText="loading endpoint list"
-                        statusType={
-                          loadingEndpointList ? 'loading' : 'finished'
-                        }
-                        options={OptionsSagemakerEndpoint}
-                        placeholder="Search or enter value"
-                        empty="No matches found"
-                      />
+                  <Grid gridDefinition={[{ colspan: 6 }, { colspan: 6 }]}>
+                    <FormField>
+                      <Toggle {...bindIsSagemakerStreaming}>
+                        Streaming output
+                      </Toggle>
                     </FormField>
-                    <FormField label="Switch for Streaming">
-                      <Toggle {...bindIsSagemakerStreaming}>Streaming</Toggle>
+                    <FormField>
+                      <Toggle {...bindLlama2Switch}>
+                        LLama2 model deployed through Jumpstart
+                      </Toggle>
                     </FormField>
                   </Grid>
+
+                  <FormField label="SageMaker Endpoint">
+                    <Autosuggest
+                      enteredTextLabel={(v) => `Use: "${v}"`}
+                      {...bindSagemakerEndpoint}
+                      loadingText="loading endpoint list"
+                      statusType={loadingEndpointList ? 'loading' : 'finished'}
+                      options={OptionsSagemakerEndpoint}
+                      placeholder="Search or enter value"
+                      empty="No matches found"
+                    />
+                  </FormField>
 
                   <FormField label="Embedding Endpoint">
                     <Autosuggest
