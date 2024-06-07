@@ -70,16 +70,32 @@ const useApiOrchestration = (sessionId, resetQuery) => {
       );
 
       // // TESTING: bypassing multi-modal process by checking if there's any image in the question
-      // const isMultiModalQuery = question.some((q) => q.type === 'image');
+      const isMultiModalQuery = question.some((q) => q.type === 'image');
       // if (!isMultiModalQuery) {
       //   return socketSendSearch(query, question, configs, newSessionList);
       // }
 
       let newQuery = '';
 
+      const goThroughChatModule = () => {
+        if (!configs) return false;
+        const {
+          workFlow,
+          isCheckedTextRAGOnlyOnMultiModal: bypassChat = true,
+        } = configs;
+        // @ts-ignore
+        // TODO: change this to check 'CHAT' in new 4.0 api
+        const hasChatInWorkFlow = workFlow?.length > 1;
+        if (!hasChatInWorkFlow) return false;
+        // if do NOT bypass, always go through chat module
+        if (!bypassChat) return true;
+        // if bypass, only go through chat module if it's a multi-modal query
+        if (isMultiModalQuery) return true;
+        return false;
+      };
+
       // TODO: dynamic work flow
-      // @ts-ignore
-      if (configs?.workFlow?.length > 1) {
+      if (goThroughChatModule()) {
         newQuery = await getChatModuleResult({ configs, question });
         if (newQuery) {
           // TODO: add newQuery text to existing user query text

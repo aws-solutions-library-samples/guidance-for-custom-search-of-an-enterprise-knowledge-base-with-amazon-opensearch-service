@@ -62,6 +62,12 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
   ] = useInput(DEFAULT_CHAT_SYSTEM_PROMPT);
   const [workFlow, setWorkFlow] = useState(DEFAULT_WORK_FLOW);
   const [workMode, _, resetWorkMode, setWorkMode] = useInput(DEFAULT_WORK_MODE);
+  const [
+    isCheckedTextRAGOnlyOnMultiModal,
+    bindTextRAGOnlyOnMultiModal,
+    resetTextRAGOnlyOnMultiModal,
+    setIsCheckedTextRAGOnlyOnMultiModal,
+  ] = useToggle(true);
 
   const [searchEngine, bindSearchEngine, resetSearchEngine, setSearchEngine] =
     useInput(OPTIONS_SEARCH_ENGINE[0].value);
@@ -155,6 +161,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     resetSearchEngine();
     resetWorkMode();
     setWorkFlow(DEFAULT_WORK_FLOW);
+    resetTextRAGOnlyOnMultiModal();
     resetChatSystemPrompt();
     setLLMData();
     resetRole();
@@ -194,6 +201,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
           searchEngine,
           workMode,
           workFlow,
+          isCheckedTextRAGOnlyOnMultiModal,
           chatSystemPrompt,
           llmData,
           role,
@@ -225,6 +233,8 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
       if (searchEngine !== undefined) setSearchEngine(searchEngine);
       if (workMode !== undefined) setWorkMode(workMode);
       if (workFlow !== undefined) setWorkFlow(workFlow);
+      if (isCheckedTextRAGOnlyOnMultiModal !== undefined)
+        setIsCheckedTextRAGOnlyOnMultiModal(isCheckedTextRAGOnlyOnMultiModal);
       if (chatSystemPrompt !== undefined) {
         if (workMode === DEFAULT_WORK_MODE) {
           setChatSystemPrompt(undefined);
@@ -298,6 +308,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                     searchEngine,
                     workMode,
                     workFlow,
+                    isCheckedTextRAGOnlyOnMultiModal,
                     chatSystemPrompt,
                     llmData,
                     role,
@@ -415,17 +426,27 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
             </FormField>
 
             {workMode !== DEFAULT_WORK_MODE && (
-              <FormField
-                stretch
-                label="System Prompt for CHAT module"
-                description="Please provide your system prompt for CHAT module"
-              >
-                <Textarea
-                  {...bindChatSystemPrompt}
-                  rows={4}
-                  placeholder="System prompt for CHAT module"
-                />
-              </FormField>
+              <>
+                <FormField
+                  stretch
+                  label="System Prompt for CHAT module"
+                  description="Please provide your system prompt for CHAT module"
+                >
+                  <Textarea
+                    {...bindChatSystemPrompt}
+                    rows={4}
+                    placeholder="System prompt for CHAT module"
+                  />
+                </FormField>
+                <FormField
+                  stretch
+                  constraintText="Check to bypass CHAT module when it is NOT a multi-modal query"
+                >
+                  <Toggle {...bindTextRAGOnlyOnMultiModal}>
+                    Bypass Chat module
+                  </Toggle>
+                </FormField>
+              </>
             )}
 
             <Divider />
