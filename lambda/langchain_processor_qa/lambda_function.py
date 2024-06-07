@@ -103,6 +103,7 @@ def lambda_handler(event, context):
             task = evt_body['task']
         elif "action" in evt_body.keys():
             task = evt_body['action'].lower()
+        print('task:',task)
         
         if httpMethod == 'POST':
             task = "chat"
@@ -262,6 +263,8 @@ def lambda_handler(event, context):
             
             if "maxTokens" in llmData.keys():
                 maxTokens = int(llmData['maxTokens'])
+            print('temperature:',temperature)
+            print('maxTokens:',maxTokens)
                 
         if isCheckedTitanEmbedding or embeddingEndpoint == "bedrock-titan-embed":
             embeddingEndpoint = "amazon.titan-embed-text-v1"

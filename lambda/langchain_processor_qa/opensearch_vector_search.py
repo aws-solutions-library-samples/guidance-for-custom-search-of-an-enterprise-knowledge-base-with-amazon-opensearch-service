@@ -734,7 +734,6 @@ class OpenSearchVectorSearch(VectorStore):
                 else:
                     docs_with_scores = new_vec_docs     
                     
-                print('new_vec_docs:',new_vec_docs)
                 print('docs_with_scores:',docs_with_scores)
         
         return docs_with_scores        
