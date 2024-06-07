@@ -10,6 +10,7 @@ from langchain.schema.embeddings import Embeddings
 from langchain.schema.vectorstore import VectorStore
 from langchain.utils import get_from_dict_or_env
 from langchain.vectorstores.utils import maximal_marginal_relevance
+import ast
 
 IMPORT_OPENSEARCH_PY_ERROR = (
     "Could not import OpenSearch. Please install it with `pip install opensearch-py`."
@@ -580,6 +581,17 @@ class OpenSearchVectorSearch(VectorStore):
                     break
         return new_docs
 
+    def doc_filter_by_content(self, docs:List[Document],k:int = 4)-> List[Document]:
+        source_set = set()
+        new_docs = []
+        for doc in docs:
+            if doc[0].page_content not in source_set:
+                source_set.add(doc[0].page_content)
+                new_docs.append(doc)
+                if len(new_docs) >= k:
+                    break
+        return new_docs
+
     def similarity_search(
         self, query: str, k: int = 4, **kwargs: Any
     ) -> List[Document]:
@@ -648,9 +660,22 @@ class OpenSearchVectorSearch(VectorStore):
         image_field = kwargs.get("image_field", "image_base64")
         
         source_filter = kwargs.get("source_filter", False)
-        if source_filter:
-            k = 3*k
-            txt_docs_num = 3*txt_docs_num
+        source_filter = ast.literal_eval(str(source_filter).title())
+        
+        content_filter = kwargs.get("content_filter", True)
+        content_filter = ast.literal_eval(str(content_filter).title())
+        
+        print('open search source_filter:',source_filter)
+        print('open search content_filter:',content_filter)        
+        
+        if source_filter or content_filter:
+            ori_k = k
+            ori_txt_docs_num = txt_docs_num
+            k = 10*k
+            txt_docs_num = 10*txt_docs_num
+        else:
+            ori_k = k
+            ori_txt_docs_num = txt_docs_num
  
         vec_docs = []
         aos_docs = []
@@ -684,19 +709,30 @@ class OpenSearchVectorSearch(VectorStore):
             
             if search_method == "text":
                 if source_filter:
-                    docs_with_scores = self.doc_filter_by_source(new_aos_docs,txt_docs_num) 
+                    docs_with_scores = self.doc_filter_by_source(new_aos_docs,ori_txt_docs_num) 
+                elif content_filter:
+                    docs_with_scores = self.doc_filter_by_content(new_aos_docs,ori_txt_docs_num) 
                 else:
                     docs_with_scores = new_aos_docs
             elif search_method == "mix":
                 if source_filter:
-                    docs_with_scores = self.doc_filter_by_source(new_vec_docs + new_aos_docs,k + txt_docs_num)
+                    docs_with_scores = self.doc_filter_by_source(new_vec_docs + new_aos_docs,ori_k + ori_txt_docs_num)
+                    print('source_filter docs_with_scores len:',len(docs_with_scores))
+                elif content_filter:
+                    filter_vec_docs = self.doc_filter_by_content(new_vec_docs, ori_k)
+                    filter_aos_docs = self.doc_filter_by_content(new_aos_docs, ori_txt_docs_num)
+                    docs_with_scores = self.doc_filter_by_content(filter_vec_docs + filter_aos_docs,ori_k + ori_txt_docs_num)
+                    print('content_filter docs_with_scores len:',len(docs_with_scores))
                 else:
                     docs_with_scores = new_vec_docs + new_aos_docs
+                    print('docs_with_scores len:',len(docs_with_scores))
             else:
                 if source_filter:
-                    docs_with_scores = self.doc_filter_by_source(new_vec_docs,k)
+                    docs_with_scores = self.doc_filter_by_source(new_vec_docs,ori_k)
+                elif content_filter:
+                    docs_with_scores = self.doc_filter_by_content(new_vec_docs,ori_k) 
                 else:
-                    docs_with_scores = new_vec_docs   
+                    docs_with_scores = new_vec_docs     
                     
                 print('new_vec_docs:',new_vec_docs)
                 print('docs_with_scores:',docs_with_scores)

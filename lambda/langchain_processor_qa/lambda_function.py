@@ -102,7 +102,7 @@ def lambda_handler(event, context):
         if "task" in evt_body.keys():
             task = evt_body['task']
         elif "action" in evt_body.keys():
-            task = evt_body['action']
+            task = evt_body['action'].lower()
         
         if httpMethod == 'POST':
             task = "chat"
@@ -256,6 +256,13 @@ def lambda_handler(event, context):
             if "isCheckedTitanEmbedding" in llmData.keys():
                 isCheckedTitanEmbedding = ast.literal_eval(str(llmData['isCheckedTitanEmbedding']).title())
             print('isCheckedTitanEmbedding:', isCheckedTitanEmbedding)
+
+            if "temperature" in llmData.keys():
+                temperature = float(llmData['temperature'])
+            
+            if "maxTokens" in llmData.keys():
+                maxTokens = int(llmData['maxTokens'])
+                
         if isCheckedTitanEmbedding or embeddingEndpoint == "bedrock-titan-embed":
             embeddingEndpoint = "amazon.titan-embed-text-v1"
         print('embeddingEndpoint:', embeddingEndpoint)
@@ -414,7 +421,7 @@ def lambda_handler(event, context):
                         'message':'success'
                     })
 
-            elif task == "qa" or isCheckedKnowledgeBase:
+            elif task == "qa" or task == "rag" or isCheckedKnowledgeBase:
 
                 if language == "chinese":
                     prompt_template = CHINESE_PROMPT_TEMPLATE

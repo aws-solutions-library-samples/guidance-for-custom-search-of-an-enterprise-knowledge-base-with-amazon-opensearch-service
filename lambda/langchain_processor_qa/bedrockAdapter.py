@@ -190,6 +190,8 @@ class BedrockAdapter:
             elif len(prompt) > 0:
                 input_body = {"message":prompt}
             
+            input_body['temperature'] = temperature
+            
             if 'history' in model_kwargs.keys():
                 history_list = list(model_kwargs['history'])
                 chat_history = []
