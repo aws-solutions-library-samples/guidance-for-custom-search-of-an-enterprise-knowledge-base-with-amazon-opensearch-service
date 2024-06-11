@@ -259,6 +259,8 @@ class LambdaStack(Stack):
         search_engine_zilliz = self.node.try_get_context("search_engine_zilliz")
         zilliz_endpoint = self.node.try_get_context("zilliz_endpoint")
         zilliz_token = self.node.try_get_context("zilliz_token")
+        bedrock_aws_region = self.node.try_get_context('bedrock_aws_region')
+
         # configure the lambda role
         if search_engine_kendra:
             _langchain_processor_role_policy = _iam.PolicyStatement(
@@ -338,6 +340,8 @@ class LambdaStack(Stack):
         langchain_processor_qa_function.add_environment("search_engine_zilliz", str(search_engine_zilliz))
         langchain_processor_qa_function.add_environment("zilliz_endpoint", str(zilliz_endpoint))
         langchain_processor_qa_function.add_environment("zilliz_token", str(zilliz_token))
+        if bedrock_aws_region:
+            langchain_processor_qa_function.add_environment("bedrock_aws_region", str(bedrock_aws_region))
 
         #publish a new version
         version = _lambda.Version(
