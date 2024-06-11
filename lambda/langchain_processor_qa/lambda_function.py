@@ -553,11 +553,14 @@ def lambda_handler(event, context):
 
                 source_docs = []
                 query_docs_scores = []
+                images = ''
                 if len(result) > 0 and 'source_documents' in result.keys():
                     source_documents = result['source_documents']
                     if searchEngine == "opensearch":
                         source_docs = [doc[0] for doc in source_documents]
                         query_docs_scores = [doc[1] for doc in source_documents]
+                        if len(source_documents) > 0 and len(source_documents[0]) == 3:
+                            images = source_documents[0][2]
                         # sentences = [doc[2] for doc in source_documents]
                     elif searchEngine == "kendra":
                         source_docs = source_documents
@@ -568,7 +571,7 @@ def lambda_handler(event, context):
 
                 #if enable streaming， return the souce docs before caculating the scores
                 if streaming and requestType == 'websocket':
-                    source_list=buildSourceList(searchEngine, source_docs, [], [])
+                    source_list=buildSourceList(searchEngine, source_docs, images, [], [])
                     response['body'] = json.dumps(
                         {
                             'message': 'streaming',
@@ -582,65 +585,65 @@ def lambda_handler(event, context):
                         })
                     #print(f"if streaming and requestType == 'websocket'==={len(source_list)}")
                     sendWebSocket(response['body'],event)
-
-                chinese_truncation_len = 350
-                english_truncation_len = 500
-                # cal query_answer_score
-                isCheckedScoreQA = False
-                query_answer_score = -1
-                if "isCheckedScoreQA" in evt_body.keys():
-                    isCheckedScoreQA = ast.literal_eval(str(evt_body['isCheckedScoreQA']).title())
-                if isCheckedScoreQA and (searchEngine == "opensearch" or searchEngine == "zilliz"):
-                    cal_answer = answer
-                    if language.find("chinese") >= 0 and len(answer) > chinese_truncation_len:
-                        cal_answer = answer[:chinese_truncation_len]
-                    elif language.find("english") >= 0 and len(answer) > english_truncation_len:
-                        cal_answer = answer[:english_truncation_len]
-
-                    if language.find("chinese") >= 0 and len(query) > chinese_truncation_len:
-                        query = query[:chinese_truncation_len]
-                    elif language.find("english") >= 0 and len(query) > english_truncation_len:
-                        query = query[:english_truncation_len]
-                    query_answer_score = search_qa.get_qa_relation_score(query, cal_answer)
-                print('1.query_answer_score:', query_answer_score)
-
-                # cal answer_docs_scores
-                isCheckedScoreAD = False
-                answer_docs_scores = []
-                if "isCheckedScoreAD" in evt_body.keys():
-                    isCheckedScoreAD = ast.literal_eval(str(evt_body['isCheckedScoreAD']).title())
-                print('isCheckedScoreAD:',isCheckedScoreAD)
-                if isCheckedScoreAD and (searchEngine == "opensearch" or searchEngine == "zilliz"):
-                    cal_answer = answer
-                    if language.find("chinese") >= 0 and len(answer) > chinese_truncation_len:
-                        cal_answer = answer[:chinese_truncation_len]
-                    elif language.find("english") >= 0 and len(answer) > english_truncation_len:
-                        cal_answer = answer[:english_truncation_len]    
-                        
-                    for source_doc in source_docs:
-                        cal_source_page_content = source_doc.page_content
-                        if language.find("chinese") >= 0 and len(cal_source_page_content) > chinese_truncation_len:
-                            cal_source_page_content = cal_source_page_content[:chinese_truncation_len]
-                        elif language.find("english") >= 0 and len(cal_source_page_content) > english_truncation_len:
-                            cal_source_page_content = cal_source_page_content[:english_truncation_len]
-                        answer_docs_score = search_qa.get_qa_relation_score(cal_answer, cal_source_page_content)
-                        answer_docs_scores.append(answer_docs_score)
-                print('2.answer_docs_scores:', answer_docs_scores)
-
-                #update the source list according the query_docs_scores and answer_docs_scores
-                source_list = buildSourceList(searchEngine, source_docs, query_docs_scores, answer_docs_scores)
-
-                response['body'] = json.dumps(
-                    {
-                        'message': 'streaming_end',
-                        'timestamp': time.time() * 1000,
-                        'sourceData': source_list,
-                        'text': answer,
-                        'scoreQueryAnswer': str(round(query_answer_score,3)),
-                        'contentCheckLabel': contentCheckLabel,
-                        'contentCheckSuggestion': contentCheckSuggestion
-
-                    })
+                else:
+                    chinese_truncation_len = 350
+                    english_truncation_len = 500
+                    # cal query_answer_score
+                    isCheckedScoreQA = False
+                    query_answer_score = -1
+                    if "isCheckedScoreQA" in evt_body.keys():
+                        isCheckedScoreQA = ast.literal_eval(str(evt_body['isCheckedScoreQA']).title())
+                    if isCheckedScoreQA and (searchEngine == "opensearch" or searchEngine == "zilliz"):
+                        cal_answer = answer
+                        if language.find("chinese") >= 0 and len(answer) > chinese_truncation_len:
+                            cal_answer = answer[:chinese_truncation_len]
+                        elif language.find("english") >= 0 and len(answer) > english_truncation_len:
+                            cal_answer = answer[:english_truncation_len]
+    
+                        if language.find("chinese") >= 0 and len(query) > chinese_truncation_len:
+                            query = query[:chinese_truncation_len]
+                        elif language.find("english") >= 0 and len(query) > english_truncation_len:
+                            query = query[:english_truncation_len]
+                        query_answer_score = search_qa.get_qa_relation_score(query, cal_answer)
+                    print('1.query_answer_score:', query_answer_score)
+    
+                    # cal answer_docs_scores
+                    isCheckedScoreAD = False
+                    answer_docs_scores = []
+                    if "isCheckedScoreAD" in evt_body.keys():
+                        isCheckedScoreAD = ast.literal_eval(str(evt_body['isCheckedScoreAD']).title())
+                    print('isCheckedScoreAD:',isCheckedScoreAD)
+                    if isCheckedScoreAD and (searchEngine == "opensearch" or searchEngine == "zilliz"):
+                        cal_answer = answer
+                        if language.find("chinese") >= 0 and len(answer) > chinese_truncation_len:
+                            cal_answer = answer[:chinese_truncation_len]
+                        elif language.find("english") >= 0 and len(answer) > english_truncation_len:
+                            cal_answer = answer[:english_truncation_len]    
+                            
+                        for source_doc in source_docs:
+                            cal_source_page_content = source_doc.page_content
+                            if language.find("chinese") >= 0 and len(cal_source_page_content) > chinese_truncation_len:
+                                cal_source_page_content = cal_source_page_content[:chinese_truncation_len]
+                            elif language.find("english") >= 0 and len(cal_source_page_content) > english_truncation_len:
+                                cal_source_page_content = cal_source_page_content[:english_truncation_len]
+                            answer_docs_score = search_qa.get_qa_relation_score(cal_answer, cal_source_page_content)
+                            answer_docs_scores.append(answer_docs_score)
+                    print('2.answer_docs_scores:', answer_docs_scores)
+    
+                    #update the source list according the query_docs_scores and answer_docs_scores
+                    source_list = buildSourceList(searchEngine, source_docs, images, query_docs_scores, answer_docs_scores)
+    
+                    response['body'] = json.dumps(
+                        {
+                            'message': 'streaming_end',
+                            'timestamp': time.time() * 1000,
+                            'sourceData': source_list,
+                            'text': answer,
+                            'scoreQueryAnswer': str(round(query_answer_score,3)),
+                            'contentCheckLabel': contentCheckLabel,
+                            'contentCheckSuggestion': contentCheckSuggestion
+    
+                        })
 
             elif task == "summarize":
 
@@ -720,7 +723,7 @@ def sendWebSocket(msgbody,event):
     api_res = apigw_management.post_to_connection(ConnectionId=connectionId, Data=msgbody)
     print('api_res', api_res)
 
-def buildSourceList(searchEngine, source_docs, query_docs_scores, answer_docs_scores):
+def buildSourceList(searchEngine, source_docs, images,query_docs_scores, answer_docs_scores):
     source_list=[]
     if not query_docs_scores or len(query_docs_scores) == 0:
         query_docs_scores = [-1] * len(source_docs)
@@ -736,6 +739,10 @@ def buildSourceList(searchEngine, source_docs, query_docs_scores, answer_docs_sc
                 source["title"] = os.path.split(source_docs[i].metadata['source'])[-1]
             elif 'title' in source_docs[i].metadata.keys():
                 source["title"] = source_docs[i].metadata['title']
+                
+        if len(images) > 0 and i == 0:
+            source['image'] = images
+            
         source["titleLink"] = "http://#"
         source["paragraph"] = source_docs[i].page_content.replace("\n", "")
         source["sentence"] = source_docs[i].metadata['sentence'] if (searchEngine == "opensearch" or searchEngine == "zilliz") and 'sentence' in source_docs[i].metadata.keys() \

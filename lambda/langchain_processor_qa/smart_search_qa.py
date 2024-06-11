@@ -515,7 +515,7 @@ class SmartSearchQA:
             
             print('docs:',docs)
 
-            result['source_documents'] = [[doc[0],doc[1]] for doc in docs]
+            result['source_documents'] = docs
             if len(docs) > 0:
                 related_docs = []
                 for doc in docs:
