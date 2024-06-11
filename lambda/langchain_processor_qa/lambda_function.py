@@ -77,7 +77,8 @@ def lambda_handler(event, context):
             if event['body'] != 'None':
                 evt_body = json.loads(event['body'])
         else:
-            evt_body = evt_para
+            evt_body = json.loads(event['body'])
+            # evt_body = evt_para
 
         if httpMethod == 'POST' and "requestType" in evt_body.keys():
             requestType = evt_body['requestType']
@@ -113,10 +114,7 @@ def lambda_handler(event, context):
         if 'body' in event.keys() and requestType == 'websocket':
             evt_body = evt_body['configs']
         elif requestType == 'restful':
-            if httpMethod == 'POST':
                 evt_body = evt_body['configs']
-            else:
-                evt_body = json.loads(evt_body['configs'])
             
         chatSystemPrompt = ""
         if "chatSystemPrompt" in evt_body.keys():
