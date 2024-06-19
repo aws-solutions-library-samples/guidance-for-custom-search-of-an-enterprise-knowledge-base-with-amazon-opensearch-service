@@ -89,11 +89,6 @@ const THIRD_PARTY_API_MODEL_NAMES = [
     modelType: ['bedrock', 'bedrock_api'],
   },
   {
-    label: 'mistral.mixtral-8x7b',
-    value: 'mistral.mixtral-8x7b-instruct-v0:1',
-    modelType: ['bedrock', 'bedrock_api'],
-  },
-  {
     label: 'cohere.Command R+',
     value: 'cohere.command-r-plus-v1:0',
     modelType: ['bedrock', 'bedrock_api'],
