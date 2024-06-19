@@ -41,7 +41,7 @@ function FormInputWithDebounceAndToast({
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [v, initValue]);
+  }, [v, initValue, handleChange, label]);
 
   return (
     <FormField stretch label={label} description={description}>

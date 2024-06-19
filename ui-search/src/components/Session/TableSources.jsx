@@ -3,11 +3,14 @@ import {
   Box,
   Button,
   Link,
+  Modal,
   Popover,
   SpaceBetween,
   StatusIndicator,
   Table,
 } from '@cloudscape-design/components';
+import { useState } from 'react';
+import styled from 'styled-components';
 
 const TableSources = ({ sourceData }) => {
   return (
@@ -74,6 +77,12 @@ const TableSources = ({ sourceData }) => {
             </div>
           ),
         },
+        {
+          id: 'image',
+          header: 'Image',
+          width: 120,
+          cell: ({ image }) => <SourceImage image={image} />,
+        },
       ]}
     />
   );
@@ -100,3 +109,32 @@ function ButtonFeedback({ id, isPositive = false }) {
     </Popover>
   );
 }
+
+const SourceImage = ({ image }) => {
+  const [visible, setVisible] = useState(false);
+  if (!image) return 'n/a';
+  const src = image.startsWith('data:image')
+    ? image
+    : `data:image/png;base64,${image}`;
+  return (
+    <>
+      <StyledImage
+        src={src}
+        alt="Source img"
+        width="100%"
+        height="auto"
+        onClick={() => setVisible(true)}
+      />
+      <Modal visible={visible} onDismiss={() => setVisible(false)} size="max">
+        <img src={src} alt="Source img" width="100%" height="auto" />
+      </Modal>
+    </>
+  );
+};
+const StyledImage = styled.img`
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  &:hover {
+    transform: scale(1.1);
+  }
+`;
