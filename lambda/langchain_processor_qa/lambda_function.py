@@ -77,7 +77,8 @@ def lambda_handler(event, context):
             if event['body'] != 'None':
                 evt_body = json.loads(event['body'])
         else:
-            evt_body = evt_para
+            evt_body = json.loads(event['body'])
+            # evt_body = evt_para
 
         if httpMethod == 'POST' and "requestType" in evt_body.keys():
             requestType = evt_body['requestType']
@@ -113,10 +114,7 @@ def lambda_handler(event, context):
         if 'body' in event.keys() and requestType == 'websocket':
             evt_body = evt_body['configs']
         elif requestType == 'restful':
-            if httpMethod == 'POST':
                 evt_body = evt_body['configs']
-            else:
-                evt_body = json.loads(evt_body['configs'])
             
         chatSystemPrompt = ""
         if "chatSystemPrompt" in evt_body.keys():
@@ -539,7 +537,7 @@ def lambda_handler(event, context):
                                                                           response_if_no_docs_found=responseIfNoDocsFound,
                                                                           vec_docs_score_thresholds=vecDocsScoreThresholds,
                                                                           txt_docs_score_thresholds=txtDocsScoreThresholds,
-                                                                          contextRounds=contextRounds,
+                                                                          context_rounds=contextRounds,
                                                                           text_field=textField,
                                                                           vector_field=vectorField,
                                                                           )
@@ -585,7 +583,7 @@ def lambda_handler(event, context):
                         })
                     #print(f"if streaming and requestType == 'websocket'==={len(source_list)}")
                     sendWebSocket(response['body'],event)
-                
+         
                 chinese_truncation_len = 350
                 english_truncation_len = 500
                 # cal query_answer_score

@@ -17,11 +17,17 @@ from langchain.schema.messages import BaseMessage
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union 
 from langchain.callbacks.manager import CallbackManagerForChainRun
 import inspect 
-
+import os
 import time
 time_seq=1
 last_time=time.time()
 init_time=last_time
+
+# Get Bedrock's AWS region, default to lambda's deployment region
+region = os.environ.get('AWS_REGION')
+bedrock_region = os.environ.get('bedrock_aws_region', region)
+
+
 def printTime(title):
     global time_seq
     global last_time
@@ -250,13 +256,15 @@ def init_model_llama2(endpoint_name,region_name,temperature):
 
 def init_model_bedrock(model_id):
     try:
-        llm = Bedrock(model_id=model_id)
+        llm = Bedrock(model_id=model_id, region_name=bedrock_region)
         return llm
     except Exception as e:
         return None
+
 def init_model_bedrock_withstreaming(model_id,callbackHandler):
     try:
         llm = Bedrock(model_id=model_id,
+                      region_name=bedrock_region,
                       streaming=True,
                      callbacks=[callbackHandler],)
         return llm
