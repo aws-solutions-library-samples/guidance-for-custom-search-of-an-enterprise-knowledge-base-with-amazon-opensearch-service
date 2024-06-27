@@ -537,7 +537,7 @@ def lambda_handler(event, context):
                                                                           response_if_no_docs_found=responseIfNoDocsFound,
                                                                           vec_docs_score_thresholds=vecDocsScoreThresholds,
                                                                           txt_docs_score_thresholds=txtDocsScoreThresholds,
-                                                                          contextRounds=contextRounds,
+                                                                          context_rounds=contextRounds,
                                                                           text_field=textField,
                                                                           vector_field=vectorField,
                                                                           )

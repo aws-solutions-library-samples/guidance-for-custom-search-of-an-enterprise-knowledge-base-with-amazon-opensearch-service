@@ -269,7 +269,7 @@ class SmartSearchQA:
                                         response_if_no_docs_found: str="",
                                         vec_docs_score_thresholds: float =0,
                                         txt_docs_score_thresholds: float =0,
-                                        contextRounds: int = 3,
+                                        context_rounds: int = 3,
                                         text_field: str="text",
                                         vector_field: str="vector_field",
                                         ):
@@ -281,10 +281,10 @@ class SmartSearchQA:
         
         history = []
         session_info = ""
-        if len(session_id) > 0 and len(table_name) > 0 and contextRounds > 0:
+        if len(session_id) > 0 and len(table_name) > 0 and context_rounds > 0:
             session_info = get_session_info(table_name,session_id)
             if len(session_info) > 0:
-                session_info = session_info[-contextRounds:]
+                session_info = session_info[-context_rounds:]
                 for item in session_info:
                     print("session info:",item[0]," ; ",item[1]," ; ",item[2])
                     if item[2] == "qa":
@@ -490,7 +490,7 @@ class SmartSearchQA:
         if len(input_docs) > 0:
             self.llm.model_kwargs['input_docs'] = input_docs
         
-        history_str = ''
+        history = []
         session_info = ""
         if len(session_id) > 0 and len(table_name) > 0 and context_rounds > 0:
             session_info = get_session_info(table_name,session_id)
@@ -499,13 +499,11 @@ class SmartSearchQA:
                 for item in session_info:
                     print("session info:",item[0]," ; ",item[1]," ; ",item[2])
                     if item[2] == "qa":
-                        if self.language.find('chinese') >=0:
-                            history_str += ( '问题：' + str(item[0]) + '，回复：' + str(item[1]) + ';' )
-                        elif self.language == 'english':
-                            history_str += ( 'question:' + str(item[0]) + ',answer:' + str(item[1]) + ';' )
-        print('history:',history_str)
-        if len(history_str) > 0:
-            self.llm.model_kwargs['history'] = history_str
+                        history.append((item[0],item[1]))
+        
+        print('history:',history)
+        if len(history) > 0:
+            self.llm.model_kwargs['history'] = history
         
         result = {}
         if (task == 'qa' or task == 'search') and isCheckedKnowledgeBase:

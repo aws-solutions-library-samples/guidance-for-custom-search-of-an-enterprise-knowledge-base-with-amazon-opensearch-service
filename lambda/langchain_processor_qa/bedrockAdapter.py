@@ -124,11 +124,19 @@ class BedrockAdapter:
                             messages['content'].append(image_dic)
     
                 if 'history' in model_kwargs.keys():
-                    history_str = '历史记录为：'
+                    history = list(model_kwargs['history'])
+                    history_str = ''
+                    for item in history:
+                        if language.find('chinese') >=0:
+                            history_str += ( '问题：' + str(item[0]) + '，回复：' + str(item[1]) + ';' )
+                        elif language == 'english':
+                            history_str += ( 'question:' + str(item[0]) + ',answer:' + str(item[1]) + ';' )
+                            
+                    history_prefix = '历史记录为：'
                     if language == 'english':
-                        history_str = 'history records are:'
+                        history_prefix = 'history records are:'
                     text_dic = {"type":"text"}
-                    text_dic["text"] = history_str +  model_kwargs['history']
+                    text_dic["text"] = history_prefix +  history_str
                     messages['content'].append(text_dic)
     
                 if 'input_docs' in model_kwargs.keys():
