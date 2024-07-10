@@ -12,6 +12,7 @@ from lib.ss_botstack import BotStack
 from lib.ss_kendrastack import KendraStack
 from lib.ss_bedrockstack import BedrockStack
 from lib.ss_asr_stack import ASRStack
+from lib.ss_difystack import DifyStack
 ACCOUNT =  os.environ.get('AWS_ACCOUNT_ID')
 REGION = os.environ.get('AWS_REGION')
 
@@ -70,4 +71,8 @@ if('bot' in app.node.try_get_context("extension")):
     botstack.add_dependency(lambdastack)
 if app.node.try_get_context("enable_asr"):
     asrstack = ASRStack(app, "ASRStack", env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
+
+if app.node.try_get_context('dify_deployment'):
+    difystack = DifyStack(app, "DifyStack", env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
+
 app.synth()

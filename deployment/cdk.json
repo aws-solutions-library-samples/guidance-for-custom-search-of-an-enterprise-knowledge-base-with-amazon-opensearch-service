@@ -46,6 +46,7 @@
     "search_engine_opensearch":true,
     "search_engine_kendra":false,
     "search_engine_zilliz":false,
+    "dify_deployment":false,
     "zilliz_endpoint": "",
     "zilliz_token": "",
     "execution_role_name": "custom-role-document-ai-upload-to-s3",
