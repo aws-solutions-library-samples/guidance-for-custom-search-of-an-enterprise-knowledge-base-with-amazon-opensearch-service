@@ -1,7 +1,10 @@
-import { Icon } from '@cloudscape-design/components';
+import { Icon, IconProps } from '@cloudscape-design/components';
 import { StyledBoxVerticalCenter } from '../StyledComponents';
+import React from 'react';
 
-const ChatIcon = ({ name = 'user-profile' }) => {
+const ChatIcon: React.FC<{ name?: IconProps.Name }> = ({
+  name = 'user-profile',
+}) => {
   return (
     <StyledBoxVerticalCenter>
       <Icon name={name} />

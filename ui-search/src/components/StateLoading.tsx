@@ -1,7 +1,19 @@
-import { Box, Container, Header, Spinner } from '@cloudscape-design/components';
+import {
+  Box,
+  Container,
+  Header,
+  Spinner,
+  SpinnerProps,
+} from '@cloudscape-design/components';
 import React from 'react';
 
-const StateLoading = ({ size = 'big', headerText = '' }) => {
+const StateLoading = ({
+  size = 'big',
+  headerText = '',
+}: {
+  size?: SpinnerProps.Size;
+  headerText?: string;
+}) => {
   return (
     <Container
       header={

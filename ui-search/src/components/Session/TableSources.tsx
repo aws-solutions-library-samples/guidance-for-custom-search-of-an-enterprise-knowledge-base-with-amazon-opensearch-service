@@ -14,7 +14,8 @@ import styled from 'styled-components';
 
 const TableSources = ({ sourceData }) => {
   return (
-    <Table
+    // TODO: define TableSourceData type
+    <Table<any>
       items={sourceData}
       loadingText="Loading resources"
       sortingDisabled

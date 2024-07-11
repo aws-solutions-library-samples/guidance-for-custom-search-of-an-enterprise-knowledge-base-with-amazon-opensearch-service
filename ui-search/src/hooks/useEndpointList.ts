@@ -52,7 +52,7 @@ const useEndpointList = (fetchNow = true) => {
     [...EMBEDDING_ENDPOINTS_FIXED, ...optionsEndpoint],
     loading,
     getEndpointList,
-  ];
+  ] as const;
 };
 
 export default useEndpointList;

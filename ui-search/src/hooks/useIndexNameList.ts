@@ -36,7 +36,7 @@ const useIndexNameList = (fetchNow = true) => {
     return () => clearTimeout(timer);
   }, [fetchNow, getIndexNameList, urlApiGateway]);
 
-  return [list, loading, getIndexNameList];
+  return [list, loading, getIndexNameList] as const;
 };
 
 export default useIndexNameList;
