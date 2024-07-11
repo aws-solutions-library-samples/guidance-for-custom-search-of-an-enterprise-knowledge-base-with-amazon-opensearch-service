@@ -13,7 +13,7 @@ const useToggle = (initValue = false, cb = (boolean) => {}) => {
     },
   };
   const reset = () => setChecked(initValue);
-  return [checked, bind, reset, setChecked];
+  return [checked, bind, reset, setChecked] as const;
 };
 
 export default useToggle;

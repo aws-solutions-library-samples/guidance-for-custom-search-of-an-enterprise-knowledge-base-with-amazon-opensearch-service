@@ -101,9 +101,8 @@ const useApiOrchestration = (sessionId, resetQuery) => {
           // TODO: add newQuery text to existing user query text
           newSessionList = newSessionList.map((s) => {
             if (s.sessionId === sessionId) {
-              s.conversations[
-                s.conversations.length - 2
-              ].content.text = `${query}\n\nQuery processed by CHAT Module:\n${newQuery}`;
+              s.conversations[s.conversations.length - 2].content.text =
+                `${query}\n\nQuery processed by CHAT Module:\n${newQuery}`;
             }
             return s;
           });

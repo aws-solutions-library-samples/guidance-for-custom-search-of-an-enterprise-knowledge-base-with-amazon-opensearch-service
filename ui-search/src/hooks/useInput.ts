@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 /**
  * ‼️ Only use this for Cloudscape-design components
  */
-const useInput = (initValue = '', cb) => {
+const useInput = (initValue = '', cb?: (v: typeof initValue) => any) => {
   const [value, setValue] = useState(initValue);
   const bind = {
     value,
@@ -12,8 +12,11 @@ const useInput = (initValue = '', cb) => {
       if (cb) cb(detail.value);
     },
   };
-  const reset = useCallback((v) => setValue(v || initValue), [initValue]);
-  return [value, bind, reset, setValue];
+  const reset = useCallback(
+    (v?: typeof initValue) => setValue(v ?? initValue),
+    [initValue]
+  );
+  return [value, bind, reset, setValue] as const;
 };
 
 export default useInput;

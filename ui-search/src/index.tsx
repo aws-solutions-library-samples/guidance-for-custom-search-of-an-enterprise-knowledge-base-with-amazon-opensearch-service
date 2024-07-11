@@ -7,15 +7,18 @@ import {
 import '@cloudscape-design/global-styles/index.css';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { RouterProvider, createBrowserRouter } from 'react-router-dom';
-import LanguageModelStrategy from './components/LanguageModelStrategy';
+import {
+  RouterProvider,
+  createBrowserRouter,
+  useRouteError,
+} from 'react-router-dom';
+import AppConfigs from './components/AppConfigs';
 import Landing from './components/Landing';
+import LanguageModelStrategy from './components/LanguageModelStrategy';
 import Layout from './components/Layout';
 import Session from './components/Session';
 import UploadFiles from './components/UploadFiles';
 import './index.css';
-import AppConfigs from './components/AppConfigs';
-import { useRouteError } from 'react-router-dom';
 
 applyMode(Mode.Light);
 applyDensity(Density.Comfortable);
@@ -89,7 +92,7 @@ function DemoRestricted({ pageName }) {
   );
 }
 function ErrorPage() {
-  const error = useRouteError();
+  const error = useRouteError() as any;
   console.error(error);
 
   return (
