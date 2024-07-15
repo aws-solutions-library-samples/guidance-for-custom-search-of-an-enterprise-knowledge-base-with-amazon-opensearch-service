@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   Box,
   Checkbox,
@@ -7,6 +6,7 @@ import {
   FormField,
   Input,
   Select,
+  SelectProps,
   Textarea,
   Tiles,
   Toggle,
@@ -51,7 +51,8 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
   const { lsSessionList, lsGetOneSession } = useLsSessionList();
   const { appConfigs } = useLsAppConfigs();
   const [name, bindName, resetName] = useInput('');
-  const [sessionTemplateOpt, setSessionTemplateOpt] = useState();
+  const [sessionTemplateOpt, setSessionTemplateOpt] =
+    useState<SelectProps.Option>();
 
   // CHAT Module
   const [
@@ -163,7 +164,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     setWorkFlow(DEFAULT_WORK_FLOW);
     resetTextRAGOnlyOnMultiModal();
     resetChatSystemPrompt();
-    setLLMData();
+    setLLMData(undefined);
     resetRole();
     resetTaskDefinition();
     resetOutputFormat();
@@ -226,7 +227,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
           isCheckedEditPrompt,
           prompt,
         },
-      } = lsGetOneSession(sessionTemplateOpt.value, lsSessionList);
+      } = lsGetOneSession(sessionTemplateOpt.value!, lsSessionList);
 
       // setName(name);
       // NOTE: add code when adding new inputs
@@ -507,9 +508,9 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                   <Input
                     step={1}
                     type="number"
-                    value={contextRounds}
+                    value={contextRounds.toString()}
                     onChange={({ detail }) => {
-                      setContextRounds(detail.value);
+                      setContextRounds(Number(detail.value));
                     }}
                   />
                 </FormField>
@@ -620,9 +621,9 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                           }
                           step={0.01}
                           type="number"
-                          value={vecDocsScoreThresholds}
+                          value={vecDocsScoreThresholds.toString()}
                           onChange={({ detail }) => {
-                            setVecDocsScoreThresholds(detail.value);
+                            setVecDocsScoreThresholds(Number(detail.value));
                           }}
                         />
                       </FormField>
@@ -645,9 +646,9 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                           step={1}
                           type="number"
                           inputMode="decimal"
-                          value={topK}
+                          value={topK.toString()}
                           onChange={({ detail }) => {
-                            setTopK(detail.value);
+                            setTopK(Number(detail.value));
                           }}
                         />
                       </FormField>
@@ -670,9 +671,9 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                           step={1}
                           type="number"
                           inputMode="decimal"
-                          value={txtDocsNum}
+                          value={txtDocsNum.toString()}
                           onChange={({ detail }) => {
-                            setTxtDocsNum(detail.value);
+                            setTxtDocsNum(Number(detail.value));
                           }}
                         />
                       </FormField>
@@ -696,9 +697,9 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                           }
                           step={0.01}
                           type="number"
-                          value={txtDocsScoreThresholds}
+                          value={txtDocsScoreThresholds.toString()}
                           onChange={({ detail }) => {
-                            setTxtDocsScoreThresholds(detail.value);
+                            setTxtDocsScoreThresholds(Number(detail.value));
                           }}
                         />
                       </FormField>

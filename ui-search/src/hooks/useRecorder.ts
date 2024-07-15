@@ -1,5 +1,15 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+
+interface IUseRecorderProps {
+  isRecording: boolean;
+  setIsRecording: (boolean) => void;
+  url: string;
+  language?: string | 'chinese' | 'english';
+  processData: (data: string) => void;
+  readAfterRecord?: boolean;
+  base64?: boolean;
+}
 
 const useRecorder = ({
   isRecording,
@@ -9,7 +19,7 @@ const useRecorder = ({
   processData,
   readAfterRecord = false,
   base64 = false,
-}) => {
+}: IUseRecorderProps) => {
   // recorder registers and controls the start and stop mechanism
   const [mediaRecorder, setMediaRecorder] = useState(null);
   // the audio stream from the browser, which is used to initiate the recorder

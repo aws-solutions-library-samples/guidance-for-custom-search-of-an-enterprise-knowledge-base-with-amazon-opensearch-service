@@ -14,7 +14,7 @@ import {
   Toggle,
   Slider,
 } from '@cloudscape-design/components';
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import useInput from 'src/hooks/useInput';
 import useLsLanguageModelList from 'src/hooks/useLsLanguageModelList';
@@ -100,7 +100,7 @@ const THIRD_PARTY_API_MODEL_NAMES = [
   },
 ];
 
-const LanguageModelStrategy = () => {
+const LanguageModelStrategy: React.FC = () => {
   const [strategyName, bindStrategyName, resetStrategyName] = useInput('');
   const [type, setType] = useState(TYPE.sagemaker);
   const [
