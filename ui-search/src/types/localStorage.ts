@@ -13,7 +13,22 @@ export type ILocConvoCustomer = {
   };
 };
 
-export type ILocConvoRobotSourceDatum = {};
+export type ILocConvoRobotSourceDatum = {
+  id: GI_UUID;
+  title: string;
+  source: {
+    sources: string;
+    sentence: string;
+    page: number;
+  };
+  image: GI_Base64;
+  titleLink: GI_Href;
+  paragraph: string;
+  sentence: string;
+  scoreQueryDoc: number;
+  scoreAnswerDoc: number;
+};
+
 export type ILocConvoRobot = {
   type: 'robot';
   content: {

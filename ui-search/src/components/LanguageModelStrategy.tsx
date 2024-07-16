@@ -20,7 +20,7 @@ import useEndpointList from 'src/hooks/useEndpointList';
 import useInput from 'src/hooks/useInput';
 import useLsLanguageModelList from 'src/hooks/useLsLanguageModelList';
 import useToggle from 'src/hooks/useToggle';
-import { ILlmDataTYPE } from 'src/types/localStorage-configs';
+import { LLM_DATA_TYPE } from 'src/types/localStorage-configs';
 import { DEMO_SESSION_1 } from 'src/utils/PROMPT_TEMPLATES';
 import { genRandomNum } from 'src/utils/genUID';
 
@@ -115,7 +115,7 @@ const THIRD_PARTY_API_MODEL_NAMES = [
 
 const LanguageModelStrategy: React.FC = () => {
   const [strategyName, bindStrategyName, resetStrategyName] = useInput('');
-  const [type, setType] = useState<ILlmDataTYPE>(ILlmDataTYPE.sagemaker);
+  const [type, setType] = useState<LLM_DATA_TYPE>(LLM_DATA_TYPE.sagemaker);
   const [
     OptionsSagemakerEndpoint,
     OptionsEmbeddingEndpoint,
@@ -358,7 +358,7 @@ const LanguageModelStrategy: React.FC = () => {
 
                     try {
                       let values;
-                      if (type === ILlmDataTYPE.sagemaker) {
+                      if (type === LLM_DATA_TYPE.sagemaker) {
                         // SageMaker endpoint
                         values = {
                           strategyName,
@@ -419,16 +419,16 @@ const LanguageModelStrategy: React.FC = () => {
               <FormField stretch label="Please select the endpoint type">
                 <Tiles
                   value={type}
-                  onChange={(e) => setType(e.detail.value as ILlmDataTYPE)}
+                  onChange={(e) => setType(e.detail.value as LLM_DATA_TYPE)}
                   items={[
                     {
-                      value: ILlmDataTYPE.sagemaker,
+                      value: LLM_DATA_TYPE.sagemaker,
                       label: 'SageMaker Endpoint',
                       description:
                         'Deployed service for real-time ML model inference',
                     },
                     {
-                      value: ILlmDataTYPE.thirdParty,
+                      value: LLM_DATA_TYPE.thirdParty,
                       label: 'Third Party APIs',
                       description: 'Options are Bedrock, Claude, ChatGLM etc.',
                     },
@@ -501,7 +501,7 @@ const LanguageModelStrategy: React.FC = () => {
                 </FormField>
               </Grid>
 
-              {type === ILlmDataTYPE.sagemaker ? (
+              {type === LLM_DATA_TYPE.sagemaker ? (
                 // **** SageMaker *************************************************************
                 <>
                   <Grid gridDefinition={[{ colspan: 6 }, { colspan: 6 }]}>

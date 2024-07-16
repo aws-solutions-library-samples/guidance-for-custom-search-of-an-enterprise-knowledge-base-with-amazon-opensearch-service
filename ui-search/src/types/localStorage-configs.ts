@@ -12,7 +12,7 @@ export enum WORK_MODE {
   multiModal = 'multi-modal',
   text = 'text',
 }
-export enum WORK_FLOW {
+export enum WORK_MODULE {
   CHAT = 'CHAT',
   RAG = 'RAG',
 }
@@ -21,7 +21,7 @@ export type ILocConfigs = {
   name: string;
   searchEngine: 'opensearch';
   workMode: WORK_MODE;
-  workFlow: Array<WORK_FLOW>;
+  workFlowLocal: Array<{ module: WORK_MODULE; systemPrompt: string }>;
   llmData: ILocLlmData;
   role?: string;
   taskDefinition?: string;
@@ -30,10 +30,10 @@ export type ILocConfigs = {
   isCheckedGenerateReport: boolean;
   isCheckedContext: boolean;
   isCheckedKnowledgeBase: boolean;
-  indexName: string;
+  indexName: string; // # can NOT be empty when RAG search
   searchMethod: ISearchMethodValues;
-  topK: string | number;
-  txtDocsNum: string | number;
+  vecTopK: string | number; //                      #renamedFrom - topK
+  txtTopK: string | number; //                #renameFrom - txtDocsNum
   vecDocsScoreThresholds: number;
   txtDocsScoreThresholds: number;
   contextRounds: number;
@@ -47,9 +47,13 @@ export type ILocConfigs = {
   sessionId: GI_UUID;
 };
 
+export enum LLM_DATA_TYPE {
+  sagemaker = 'sagemaker_endpoint',
+  thirdParty = 'third_party_api',
+}
 export type ILocLlmData = {
   strategyName: string;
-  type: ILlmDataTYPE;
+  type: LLM_DATA_TYPE;
   embeddingEndpoint: string;
   modelType: ISagemakerModelTypeValues & IThirdPartyApiModelTypeValues;
   modelName: IThirdPartyApiModelNameValues;
@@ -58,8 +62,3 @@ export type ILocLlmData = {
   apiKey?: string;
   secretKey?: string;
 };
-
-export enum ILlmDataTYPE {
-  sagemaker = 'sagemaker_endpoint',
-  thirdParty = 'third_party_api',
-}

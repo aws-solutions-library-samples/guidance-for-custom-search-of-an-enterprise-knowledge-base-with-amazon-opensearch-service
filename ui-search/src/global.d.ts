@@ -6,6 +6,7 @@ declare global {
   type GI_Href = string;
   type GI_UUID = string;
   type GI_Timestamp = number;
+  type GI_Base64 = string;
 }
 
 export {};
