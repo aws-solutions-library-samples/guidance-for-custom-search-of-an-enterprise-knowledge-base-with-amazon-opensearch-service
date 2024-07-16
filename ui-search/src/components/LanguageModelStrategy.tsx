@@ -8,33 +8,41 @@ import {
   Grid,
   Header,
   Input,
+  Slider,
   SpaceBetween,
   Table,
   Tiles,
   Toggle,
-  Slider,
 } from '@cloudscape-design/components';
 import React, { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import useEndpointList from 'src/hooks/useEndpointList';
 import useInput from 'src/hooks/useInput';
 import useLsLanguageModelList from 'src/hooks/useLsLanguageModelList';
 import useToggle from 'src/hooks/useToggle';
-import { genRandomNum } from 'src/utils/genUID';
-import useEndpointList from 'src/hooks/useEndpointList';
+import { ILlmDataTYPE } from 'src/types/localStorage-configs';
 import { DEMO_SESSION_1 } from 'src/utils/PROMPT_TEMPLATES';
+import { genRandomNum } from 'src/utils/genUID';
 
 const SIZE = 'l';
 
-const TYPE = { sagemaker: 'sagemaker_endpoint', thirdParty: 'third_party_api' };
+export type ISagemakerModelTypeValues =
+  (typeof SAGEMAKER_MODEL_TYPE)[number]['value'];
 const SAGEMAKER_MODEL_TYPE = [
   { label: 'non-llama2', value: 'non_llama2' },
   { label: 'llama2', value: 'llama2' },
-];
+] as const;
+
+export type IThirdPartyApiModelTypeValues =
+  (typeof THIRD_PARTY_API_MODEL_TYPES)[number]['value'];
 const THIRD_PARTY_API_MODEL_TYPES = [
   { label: 'Bedrock', value: 'bedrock' },
   { label: 'Bedrock API', value: 'bedrock_api' },
   { label: 'LLM API', value: 'llm_api' },
-];
+] as const;
+
+export type IThirdPartyApiModelNameValues =
+  (typeof THIRD_PARTY_API_MODEL_NAMES)[number]['value'];
 const THIRD_PARTY_API_MODEL_NAMES = [
   { label: 'Baichuan2-53B', value: 'Baichuan2-53B', modelType: ['llm_api'] },
   { label: 'Baichuan2-192k', value: 'Baichuan2-192k', modelType: ['llm_api'] },
@@ -98,11 +106,11 @@ const THIRD_PARTY_API_MODEL_NAMES = [
     value: 'cohere.command-r-v1:0',
     modelType: ['bedrock', 'bedrock_api'],
   },
-];
+] as const;
 
 const LanguageModelStrategy: React.FC = () => {
   const [strategyName, bindStrategyName, resetStrategyName] = useInput('');
-  const [type, setType] = useState(TYPE.sagemaker);
+  const [type, setType] = useState<ILlmDataTYPE>(ILlmDataTYPE.sagemaker);
   const [
     OptionsSagemakerEndpoint,
     OptionsEmbeddingEndpoint,
@@ -125,16 +133,16 @@ const LanguageModelStrategy: React.FC = () => {
     bindThirdPartyEmbeddingEndpoint,
     resetThirdPartyEmbeddingEmbeddingEndpoint,
   ] = useInput('');
-  const [thirdPartyModelType, setThirdPartyModelType] = useState(
-    THIRD_PARTY_API_MODEL_TYPES[0].value
-  );
-  const [sagemakerModelType, setSagemakerModelType] = useState(
-    SAGEMAKER_MODEL_TYPE[0].value
-  );
-  const [thirdPartyModelNameOpts, setThirdPartyModelNameOpts] = useState(
-    THIRD_PARTY_API_MODEL_NAMES
-  );
-  const [thirdPartyModelName, setThirdPartyModelName] = useState(
+  const [thirdPartyModelType, setThirdPartyModelType] =
+    useState<IThirdPartyApiModelTypeValues>(
+      THIRD_PARTY_API_MODEL_TYPES[0].value
+    );
+  const [sagemakerModelType, setSagemakerModelType] =
+    useState<ISagemakerModelTypeValues>(SAGEMAKER_MODEL_TYPE[0].value);
+  const [thirdPartyModelNameOpts, setThirdPartyModelNameOpts] = useState<
+    Partial<typeof THIRD_PARTY_API_MODEL_NAMES>
+  >(THIRD_PARTY_API_MODEL_NAMES);
+  const [thirdPartyModelName, setThirdPartyModelName] = useState<string>(
     THIRD_PARTY_API_MODEL_NAMES[0].value
   );
 
@@ -152,13 +160,14 @@ const LanguageModelStrategy: React.FC = () => {
 
   useEffect(() => {
     const filteredModalNameOpts = THIRD_PARTY_API_MODEL_NAMES.filter((item) =>
-      item.modelType.includes(thirdPartyModelType)
-    );
+      item.modelType.includes(thirdPartyModelType as never)
+    ) as unknown as Partial<typeof THIRD_PARTY_API_MODEL_NAMES>;
     setThirdPartyModelName(filteredModalNameOpts[0].value);
     setThirdPartyModelNameOpts(filteredModalNameOpts);
     resetThirdPartyApiUrl();
     resetThirdPartyApiKey();
     resetThirdPartySecretKey();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [thirdPartyModelType]);
 
   const [isCheckedLlama2Switch, bindLlama2Switch, resetLlama2Switch] =
@@ -344,7 +353,7 @@ const LanguageModelStrategy: React.FC = () => {
 
                     try {
                       let values;
-                      if (type === TYPE.sagemaker) {
+                      if (type === ILlmDataTYPE.sagemaker) {
                         // SageMaker endpoint
                         values = {
                           strategyName,
@@ -405,16 +414,16 @@ const LanguageModelStrategy: React.FC = () => {
               <FormField stretch label="Please select the endpoint type">
                 <Tiles
                   value={type}
-                  onChange={(e) => setType(e.detail.value)}
+                  onChange={(e) => setType(e.detail.value as ILlmDataTYPE)}
                   items={[
                     {
-                      value: TYPE.sagemaker,
+                      value: ILlmDataTYPE.sagemaker,
                       label: 'SageMaker Endpoint',
                       description:
                         'Deployed service for real-time ML model inference',
                     },
                     {
-                      value: TYPE.thirdParty,
+                      value: ILlmDataTYPE.thirdParty,
                       label: 'Third Party APIs',
                       description: 'Options are Bedrock, Claude, ChatGLM etc.',
                     },
@@ -487,7 +496,7 @@ const LanguageModelStrategy: React.FC = () => {
                 </FormField>
               </Grid>
 
-              {type === TYPE.sagemaker ? (
+              {type === ILlmDataTYPE.sagemaker ? (
                 // **** SageMaker *************************************************************
                 <>
                   <Grid gridDefinition={[{ colspan: 6 }, { colspan: 6 }]}>
@@ -534,7 +543,9 @@ const LanguageModelStrategy: React.FC = () => {
                     <Tiles
                       columns={4}
                       onChange={({ detail }) =>
-                        setThirdPartyModelType(detail.value)
+                        setThirdPartyModelType(
+                          detail.value as IThirdPartyApiModelTypeValues
+                        )
                       }
                       value={thirdPartyModelType}
                       items={THIRD_PARTY_API_MODEL_TYPES}

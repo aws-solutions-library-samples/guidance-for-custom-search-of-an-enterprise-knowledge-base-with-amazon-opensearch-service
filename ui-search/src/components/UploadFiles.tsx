@@ -268,7 +268,9 @@ const UploadFiles = () => {
                     step={1}
                     type="number"
                     value={chunkSize.toString()}
-                    onChange={({ detail }) => setChunkSize(Number(detail.value))}
+                    onChange={({ detail }) =>
+                      setChunkSize(Number(detail.value))
+                    }
                   />
                 </FormField>
               </Grid>
@@ -443,7 +445,7 @@ const UploadFiles = () => {
 
 export default UploadFiles;
 
-function useManInput({
+export function useManInput({
   label = '',
   description = '',
   initValue,

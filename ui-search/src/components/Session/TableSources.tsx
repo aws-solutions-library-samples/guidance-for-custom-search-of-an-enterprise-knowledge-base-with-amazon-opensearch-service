@@ -91,7 +91,7 @@ const TableSources = ({ sourceData }) => {
 
 export default TableSources;
 
-function ButtonFeedback({ id, isPositive = false }) {
+export function ButtonFeedback({ id, isPositive = false }) {
   return (
     <Popover
       dismissButton={false}

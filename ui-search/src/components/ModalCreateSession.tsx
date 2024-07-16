@@ -33,17 +33,20 @@ import { DEFAULT_CHAT_SYSTEM_PROMPT } from 'src/utils/PROMPT_TEMPLATES';
 import Divider from './Divider';
 
 const SIZE = 's';
+export type ILanguageValues = (typeof OPTIONS_LANGUAGE)[number]['value'];
 const OPTIONS_LANGUAGE = [
   { label: '简体中文', value: 'chinese' },
   { label: '繁体中文', value: 'chinese-tc' },
   { label: 'English', value: 'english' },
-];
+] as const;
 const KENDRA = OPTIONS_SEARCH_ENGINE[1].value;
+
+export type ISearchMethodValues = (typeof SEARCH_METHOD)[number]['value'];
 const SEARCH_METHOD = [
   { label: 'vector', value: 'vector' },
   { label: 'text', value: 'text' },
   { label: 'mix', value: 'mix' },
-];
+] as const;
 
 export default function ModalCreateSession({ dismissModal, modalVisible }) {
   const { addSession } = useSessionStore();
@@ -76,7 +79,9 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
   const [llmData, setLLMData] = useState(lsLanguageModelList[0]);
   const [role, bindRole, resetRole, setRole] = useInput();
 
-  const [language, setLanguage] = useState(OPTIONS_LANGUAGE[0].value);
+  const [language, setLanguage] = useState<ILanguageValues>(
+    OPTIONS_LANGUAGE[0].value
+  );
   useLsAppConfigs();
 
   const [
@@ -119,7 +124,9 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
   const [kendraIndexId, setKendraIndexId] = useState('');
   const [indexNameList, loadingIndexNameList, refreshIndexNameList] =
     useIndexNameList(modalVisible);
-  const [searchMethod, setSearchMethod] = useState(SEARCH_METHOD[0].value);
+  const [searchMethod, setSearchMethod] = useState<ISearchMethodValues>(
+    SEARCH_METHOD[0].value
+  );
   const [txtDocsNum, setTxtDocsNum] = useState(0);
   const [vecDocsScoreThresholds, setVecDocsScoreThresholds] = useState(0);
   const [txtDocsScoreThresholds, setTxtDocsScoreThresholds] = useState(0);
@@ -496,7 +503,9 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                   <Select
                     selectedOption={{ value: language }}
                     onChange={({ detail }) =>
-                      setLanguage(detail.selectedOption.value)
+                      setLanguage(
+                        detail.selectedOption.value as ILanguageValues
+                      )
                     }
                     options={OPTIONS_LANGUAGE}
                   />
@@ -596,7 +605,9 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                         <Select
                           selectedOption={{ value: searchMethod }}
                           onChange={({ detail }) =>
-                            setSearchMethod(detail.selectedOption.value)
+                            setSearchMethod(
+                              detail.selectedOption.value as ISearchMethodValues
+                            )
                           }
                           options={SEARCH_METHOD}
                         />
