@@ -28,7 +28,7 @@ const DEFAULT_SESSIONS = [
       isCheckedKnowledgeBase: true,
       isCheckedMapReduce: false,
       indexName: 'index1',
-      topK: 3,
+      vecTopK: 3,
       isCheckedScoreQA: true,
       isCheckedScoreQD: true,
       isCheckedScoreAD: true,

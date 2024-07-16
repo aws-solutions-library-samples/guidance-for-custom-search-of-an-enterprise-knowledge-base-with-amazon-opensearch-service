@@ -30,6 +30,13 @@ import useLsSessionList from 'src/hooks/useLsSessionList';
 import useToggle from 'src/hooks/useToggle';
 import { useSessionStore } from 'src/stores/session';
 import { DEFAULT_CHAT_SYSTEM_PROMPT } from 'src/utils/PROMPT_TEMPLATES';
+import {
+  ILocConfigs,
+  IWorkFLow,
+  SEARCH_ENGINE,
+  WORK_MODE,
+  WORK_MODULE,
+} from 'src/types';
 import Divider from './Divider';
 
 const SIZE = 's';
@@ -39,7 +46,6 @@ const OPTIONS_LANGUAGE = [
   { label: '繁体中文', value: 'chinese-tc' },
   { label: 'English', value: 'english' },
 ] as const;
-const KENDRA = OPTIONS_SEARCH_ENGINE[1].value;
 
 export type ISearchMethodValues = (typeof SEARCH_METHOD)[number]['value'];
 const SEARCH_METHOD = [
@@ -64,17 +70,24 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     resetChatSystemPrompt,
     setChatSystemPrompt,
   ] = useInput(DEFAULT_CHAT_SYSTEM_PROMPT);
-  const [workFlow, setWorkFlow] = useState(DEFAULT_WORK_FLOW);
-  const [workMode, _, resetWorkMode, setWorkMode] = useInput(DEFAULT_WORK_MODE);
+  const [workFlow, setWorkFlow] = useState<IWorkFLow>(DEFAULT_WORK_FLOW);
+  const [workMode, _, resetWorkMode, setWorkMode] =
+    useInput<WORK_MODE>(DEFAULT_WORK_MODE);
+  const [
+    isCheckedKnowledgeBase,
+    bindKnowledgeBase,
+    resetKnowledgeBase,
+    setIsCheckedKnowledgeBase,
+  ] = useToggle(true);
   const [
     isCheckedTextRAGOnlyOnMultiModal,
     bindTextRAGOnlyOnMultiModal,
     resetTextRAGOnlyOnMultiModal,
     setIsCheckedTextRAGOnlyOnMultiModal,
-  ] = useToggle(true);
+  ] = useToggle(false, (checked) => checked && setIsCheckedKnowledgeBase(true));
 
   const [searchEngine, bindSearchEngine, resetSearchEngine, setSearchEngine] =
-    useInput(OPTIONS_SEARCH_ENGINE[0].value);
+    useInput(SEARCH_ENGINE.opensearch);
 
   const [llmData, setLLMData] = useState(lsLanguageModelList[0]);
   const [role, bindRole, resetRole, setRole] = useInput();
@@ -93,44 +106,16 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
   const [outputFormat, bindOutputFormat, resetOutputFormat, setOutputFormat] =
     useInput();
 
-  const [
-    isCheckedGenerateReport,
-    bindGenerateReport,
-    resetGenerateReport,
-    setIsCheckedGenerateReport,
-  ] = useToggle(false, (checked) => {
-    if (checked) {
-      setIsCheckedContext(false);
-      setIsCheckedKnowledgeBase(true);
-    }
-  });
-  const [isCheckedContext, bindContext, resetContext, setIsCheckedContext] =
-    useToggle(false);
-  const [
-    isCheckedKnowledgeBase,
-    bindKnowledgeBase,
-    resetKnowledgeBase,
-    setIsCheckedKnowledgeBase,
-  ] = useToggle(true);
-
-  // const [
-  // isCheckedMapReduce,
-  //   bindMapReduce,
-  //   resetMapReduce,
-  //   setIsCheckedMapReduce,
-  // ] = useToggle(false);
-
   const [indexName, setIndexName] = useState('');
-  const [kendraIndexId, setKendraIndexId] = useState('');
   const [indexNameList, loadingIndexNameList, refreshIndexNameList] =
     useIndexNameList(modalVisible);
   const [searchMethod, setSearchMethod] = useState<ISearchMethodValues>(
     SEARCH_METHOD[0].value
   );
-  const [txtDocsNum, setTxtDocsNum] = useState(0);
+  const [txtTopK, setTxtDocsNum] = useState(0);
   const [vecDocsScoreThresholds, setVecDocsScoreThresholds] = useState(0);
   const [txtDocsScoreThresholds, setTxtDocsScoreThresholds] = useState(0);
-  const [topK, setTopK] = useState(3);
+  const [vecTopK, setTopK] = useState(3);
   const [contextRounds, setContextRounds] = useState(3);
 
   const [isCheckedScoreQA, bindScoreQA, resetScoreQA, setIsCheckedScoreQA] =
@@ -175,12 +160,9 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     resetRole();
     resetTaskDefinition();
     resetOutputFormat();
-    resetGenerateReport();
-    resetContext();
     resetKnowledgeBase();
     // resetMapReduce();
     setIndexName('');
-    setKendraIndexId('');
     setSearchMethod(SEARCH_METHOD[0].value);
     setTopK(3);
     setContextRounds(3);
@@ -216,16 +198,12 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
           language,
           taskDefinition,
           outputFormat,
-          isCheckedGenerateReport,
-          isCheckedContext,
           isCheckedKnowledgeBase,
-          // isCheckedMapReduce,
           indexName,
-          kendraIndexId,
-          topK,
+          vecTopK,
           contextRounds,
           searchMethod,
-          txtDocsNum,
+          txtTopK,
           vecDocsScoreThresholds,
           txtDocsScoreThresholds,
           isCheckedScoreQA,
@@ -256,19 +234,15 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
       if (taskDefinition !== undefined) setTaskDefinition(taskDefinition);
       if (outputFormat !== undefined) setOutputFormat(outputFormat);
 
-      if (isCheckedGenerateReport !== undefined)
-        setIsCheckedGenerateReport(isCheckedGenerateReport);
-      if (isCheckedContext !== undefined) setIsCheckedContext(isCheckedContext);
       if (isCheckedKnowledgeBase !== undefined)
         setIsCheckedKnowledgeBase(isCheckedKnowledgeBase);
       // setIsCheckedMapReduce(isCheckedMapReduce);
 
       if (indexName !== undefined) setIndexName(indexName);
-      if (kendraIndexId !== undefined) setKendraIndexId(kendraIndexId);
-      if (topK !== undefined) setTopK(topK);
+      if (vecTopK !== undefined) setTopK(vecTopK);
       if (contextRounds !== undefined) setContextRounds(contextRounds);
       if (searchMethod !== undefined) setSearchMethod(searchMethod);
-      if (txtDocsNum !== undefined) setTxtDocsNum(txtDocsNum);
+      if (txtTopK !== undefined) setTxtDocsNum(txtTopK);
       if (vecDocsScoreThresholds !== undefined)
         setVecDocsScoreThresholds(vecDocsScoreThresholds);
       if (txtDocsScoreThresholds !== undefined)
@@ -287,7 +261,6 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
 
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState(false);
-  const isKendra = searchEngine === KENDRA;
 
   return (
     <Modal
@@ -311,27 +284,26 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                   setValidating(true);
 
                   // NOTE: add code when adding new inputs
-                  const sessionData = {
+                  const sessionData: Omit<ILocConfigs, 'sessionId'> = {
                     name,
                     searchEngine,
                     workMode,
-                    workFlow,
+                    workFlowLocal: workFlow.map((mod) => ({
+                      module: mod,
+                      systemPrompt:
+                        mod === WORK_MODULE.CHAT ? chatSystemPrompt : prompt,
+                    })),
                     isCheckedTextRAGOnlyOnMultiModal,
-                    chatSystemPrompt,
                     llmData,
                     role,
                     language,
                     taskDefinition,
                     outputFormat,
-                    isCheckedGenerateReport,
-                    isCheckedContext,
                     isCheckedKnowledgeBase,
-                    // isCheckedMapReduce,
                     indexName,
-                    kendraIndexId,
-                    topK,
+                    vecTopK,
                     searchMethod,
-                    txtDocsNum,
+                    txtTopK,
                     vecDocsScoreThresholds,
                     txtDocsScoreThresholds,
                     isCheckedScoreQA,
@@ -339,7 +311,6 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                     isCheckedScoreAD,
                     contextRounds,
                     isCheckedEditPrompt,
-                    prompt,
                     tokenContentCheck: appConfigs.tokenContentCheck,
                     responseIfNoDocsFound: appConfigs.responseIfNoDocsFound,
                   };
@@ -348,24 +319,6 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                     return toast.error('Please select language model strategy');
                   }
 
-                  if (isKendra) {
-                    delete sessionData.indexName;
-                    delete sessionData.topK;
-                    delete sessionData.searchMethod;
-                    delete sessionData.txtDocsNum;
-                    delete sessionData.vecDocsScoreThresholds;
-                    delete sessionData.txtDocsScoreThresholds;
-                    sessionData.isCheckedScoreQA = false;
-                    sessionData.isCheckedScoreQD = false;
-                    sessionData.isCheckedScoreAD = false;
-                    if (!kendraIndexId)
-                      return toast.error('Please provide Kendra Index ID');
-                  } else {
-                    delete sessionData.kendraIndexId;
-                    if (isCheckedKnowledgeBase && !indexName) {
-                      return toast.error('Please provide Index Name');
-                    }
-                  }
                   await addSession(sessionData);
                   dismissModal();
                   resetAllFields();
@@ -422,7 +375,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                 value={workMode}
                 items={OPTIONS_WORK_MODE}
                 onChange={({ detail: { value } }) => {
-                  setWorkMode(value);
+                  setWorkMode(value as WORK_MODE);
                   setWorkFlow(
                     OPTIONS_WORK_MODE.find((m) => m.value === value).workFlow
                   );
@@ -459,11 +412,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
 
             <Divider />
 
-            <FormField
-              stretch
-              label="Search Engine"
-              description="Please select a search engine"
-            >
+            <FormField stretch label="Search Engine">
               <Tiles {...bindSearchEngine} items={OPTIONS_SEARCH_ENGINE} />
             </FormField>
 
@@ -525,221 +474,167 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                 </FormField>
               </ColumnLayout>
 
-              {/* <FormField constraintText="Has to use a knowledge base">
-                  <Toggle {...bindGenerateReport}>Generate Report</Toggle>
-                </FormField> */}
-              {/* <FormField constraintText="OFF when generating report">
-                  <Toggle disabled={isCheckedGenerateReport} {...bindContext}>
-                    Context
-                  </Toggle>
-                </FormField> */}
-              {/* <FormField constraintText="Can be enabled when generating report">
-                  <Toggle
-                    disabled={!isCheckedGenerateReport}
-                    {...bindMapReduce}
-                  >
-                    Map Reduce
-                  </Toggle>
-                </FormField> */}
-
               <Divider />
 
               <FormField constraintText="Chat Mode is activated when knowledge base is NOT specified">
                 <Toggle
                   {...bindKnowledgeBase}
-                  disabled={isCheckedGenerateReport}
+                  disabled={isCheckedTextRAGOnlyOnMultiModal}
                 >
                   Knowledge Base
                 </Toggle>
               </FormField>
-              {isCheckedKnowledgeBase ? (
-                isKendra ? (
-                  <SpaceBetween direction="vertical" size="s">
+              {!isCheckedKnowledgeBase ? null : (
+                <SpaceBetween direction="vertical" size="s">
+                  <ColumnLayout columns={3}>
                     <FormField
-                      label="Kendra Index ID"
+                      label="Index Name"
                       stretch
                       errorText={
-                        validating && kendraIndexId === ''
-                          ? 'Please provide Kendra Index'
-                          : ''
+                        validating && !indexName && 'Please provide Index Name'
+                      }
+                    >
+                      <Select
+                        onFocus={refreshIndexNameList}
+                        empty="Upload a file if no options present"
+                        onChange={({ detail }) =>
+                          setIndexName(detail.selectedOption.value)
+                        }
+                        loadingText="loading index names"
+                        statusType={
+                          loadingIndexNameList ? 'loading' : 'finished'
+                        }
+                        selectedOption={{ value: indexName }}
+                        options={indexNameList.map((name) => ({
+                          value: name,
+                        }))}
+                      />
+                    </FormField>
+                    <FormField stretch label="Search method">
+                      <Select
+                        selectedOption={{ value: searchMethod }}
+                        onChange={({ detail }) =>
+                          setSearchMethod(
+                            detail.selectedOption.value as ISearchMethodValues
+                          )
+                        }
+                        options={SEARCH_METHOD}
+                      />
+                    </FormField>
+                    <FormField
+                      stretch
+                      label="Threshold for vector search"
+                      constraintText="Float number between 0 and 1"
+                      errorText={
+                        vecDocsScoreThresholds >= 0 &&
+                        vecDocsScoreThresholds <= 1
+                          ? ''
+                          : 'A number between 0 and 1'
                       }
                     >
                       <Input
-                        placeholder="Please provide Kendra index ID"
-                        value={kendraIndexId}
+                        onBlur={() =>
+                          vecDocsScoreThresholds !== 0 &&
+                          !vecDocsScoreThresholds
+                            ? setVecDocsScoreThresholds(0)
+                            : null
+                        }
+                        step={0.01}
+                        type="number"
+                        value={vecDocsScoreThresholds.toString()}
                         onChange={({ detail }) => {
-                          setKendraIndexId(detail.value);
+                          setVecDocsScoreThresholds(Number(detail.value));
                         }}
                       />
                     </FormField>
-                  </SpaceBetween>
-                ) : (
-                  <SpaceBetween direction="vertical" size="s">
-                    <ColumnLayout columns={3}>
-                      <FormField
-                        label="Index Name"
-                        stretch
-                        errorText={
-                          validating &&
-                          !indexName &&
-                          'Please provide Index Name'
+                  </ColumnLayout>
+                  <ColumnLayout columns={3}>
+                    <FormField
+                      stretch
+                      label="Number of doc for vector search"
+                      constraintText="Integer between 0 and 200"
+                      errorText={
+                        vecTopK >= 0 && vecTopK <= 200
+                          ? ''
+                          : 'A number between 0 and 200'
+                      }
+                    >
+                      <Input
+                        onBlur={() =>
+                          vecTopK !== 0 && !vecTopK ? setTopK(0) : null
                         }
-                      >
-                        <Select
-                          onFocus={refreshIndexNameList}
-                          empty="Upload a file if no options present"
-                          onChange={({ detail }) =>
-                            setIndexName(detail.selectedOption.value)
-                          }
-                          loadingText="loading index names"
-                          statusType={
-                            loadingIndexNameList ? 'loading' : 'finished'
-                          }
-                          selectedOption={{ value: indexName }}
-                          options={indexNameList.map((name) => ({
-                            value: name,
-                          }))}
-                        />
-                      </FormField>
-                      <FormField stretch label="Search method">
-                        <Select
-                          selectedOption={{ value: searchMethod }}
-                          onChange={({ detail }) =>
-                            setSearchMethod(
-                              detail.selectedOption.value as ISearchMethodValues
-                            )
-                          }
-                          options={SEARCH_METHOD}
-                        />
-                      </FormField>
-                      <FormField
-                        stretch
-                        label="Threshold for vector search"
-                        constraintText="Float number between 0 and 1"
-                        errorText={
-                          vecDocsScoreThresholds >= 0 &&
-                          vecDocsScoreThresholds <= 1
-                            ? ''
-                            : 'A number between 0 and 1'
+                        step={1}
+                        type="number"
+                        inputMode="decimal"
+                        value={vecTopK.toString()}
+                        onChange={({ detail }) => {
+                          setTopK(Number(detail.value));
+                        }}
+                      />
+                    </FormField>
+                    <FormField
+                      stretch
+                      label="Number of doc for text search"
+                      constraintText="Integer between 0 and 200"
+                      errorText={
+                        txtTopK >= 0 && txtTopK <= 200
+                          ? ''
+                          : 'A number between 0 and 200'
+                      }
+                    >
+                      <Input
+                        onBlur={() =>
+                          txtTopK !== 0 && !txtTopK ? setTxtDocsNum(0) : null
                         }
-                      >
-                        <Input
-                          onBlur={() =>
-                            vecDocsScoreThresholds !== 0 &&
-                            !vecDocsScoreThresholds
-                              ? setVecDocsScoreThresholds(0)
-                              : null
-                          }
-                          step={0.01}
-                          type="number"
-                          value={vecDocsScoreThresholds.toString()}
-                          onChange={({ detail }) => {
-                            setVecDocsScoreThresholds(Number(detail.value));
-                          }}
-                        />
-                      </FormField>
-                    </ColumnLayout>
-                    <ColumnLayout columns={3}>
-                      <FormField
-                        stretch
-                        label="Number of doc for vector search"
-                        constraintText="Integer between 0 and 200"
-                        errorText={
-                          topK >= 0 && topK <= 200
-                            ? ''
-                            : 'A number between 0 and 200'
+                        step={1}
+                        type="number"
+                        inputMode="decimal"
+                        value={txtTopK.toString()}
+                        onChange={({ detail }) => {
+                          setTxtDocsNum(Number(detail.value));
+                        }}
+                      />
+                    </FormField>
+                    <FormField
+                      stretch
+                      label="Threshold for text search"
+                      constraintText="Float number between 0 and 1"
+                      errorText={
+                        txtDocsScoreThresholds >= 0 &&
+                        txtDocsScoreThresholds <= 1
+                          ? ''
+                          : 'A number between 0 and 1'
+                      }
+                    >
+                      <Input
+                        onBlur={() =>
+                          txtDocsScoreThresholds !== 0 &&
+                          !txtDocsScoreThresholds
+                            ? setTxtDocsScoreThresholds(0)
+                            : null
                         }
-                      >
-                        <Input
-                          onBlur={() =>
-                            topK !== 0 && !topK ? setTopK(0) : null
-                          }
-                          step={1}
-                          type="number"
-                          inputMode="decimal"
-                          value={topK.toString()}
-                          onChange={({ detail }) => {
-                            setTopK(Number(detail.value));
-                          }}
-                        />
-                      </FormField>
-                      <FormField
-                        stretch
-                        label="Number of doc for text search"
-                        constraintText="Integer between 0 and 200"
-                        errorText={
-                          txtDocsNum >= 0 && txtDocsNum <= 200
-                            ? ''
-                            : 'A number between 0 and 200'
-                        }
-                      >
-                        <Input
-                          onBlur={() =>
-                            txtDocsNum !== 0 && !txtDocsNum
-                              ? setTxtDocsNum(0)
-                              : null
-                          }
-                          step={1}
-                          type="number"
-                          inputMode="decimal"
-                          value={txtDocsNum.toString()}
-                          onChange={({ detail }) => {
-                            setTxtDocsNum(Number(detail.value));
-                          }}
-                        />
-                      </FormField>
-                      <FormField
-                        stretch
-                        label="Threshold for text search"
-                        constraintText="Float number between 0 and 1"
-                        errorText={
-                          txtDocsScoreThresholds >= 0 &&
-                          txtDocsScoreThresholds <= 1
-                            ? ''
-                            : 'A number between 0 and 1'
-                        }
-                      >
-                        <Input
-                          onBlur={() =>
-                            txtDocsScoreThresholds !== 0 &&
-                            !txtDocsScoreThresholds
-                              ? setTxtDocsScoreThresholds(0)
-                              : null
-                          }
-                          step={0.01}
-                          type="number"
-                          value={txtDocsScoreThresholds.toString()}
-                          onChange={({ detail }) => {
-                            setTxtDocsScoreThresholds(Number(detail.value));
-                          }}
-                        />
-                      </FormField>
-                    </ColumnLayout>
-                    {isKendra ? null : (
-                      <FormField stretch label="Calculate Confidence Scores">
-                        <SpaceBetween direction="horizontal" size="xxl">
-                          <Checkbox {...bindScoreQA}>
-                            Query-Answer score
-                          </Checkbox>
-                          <Checkbox {...bindScoreQD}>Query-Doc scores</Checkbox>
-                          <Checkbox {...bindScoreAD}>
-                            Answer-Doc scores
-                          </Checkbox>
-                        </SpaceBetween>
-                      </FormField>
-                    )}
-                  </SpaceBetween>
-                )
-              ) : null}
+                        step={0.01}
+                        type="number"
+                        value={txtDocsScoreThresholds.toString()}
+                        onChange={({ detail }) => {
+                          setTxtDocsScoreThresholds(Number(detail.value));
+                        }}
+                      />
+                    </FormField>
+                  </ColumnLayout>
+                  <FormField stretch label="Calculate Confidence Scores">
+                    <SpaceBetween direction="horizontal" size="xxl">
+                      <Checkbox {...bindScoreQA}>Query-Answer score</Checkbox>
+                      <Checkbox {...bindScoreQD}>Query-Doc scores</Checkbox>
+                      <Checkbox {...bindScoreAD}>Answer-Doc scores</Checkbox>
+                    </SpaceBetween>
+                  </FormField>
+                </SpaceBetween>
+              )}
 
               <Divider />
 
               <SpaceBetween size={SIZE}>
-                {/* <FormField>
-                    <Toggle {...bindAutoGeneratePrompt}>
-                      Auto-generate prompt
-                    </Toggle>
-                  </FormField> */}
                 {!isCheckedEditPrompt ? (
                   <>
                     <FormField
@@ -777,7 +672,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                 {!isCheckedEditPrompt ? (
                   <FormField
                     stretch
-                    label="Prompt Summary"
+                    label="RAG Prompt Summary"
                     description="Generated automatically by the values of Role Name, Task Definition and Output Format"
                     secondaryControl={
                       <SpaceBetween size="xxs">
@@ -807,7 +702,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                   <FormField
                     stretch
                     label="Edit Prompt"
-                    description="Customise your prompt as you please"
+                    description="Customise your RAG prompt as you please"
                   >
                     <Textarea
                       value={prompt}

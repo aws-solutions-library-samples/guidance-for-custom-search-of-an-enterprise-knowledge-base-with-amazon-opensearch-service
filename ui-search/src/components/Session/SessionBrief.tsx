@@ -44,9 +44,9 @@ const SessionBrief = ({ configs }) => {
     isCheckedMapReduce,
     indexName,
     kendraIndexId,
-    topK,
+    vecTopK,
     searchMethod,
-    txtDocsNum,
+    txtTopK,
     vecDocsScoreThresholds,
     txtDocsScoreThresholds,
     isCheckedScoreQA,
@@ -157,10 +157,10 @@ const SessionBrief = ({ configs }) => {
             {!isKendra && (
               <>
                 <ValueWithLabel label="Number of doc for vector search">
-                  {topK}
+                  {vecTopK}
                 </ValueWithLabel>
                 <ValueWithLabel label="Number of doc for text search">
-                  {txtDocsNum}
+                  {txtTopK}
                 </ValueWithLabel>
                 <ValueWithLabel label="Threshold for vector search">
                   {vecDocsScoreThresholds}

@@ -50,9 +50,10 @@ export type IWSTextSearch = {
   // llmData -----------------------
   ILocLlmData;
 
+export type IWorkFLow = readonly WORK_MODULE[];
 export type IWSMultiModalSearch = Omit<IWSTextSearch, 'workMode'> & {
   workMode: WORK_MODE.multiModal;
-  workFlow: Array<WORK_MODULE>;
+  workFlow: IWorkFLow;
 };
 
 export type IWSSearch = IWSTextSearch | IWSMultiModalSearch;

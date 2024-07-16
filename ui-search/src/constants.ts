@@ -1,3 +1,5 @@
+import { IWorkFLow, SEARCH_ENGINE, WORK_MODE, WORK_MODULE } from './types';
+
 /**
  * localStorage Keys
  */
@@ -6,33 +8,31 @@ export const LSK = {
   sessionSelected: 'sessionSelected',
   languageModelList: 'languageModelList',
   appConfigs: 'appConfigs',
-};
+} as const;
 
 export const OPTIONS_SEARCH_ENGINE = [
   {
-    value: 'opensearch',
+    value: SEARCH_ENGINE.opensearch,
     label: 'Open Search',
     description:
       'OpenSearch is an open source, distributed search and analytics suite derived from Elasticsearch.',
   },
-  {
-    value: 'kendra',
-    label: 'Kendra',
-    description:
-      'Amazon Kendra is an intelligent search service powered by machine learning (ML)',
-  },
-];
 
-export const WORK_MODULES = {
-  CHAT: 'CHAT',
-  RAG: 'RAG',
-};
-export const DEFAULT_WORK_FLOW = [WORK_MODULES.RAG];
+  // {
+  //   value: SEARCH_ENGINE.kendra,
+  //   label: 'Kendra',
+  //   description:
+  //     'Amazon Kendra is an intelligent search service powered by machine learning (ML)',
+  //   disabled: true,
+  // },
+] as const;
+
+export const DEFAULT_WORK_FLOW: IWorkFLow = [WORK_MODULE.RAG] as const;
 
 export const OPTIONS_WORK_MODE = [
   {
     label: 'Text Search',
-    value: 'text',
+    value: WORK_MODE.text,
     description: 'User query -- RAG module',
     workFlow: DEFAULT_WORK_FLOW,
     // description: (
@@ -61,15 +61,16 @@ export const OPTIONS_WORK_MODE = [
   },
   {
     label: 'Multi-modal',
-    value: 'multi-modal',
+    value: WORK_MODE.multiModal,
     description: 'User query -- CHAT module -- RAG module',
-    workFlow: [WORK_MODULES.CHAT, WORK_MODULES.RAG],
+    workFlow: [WORK_MODULE.CHAT, WORK_MODULE.RAG],
   },
-  {
-    label: 'Customize',
-    value: 'customize',
-    description: 'User can customize their work flow in the future',
-    disabled: true,
-  },
-];
+  // {
+  //   label: 'Customize',
+  //   value: 'customize',
+  //   description: 'User can customize their work flow in the future',
+  //   workFlow: [],
+  //   disabled: true,
+  // },
+] as const;
 export const DEFAULT_WORK_MODE = OPTIONS_WORK_MODE[0].value;

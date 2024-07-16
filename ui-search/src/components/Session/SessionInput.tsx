@@ -110,7 +110,7 @@ const SessionInput = () => {
               data-corner-style="rounded"
               placeholder="⇧ + Enter to search"
               onKeyDown={({ detail: { key, shiftKey } }) =>
-                shiftKey && key === 'Enter' ? search() : null
+                shiftKey && key === 'Enter' && search()
               }
             />
             <div

@@ -16,10 +16,14 @@ export enum WORK_MODULE {
   CHAT = 'CHAT',
   RAG = 'RAG',
 }
+export enum SEARCH_ENGINE {
+  opensearch = 'opensearch',
+  kendra = 'kendra',
+}
 
 export type ILocConfigs = {
   name: string;
-  searchEngine: 'opensearch';
+  searchEngine: SEARCH_ENGINE;
   workMode: WORK_MODE;
   workFlowLocal: Array<{ module: WORK_MODULE; systemPrompt: string }>;
   llmData: ILocLlmData;
@@ -27,24 +31,27 @@ export type ILocConfigs = {
   taskDefinition?: string;
   outputFormat?: string;
   language: ILanguageValues;
-  isCheckedGenerateReport: boolean;
-  isCheckedContext: boolean;
   isCheckedKnowledgeBase: boolean;
-  indexName: string; // # can NOT be empty when RAG search
+  indexName: string; //               # can NOT be empty when RAG search
   searchMethod: ISearchMethodValues;
-  vecTopK: string | number; //                      #renamedFrom - topK
-  txtTopK: string | number; //                #renameFrom - txtDocsNum
+  vecTopK: string | number; //        # renamedFrom - topK
+  txtTopK: string | number; //        # renameFrom - txtDocsNum
   vecDocsScoreThresholds: number;
   txtDocsScoreThresholds: number;
   contextRounds: number;
   isCheckedScoreQA: boolean;
   isCheckedScoreQD: boolean;
   isCheckedScoreAD: boolean;
-  isCheckedEditPrompt: true;
   chatSystemPrompt?: string;
-  tokenContentCheck?: string;
   responseIfNoDocsFound: string;
   sessionId: GI_UUID;
+
+  // TODO: deprecated
+  tokenContentCheck?: string;
+
+  // Only Frontend Feature needs the following values
+  isCheckedTextRAGOnlyOnMultiModal?: boolean;
+  isCheckedEditPrompt: boolean;
 };
 
 export enum LLM_DATA_TYPE {

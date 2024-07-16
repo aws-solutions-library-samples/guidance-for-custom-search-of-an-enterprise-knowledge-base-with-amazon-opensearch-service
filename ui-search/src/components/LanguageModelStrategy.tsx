@@ -20,7 +20,7 @@ import useEndpointList from 'src/hooks/useEndpointList';
 import useInput from 'src/hooks/useInput';
 import useLsLanguageModelList from 'src/hooks/useLsLanguageModelList';
 import useToggle from 'src/hooks/useToggle';
-import { LLM_DATA_TYPE } from 'src/types/localStorage-configs';
+import { LLM_DATA_TYPE } from 'src/types';
 import { DEMO_SESSION_1 } from 'src/utils/PROMPT_TEMPLATES';
 import { genRandomNum } from 'src/utils/genUID';
 

@@ -3,7 +3,7 @@ import { useState } from 'react';
 /**
  * ‼️ Only use this for Cloudscape-design components
  */
-const useToggle = (initValue = false, cb = (boolean) => {}) => {
+const useToggle = (initValue = false, cb = (bool) => {}) => {
   const [checked, setChecked] = useState(initValue);
   const bind = {
     checked,

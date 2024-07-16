@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 /**
  * ‼️ Only use this for Cloudscape-design components
  */
-const useInput = (initValue = '', cb?: (v: typeof initValue) => any) => {
+const useInput = <T = string>(initValue?: T, cb?: (v: T) => any) => {
   const [value, setValue] = useState(initValue);
   const bind = {
     value,

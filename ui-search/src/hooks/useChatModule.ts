@@ -2,6 +2,9 @@ import { useCallback, useState } from 'react';
 import useLsAppConfigs from './useLsAppConfigs';
 import toast from 'react-hot-toast';
 
+/**
+ * @deprecated Restful API
+ */
 const useChatModule = () => {
   const [chatModuleResult, setChatModuleResult] = useState();
   const { urlApiGateway } = useLsAppConfigs();
