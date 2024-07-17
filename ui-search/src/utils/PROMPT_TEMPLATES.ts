@@ -74,7 +74,7 @@ const TEMPLATE_1 = {
     AI:`),
     sessionId: 'template_1',
   },
-};
+} as const;
 
 const TEMPLATE_2 = {
   text: 'Template_2_表格型(QA问题对)内部知识库问答',
@@ -114,7 +114,7 @@ const TEMPLATE_2 = {
     AI:`),
     sessionId: 'template_2',
   },
-};
+} as const;
 
 const TEMPLATE_3 = {
   text: 'Template_3_表格型(维保)内部知识库问答',
@@ -154,7 +154,7 @@ const TEMPLATE_3 = {
     AI:`),
     sessionId: 'template_3',
   },
-};
+} as const;
 
 const TEMPLATE_4 = {
   text: 'Template_4_文档型分析/摘要',
@@ -190,7 +190,7 @@ const TEMPLATE_4 = {
     AI:`),
     sessionId: 'template_4',
   },
-};
+} as const;
 
 const TEMPLATE_5_MULTI_MODAL = {
   text: 'Template_5_Multi_Modal_文档型内部知识库问答',
@@ -223,7 +223,7 @@ const TEMPLATE_5_MULTI_MODAL = {
     3. 回答开头使用“感谢你的提问”，在回答请一定杜绝使用类似“根据已知信息”的字眼，结尾使用一个笑脸
     </输出设定>`),
   },
-};
+} as const;
 
 let PROMPT_TEMPLATES = [
   TEMPLATE_5_MULTI_MODAL,

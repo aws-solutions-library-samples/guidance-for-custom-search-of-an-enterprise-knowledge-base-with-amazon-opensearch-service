@@ -1,17 +1,11 @@
 import { ILocConfigs } from './localStorage-configs';
 
-export enum IWebSocketMessage {
+export enum WSS_MESSAGE {
   error = 'error',
   streaming = 'streaming',
   streaming_end = 'streaming_end',
+  success = 'success',
 }
-export type ILocConvoCustomer = {
-  type: 'customer';
-  content: {
-    text: string;
-    timestamp: GI_Timestamp;
-  };
-};
 
 export type ILocConvoRobotSourceDatum = {
   id: GI_UUID;
@@ -29,16 +23,28 @@ export type ILocConvoRobotSourceDatum = {
   scoreAnswerDoc: number;
 };
 
+export enum CONVO_TYPE {
+  customer = 'customer',
+  robot = 'robot',
+}
+
+export type ILocConvoCustomer = {
+  type: CONVO_TYPE.customer;
+  content: {
+    text: string;
+    timestamp: GI_Timestamp;
+  };
+};
 export type ILocConvoRobot = {
-  type: 'robot';
+  type: CONVO_TYPE.robot;
   content: {
     timestamp: GI_Timestamp;
     text: string;
     errorMessage?: string;
-    sourceData: Array<ILocConvoRobotSourceDatum>;
-    message: IWebSocketMessage;
+    sourceData?: Array<ILocConvoRobotSourceDatum>;
+    message?: WSS_MESSAGE;
     // e.g. 1825, this is number in milliseconds
-    answerTook: number;
+    answerTook?: number;
 
     /**
      * @deprecated values
@@ -48,14 +54,15 @@ export type ILocConvoRobot = {
   };
 };
 
+export type ILocConvo = ILocConvoCustomer | ILocConvoRobot;
 export type ILocSession = {
   type: 'link';
   /**
-   * @example '/session/demo_session_3'
+   * @href_example '/session/demo_session_3'
    */
   href: string;
   text: string;
   sessionId: GI_UUID;
   configs: ILocConfigs;
-  conversations: Array<ILocConvoCustomer | ILocConvoRobot>;
+  conversations: ILocConvo[];
 };

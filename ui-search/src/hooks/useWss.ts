@@ -4,10 +4,11 @@ import { StreamingContext } from 'src/components/Session';
 import useLsAppConfigs from './useLsAppConfigs';
 import useLsSessionList from './useLsSessionList';
 import { useParams } from 'react-router-dom';
+import { ILocSession, IWSSearch, WSS_MESSAGE } from 'src/types';
 
 const GENERAL_WSS_ERROR_MSG = 'Error on receiving Websocket data';
 
-const useRAGWebSocket = (resetQuery, setLoading, answerTimer) => {
+const useWSS = (resetQuery, setLoading, answerTimer) => {
   const { urlWss } = useLsAppConfigs();
   const socket = useRef(null);
   const [isWssConnected, setIsWssConnected] = useState(false);
@@ -35,7 +36,7 @@ const useRAGWebSocket = (resetQuery, setLoading, answerTimer) => {
       try {
         const data = JSON.parse(dataStr);
 
-        if (data.message === 'streaming') {
+        if (data.message === WSS_MESSAGE.streaming) {
           lsUpdateContentOfLastConvoInOneSession(
             sessionId,
             newSessionList,
@@ -53,15 +54,15 @@ const useRAGWebSocket = (resetQuery, setLoading, answerTimer) => {
         setLoading(false);
 
         switch (data.message) {
-          case 'streaming_end':
+          case WSS_MESSAGE.streaming_end:
             resetQuery();
             setStreamingText(data.text);
             setStreaming(false);
             return;
-          case 'success':
+          case WSS_MESSAGE.success:
             resetQuery();
             return;
-          case 'error':
+          case WSS_MESSAGE.error:
             toast.error(
               data.errorMessage || data.text || GENERAL_WSS_ERROR_MSG
             );
@@ -117,7 +118,7 @@ const useRAGWebSocket = (resetQuery, setLoading, answerTimer) => {
 
   // NOTE: send query through websocket connection
   const socketSendSearch = useCallback(
-    (query, question, configs, newSessionList) => {
+    (apiConfigs: IWSSearch, newSessionList: ILocSession[]) => {
       try {
         if (socket.current?.readyState !== WebSocket.OPEN) {
           const success = initSocket();
@@ -131,7 +132,7 @@ const useRAGWebSocket = (resetQuery, setLoading, answerTimer) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
         // answerTimer = Date.now();
         socket.current?.send(
-          JSON.stringify({ action: 'search', configs, query, question })
+          JSON.stringify({ action: 'search', ...apiConfigs })
         );
       } catch (error) {
         console.error('Error socketSendSearch: ', error);
@@ -148,4 +149,4 @@ const useRAGWebSocket = (resetQuery, setLoading, answerTimer) => {
   return { isWssConnected, socketSendSearch };
 };
 
-export default useRAGWebSocket;
+export default useWSS;

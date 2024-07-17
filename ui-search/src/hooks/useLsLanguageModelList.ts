@@ -1,6 +1,7 @@
 import { LSK } from 'src/constants';
 import useLsArray from './useLsArray';
 import LLM_STRATEGY_TEMPLATE from 'src/utils/LLM_STRATEGY_TEMPLATE';
+import { ILocLlmData } from 'src/types';
 
 const useLsLanguageModelList = () => {
   const {
@@ -10,7 +11,11 @@ const useLsLanguageModelList = () => {
     clear: lsClearLanguageModelList,
     getById: lsGetLanguageModelItem,
     delById: lsDelLanguageModelItem,
-  } = useLsArray(LSK.languageModelList, 'recordId', LLM_STRATEGY_TEMPLATE);
+  } = useLsArray<ILocLlmData>(
+    LSK.languageModelList,
+    'recordId',
+    LLM_STRATEGY_TEMPLATE
+  );
 
   return {
     lsLanguageModelList,

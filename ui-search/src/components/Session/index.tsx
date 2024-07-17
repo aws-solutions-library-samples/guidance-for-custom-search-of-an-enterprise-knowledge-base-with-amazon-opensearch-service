@@ -5,13 +5,14 @@ import useLsSessionList from 'src/hooks/useLsSessionList';
 import SessionBrief from './SessionBrief';
 import SessionChats from './SessionChats';
 import SessionInput from './SessionInput';
+import { ILocSession } from 'src/types';
 
 export const StreamingContext = createContext(null);
 
 const Session = () => {
   const { sessionId } = useParams();
   const { lsSessionList } = useLsSessionList();
-  const [data, setData] = useState();
+  const [data, setData] = useState<ILocSession>();
   const navigate = useNavigate();
   const [streamingText, setStreamingText] = useState('');
   const [streaming, setStreaming] = useState(false);

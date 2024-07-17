@@ -32,6 +32,7 @@ import { useSessionStore } from 'src/stores/session';
 import { DEFAULT_CHAT_SYSTEM_PROMPT } from 'src/utils/PROMPT_TEMPLATES';
 import {
   ILocConfigs,
+  ILocLlmData,
   IWorkFLow,
   SEARCH_ENGINE,
   WORK_MODE,
@@ -87,9 +88,9 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
   ] = useToggle(false, (checked) => checked && setIsCheckedKnowledgeBase(true));
 
   const [searchEngine, bindSearchEngine, resetSearchEngine, setSearchEngine] =
-    useInput(SEARCH_ENGINE.opensearch);
+    useInput<SEARCH_ENGINE>(SEARCH_ENGINE.opensearch);
 
-  const [llmData, setLLMData] = useState(lsLanguageModelList[0]);
+  const [llmData, setLLMData] = useState<ILocLlmData>(lsLanguageModelList[0]);
   const [role, bindRole, resetRole, setRole] = useInput();
 
   const [language, setLanguage] = useState<ILanguageValues>(
@@ -187,12 +188,11 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
       // NOTE: add code when adding new inputs
       const {
         configs: {
-          name,
+          // name,
           searchEngine,
           workMode,
-          workFlow,
+          workFlowLocal,
           isCheckedTextRAGOnlyOnMultiModal,
-          chatSystemPrompt,
           llmData,
           role,
           language,
@@ -210,9 +210,19 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
           isCheckedScoreQD,
           isCheckedScoreAD,
           isCheckedEditPrompt,
-          prompt,
         },
       } = lsGetOneSession(sessionTemplateOpt.value!, lsSessionList);
+      // CHAT prompt
+      let chatSystemPrompt = '';
+      // RAG prompt
+      let ragSystemPrompt = '';
+      const workFlow = workFlowLocal.map((flow) => {
+        if (flow.module === WORK_MODULE.CHAT)
+          chatSystemPrompt = flow.systemPrompt;
+        if (flow.module === WORK_MODULE.RAG)
+          ragSystemPrompt = flow.systemPrompt;
+        return flow.module;
+      });
 
       // setName(name);
       // NOTE: add code when adding new inputs
@@ -239,10 +249,10 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
       // setIsCheckedMapReduce(isCheckedMapReduce);
 
       if (indexName !== undefined) setIndexName(indexName);
-      if (vecTopK !== undefined) setTopK(vecTopK);
+      if (vecTopK !== undefined) setTopK(Number(vecTopK));
       if (contextRounds !== undefined) setContextRounds(contextRounds);
       if (searchMethod !== undefined) setSearchMethod(searchMethod);
-      if (txtTopK !== undefined) setTxtDocsNum(txtTopK);
+      if (txtTopK !== undefined) setTxtDocsNum(Number(txtTopK));
       if (vecDocsScoreThresholds !== undefined)
         setVecDocsScoreThresholds(vecDocsScoreThresholds);
       if (txtDocsScoreThresholds !== undefined)
@@ -253,7 +263,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
       if (isCheckedScoreAD !== undefined) setIsCheckedScoreAd(isCheckedScoreAD);
       if (isCheckedEditPrompt !== undefined)
         setIsCheckedEditPrompt(isCheckedEditPrompt);
-      if (prompt !== undefined) setPrompt(prompt);
+      if (ragSystemPrompt !== undefined) setPrompt(ragSystemPrompt);
     } else {
       setSessionTemplateOpt(undefined);
     }
@@ -436,12 +446,14 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                         llmData?.recordId,
                     }}
                     onChange={({ detail }) => {
-                      setLLMData(detail.selectedOption.value);
+                      setLLMData(
+                        detail.selectedOption.value as unknown as ILocLlmData
+                      );
                     }}
                     options={lsLanguageModelList.map((item) => ({
                       label:
                         item.strategyName || item.modelName || item.recordId,
-                      value: item,
+                      value: item as any,
                     }))}
                   />
                 </FormField>

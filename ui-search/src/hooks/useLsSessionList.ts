@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { LSK } from 'src/constants';
 import useLsArray from './useLsArray';
 import PROMPT_TEMPLATES from 'src/utils/PROMPT_TEMPLATES';
+import { ILocConvo, ILocSession } from 'src/types';
 
 const useLsSessionList = () => {
   const {
@@ -12,13 +13,18 @@ const useLsSessionList = () => {
     getById: lsGetOneSession,
     delById: lsDelOneSession,
     updateById: lsUpdateOneSession,
-  } = useLsArray(LSK.sessionList, 'sessionId', PROMPT_TEMPLATES);
+  } = useLsArray<ILocSession>(
+    LSK.sessionList,
+    'sessionId',
+    // FIX ME LATER
+    PROMPT_TEMPLATES as unknown as ILocSession[]
+  );
 
   const lsAddContentToOneSession = useCallback(
-    (sessionId, sessionList, newConvo) => {
+    (sessionId: string, sessionList: ILocSession[], newConvos: ILocConvo[]) => {
       const newSessionList = sessionList.map((s) => {
         if (s.sessionId === sessionId) {
-          s.conversations = s.conversations.concat(newConvo);
+          s.conversations = s.conversations.concat(newConvos);
         }
         return s;
       });
@@ -29,10 +35,14 @@ const useLsSessionList = () => {
   );
 
   const lsUpdateContentOfLastConvoInOneSession = useCallback(
-    (sessionId, sessionList, data) => {
+    (
+      sessionId: string,
+      sessionList: ILocSession[],
+      newContent: ILocConvo['content']
+    ) => {
       const newSessionList = sessionList.map((s) => {
         if (s.sessionId === sessionId) {
-          s.conversations[s.conversations.length - 1].content = data;
+          s.conversations[s.conversations.length - 1].content = newContent;
         }
         return s;
       });

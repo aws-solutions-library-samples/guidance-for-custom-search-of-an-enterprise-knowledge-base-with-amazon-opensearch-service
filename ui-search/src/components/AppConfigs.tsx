@@ -19,6 +19,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import useLsAppConfigs, { INIT_APP_CONFIGS } from 'src/hooks/useLsAppConfigs';
 import useLsSessionList from 'src/hooks/useLsSessionList';
+import { ILocSession } from 'src/types';
 import PROMPT_TEMPLATES from 'src/utils/PROMPT_TEMPLATES';
 
 function FormInputWithDebounceAndToast({
@@ -183,7 +184,8 @@ const AppConfigs = () => {
                 onClick={(e) => {
                   e.preventDefault();
                   PROMPT_TEMPLATES.forEach((session) =>
-                    lsAddOneSession(session)
+                    // exception: just to add templates and templates may not have all the config info
+                    lsAddOneSession(session as unknown as ILocSession)
                   );
                   toast.success(
                     'Default session templates successfully imported!'

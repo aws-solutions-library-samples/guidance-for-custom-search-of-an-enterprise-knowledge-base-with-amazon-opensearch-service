@@ -20,7 +20,7 @@ import useEndpointList from 'src/hooks/useEndpointList';
 import useInput from 'src/hooks/useInput';
 import useLsLanguageModelList from 'src/hooks/useLsLanguageModelList';
 import useToggle from 'src/hooks/useToggle';
-import { LLM_DATA_TYPE } from 'src/types';
+import { ILocLlmData, LLM_DATA_TYPE } from 'src/types';
 import { DEMO_SESSION_1 } from 'src/utils/PROMPT_TEMPLATES';
 import { genRandomNum } from 'src/utils/genUID';
 
@@ -217,7 +217,7 @@ const LanguageModelStrategy: React.FC = () => {
           header={<Header variant="h2">Language Model Strategies</Header>}
         >
           <SpaceBetween size={SIZE}>
-            <Table
+            <Table<ILocLlmData>
               items={lsLanguageModelList}
               variant="borderless"
               empty={
@@ -280,8 +280,6 @@ const LanguageModelStrategy: React.FC = () => {
                   header: 'EmbeddingEndpoint',
                   width: 200,
                   cell: (item) => {
-                    if (item.isCheckedTitanEmbedding)
-                      return 'Use Titan Embedding';
                     return item.embeddingEndpoint || 'n/a';
                   },
                 },

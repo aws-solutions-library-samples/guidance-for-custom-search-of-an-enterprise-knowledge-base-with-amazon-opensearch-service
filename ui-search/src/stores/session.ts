@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import useLsSessionList from 'src/hooks/useLsSessionList';
+import { ILocSession } from 'src/types';
 import fakeDelay from 'src/utils/FakeDelay';
 import genUID from 'src/utils/genUID';
 
@@ -21,7 +22,7 @@ export const [useSessionStore, SessionStoreProvider] = createStore(() => {
         const id = genUID();
         const name = sessionData?.name || `Session ${id}`;
         const href = `/session/${id}`;
-        const processedSessionData = {
+        const processedSessionData: ILocSession = {
           type: 'link',
           href,
           text: name,

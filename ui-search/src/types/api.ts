@@ -22,19 +22,18 @@ export type IQuestion =
 
 export type IWSTextSearch = {
   workMode: WORK_MODE.text;
-
   module: WORK_MODULE;
+  systemPrompt: string;
+  // common api configs between different work mode
   query: string;
   question: Array<IQuestion>;
   streaming: boolean;
-  systemPrompt: string;
 } & Pick<
   ILocConfigs,
   // configs -----------------------
   | 'sessionId'
   | 'contextRounds'
   | 'indexName'
-  | 'isCheckedKnowledgeBase'
   | 'isCheckedKnowledgeBase'
   | 'isCheckedScoreAD'
   | 'isCheckedScoreQA'

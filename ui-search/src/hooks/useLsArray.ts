@@ -1,37 +1,39 @@
+import { LSK } from 'src/constants';
 import useLocalStorage from 'use-local-storage';
 
 /**
  * To manage CRUD operations to Arrays in localStorage
  */
-const useLsArray = (
-  key,
+const useLsArray = <T = any>(
+  key: keyof typeof LSK,
   idName = 'id',
-  initValue = [],
-  options = undefined
+  initValue: T[] = [],
+  options?: Parameters<typeof useLocalStorage<T[]>>[2]
 ) => {
-  const [value, setValue] = useLocalStorage(key, initValue, options);
+  const [value, setValue] = useLocalStorage<T[]>(key, initValue, options);
 
   return {
     // commons
     value,
     setValue,
-    add: (newValue) => setValue((prev) => [...prev, newValue]),
+    add: (newValue: T) => setValue((prev) => [...prev, newValue]),
     clear: () => setValue([]),
     reset: () => setValue(initValue),
 
     // Operate by index
     // getIndex: (index) => value[index],
-    delIndex: (index) => setValue((prev) => prev.filter((_, i) => i !== index)),
+    delIndex: (index: number) =>
+      setValue((prev) => prev.filter((_, i) => i !== index)),
     updateIndex: (index, newValue) =>
       setValue((prev) =>
         prev.map((item, i) => (i === index ? newValue : item))
       ),
 
     // Operate by ID
-    getById: (id, arr) => arr.find((item) => item[idName] === id),
-    delById: (id) =>
+    getById: (id: string, arr: T[]) => arr.find((item) => item[idName] === id),
+    delById: (id: string) =>
       setValue((prev) => prev.filter((item) => item[idName] !== id)),
-    updateById: (id, newValue) => {
+    updateById: (id: string, newValue: T) => {
       setValue((prev) => {
         return prev.map((item) => (item[idName] === id ? newValue : item));
       });

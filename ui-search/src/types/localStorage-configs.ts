@@ -58,11 +58,15 @@ export enum LLM_DATA_TYPE {
   sagemaker = 'sagemaker_endpoint',
   thirdParty = 'third_party_api',
 }
+
 export type ILocLlmData = {
   strategyName: string;
   type: LLM_DATA_TYPE;
   embeddingEndpoint: string;
-  modelType: ISagemakerModelTypeValues & IThirdPartyApiModelTypeValues;
+  sagemakerEndpoint?: string;
+  temperature: number;
+  maxTokens: number;
+  modelType: ISagemakerModelTypeValues | IThirdPartyApiModelTypeValues;
   modelName: IThirdPartyApiModelNameValues;
   recordId: GI_UUID;
   apiUrl?: GI_Href;
