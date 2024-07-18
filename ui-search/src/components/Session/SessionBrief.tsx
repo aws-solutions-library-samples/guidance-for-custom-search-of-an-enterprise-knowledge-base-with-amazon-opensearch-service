@@ -54,7 +54,6 @@ const SessionBrief = ({ configs }) => {
     isCheckedScoreAD,
     sessionId,
     prompt,
-    tokenContentCheck,
   } = configs;
 
   const isKendra = searchEngine === 'kendra';
@@ -182,7 +181,6 @@ const SessionBrief = ({ configs }) => {
                 <BoolState bool={isCheckedScoreAD} text="Score Answer-Doc" />
               </>
             )}
-            <BoolState bool={!!tokenContentCheck} text="Content Check" />
           </SpaceBetween>
         </Grid>
       )}

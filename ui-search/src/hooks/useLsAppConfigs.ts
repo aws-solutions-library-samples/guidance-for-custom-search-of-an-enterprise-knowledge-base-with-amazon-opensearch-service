@@ -12,7 +12,7 @@ export const INIT_APP_CONFIGS = {
   responseIfNoDocsFound: 'Cannot find the answer',
   mode: 'light',
   density: 'comfortable',
-  tokenContentCheck: '',
+  // tokenContentCheck: '',
 };
 
 const useLsAppConfigs = () => {

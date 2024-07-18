@@ -7,10 +7,13 @@ import { useParams } from 'react-router-dom';
 import {
   CONVO_TYPE,
   ILocSession,
+  IWSMultiModalSearch,
   IWSResponse,
   IWSSearch,
+  WORK_MODULE,
   WSS_MESSAGE,
 } from 'src/types';
+import { getSystemPrompt } from './useApiOrchestration';
 
 const GENERAL_WSS_ERROR_MSG = 'Error on receiving Websocket data';
 
@@ -70,12 +73,14 @@ const useWSS = (resetQuery, setLoading, answerTimer) => {
             resetQuery();
             setStreamingText(data.text);
             setStreaming(false);
-            if (data.modulesLeftToCall.length) {
+            if (data.modulesLeftToCall?.length) {
+              const moduleToCall = data.modulesLeftToCall[0];
               const newConvos = [
                 {
                   type: CONVO_TYPE.robot,
                   content: {
                     text: 'Processing your query...',
+                    moduleCalled: moduleToCall,
                     timestamp: Date.now(),
                   },
                 },
@@ -85,7 +90,43 @@ const useWSS = (resetQuery, setLoading, answerTimer) => {
                 newSessionList,
                 newConvos
               );
-              socketSendSearch(apiConfigs, nextSessionList);
+              let newConfigs: IWSSearch;
+              if (
+                moduleToCall === WORK_MODULE.RAG &&
+                apiConfigs.isCheckedKnowledgeBase
+              ) {
+                newConfigs = apiConfigs as IWSMultiModalSearch;
+                newConfigs.module = WORK_MODULE.RAG;
+                newConfigs.workFlow = data.modulesLeftToCall;
+                newConfigs.systemPrompt = getSystemPrompt(
+                  moduleToCall,
+                  newConfigs.workFlowLocal
+                );
+                if (data.moduleCalled === WORK_MODULE.CHAT) {
+                  if (data.text && !data.text.includes('query')) {
+                    toast(data.text, { icon: '🤔', duration: 10000 });
+                  } else {
+                    try {
+                      const parsedTextObj = JSON.parse(data.text);
+                      if (!parsedTextObj?.query)
+                        throw new Error(
+                          'LLM output error: no "query" in LLM response'
+                        );
+                      newConfigs.query = parsedTextObj.query;
+                    } catch (error) {
+                      toast(
+                        `Error on parsing/processing data.text: ${data.text}`,
+                        {
+                          icon: '🤔',
+                          duration: 10000,
+                        }
+                      );
+                      console.error(error);
+                    }
+                  }
+                }
+              }
+              socketSendSearch(newConfigs, nextSessionList);
             }
             return;
           case WSS_MESSAGE.success:

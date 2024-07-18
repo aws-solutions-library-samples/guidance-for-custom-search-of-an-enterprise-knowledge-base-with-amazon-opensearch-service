@@ -140,6 +140,7 @@ const useApiOrchestration = (sessionId, resetQuery) => {
             workMode,
             module: WORK_MODULE.RAG,
             workFlow: convertLocFlow(workFlowLocal),
+            workFlowLocal,
             systemPrompt: getSystemPrompt(WORK_MODULE.RAG, workFlowLocal),
           };
 
@@ -199,7 +200,7 @@ export default useApiOrchestration;
 /**
  * Get system prompt from workFlowLocal in configs
  */
-function getSystemPrompt(
+export function getSystemPrompt(
   module: WORK_MODULE,
   workFlowLocal: ILocConfigs['workFlowLocal']
 ) {

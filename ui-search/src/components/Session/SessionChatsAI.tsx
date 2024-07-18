@@ -17,8 +17,7 @@ const SessionChatsAI = ({
     text,
     timestamp,
     scoreQueryAnswer,
-    contentCheckLabel,
-    contentCheckSuggestion,
+    moduleCalled,
     sourceData,
     answerTook,
   },
@@ -38,24 +37,14 @@ const SessionChatsAI = ({
               {/* <Link href={link} target="blank" rel="noopener noreferrer">
                 Link <Icon name="external" />
               </Link> */}
-              {contentCheckLabel && (
-                <Popover
-                  dismissButton={false}
-                  position="top"
-                  content="Label of the content check"
-                  triggerType="custom"
-                >
-                  <Badge color="red">{contentCheckLabel}</Badge>
-                </Popover>
-              )}
-              {contentCheckSuggestion && (
+              {moduleCalled && (
                 <Popover
                   dismissButton={false}
                   position="top"
                   content="Suggestion for the content"
                   triggerType="custom"
                 >
-                  <Badge color="grey">{contentCheckSuggestion}</Badge>
+                  <Badge color="grey">{moduleCalled}</Badge>
                 </Popover>
               )}
               {scoreQueryAnswer && (

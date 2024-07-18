@@ -321,7 +321,6 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                     isCheckedScoreAD,
                     contextRounds,
                     isCheckedEditPrompt,
-                    tokenContentCheck: appConfigs.tokenContentCheck,
                     responseIfNoDocsFound: appConfigs.responseIfNoDocsFound,
                   };
 
@@ -684,7 +683,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                 {!isCheckedEditPrompt ? (
                   <FormField
                     stretch
-                    label="RAG Prompt Summary"
+                    label="RAG System Prompt Summary"
                     description="Generated automatically by the values of Role Name, Task Definition and Output Format"
                     secondaryControl={
                       <SpaceBetween size="xxs">
@@ -698,7 +697,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                             setIsCheckedEditPrompt(true);
                           }}
                         >
-                          Edit Prompt
+                          Edit System Prompt for RAG Module
                         </Button>
                         <small style={{ color: 'grey' }}>
                           ⚠️ You can edit your prompt freely, however, role
@@ -713,7 +712,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
                 ) : (
                   <FormField
                     stretch
-                    label="Edit Prompt"
+                    label="Edit System Prompt for RAG Module"
                     description="Customise your RAG prompt as you please"
                   >
                     <Textarea

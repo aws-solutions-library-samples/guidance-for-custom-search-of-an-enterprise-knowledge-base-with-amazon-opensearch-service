@@ -43,7 +43,6 @@
     "isCheckedScoreAD": false,
     "contextRounds": "0",
     "isCheckedEditPrompt": false,
-    "tokenContentCheck": "",
     "responseIfNoDocsFound": "Cannot find the answer",
     "sessionId": "1714018985502-00036"
   },

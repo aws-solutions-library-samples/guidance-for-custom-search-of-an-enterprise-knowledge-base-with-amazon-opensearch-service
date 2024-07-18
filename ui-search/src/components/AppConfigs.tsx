@@ -93,14 +93,6 @@ const AppConfigs = () => {
             />
 
             <FormInputWithDebounceAndToast
-              label="Token for Content Check"
-              description="Set to enable the ability to check content"
-              placeholder="Please provide access token if content check is required"
-              initValue={appConfigs.tokenContentCheck}
-              handleChange={(v) => setAConfig('tokenContentCheck', v)}
-            />
-
-            <FormInputWithDebounceAndToast
               label="Response text when no doc is found"
               description="Please provide a sample text"
               placeholder="Please provide a sample text"

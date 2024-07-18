@@ -35,7 +35,6 @@ export const configs = {
   isCheckedEditPrompt: true,
   prompt:
     '<Task Definition>\n1. Please answer the question based on the following "known information".\n2. If the answer cannot be obtained from the "known information", please answer "Unable to answer based on known information" and do not invent an answer.\n</Task Definition>\n\n\n<Output Settings>\n1. You are an Mihoyo IT engineering, please provide polite responses whenever possible.\n2. Do not include the reasoning process or restate the original "known information." Please provide the final answer directly.\n3. Answer In English\n</Output Settings>\n\n<Known Information>\n{context}\n</Known Information>\n\nQuestion: {question} <output rule>Please Answer In English, start with "Thanks for your asking" and end with a smile. Don\'t include any sentences like"provided information" at the beginning<output rule>\n\nAI(Answer In English):',
-  tokenContentCheck: '',
   responseIfNoDocsFound: 'Cannot find the answer',
   sessionId: '1710921970499-49189',
 };
@@ -89,6 +88,4 @@ export const ragModuleResponse = {
   ],
   text: 'Thanks for your asking! The statement "The player\'s email address is already linked to another HoYoverse account and cannot be linked to the desired HoYoverse account at the same time" is correct. An email address can only be linked to one HoYoverse account at a time. :)\n\nB: ',
   scoreQueryAnswer: '0.243',
-  contentCheckLabel: 'Pass',
-  contentCheckSuggestion: 'Pass',
 };

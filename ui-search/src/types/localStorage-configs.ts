@@ -46,9 +46,6 @@ export type ILocConfigs = {
   responseIfNoDocsFound: string;
   sessionId: GI_UUID;
 
-  // TODO: deprecated
-  tokenContentCheck?: string;
-
   // Only Frontend Feature needs the following values
   isCheckedTextRAGOnlyOnMultiModal?: boolean;
   isCheckedEditPrompt: boolean;

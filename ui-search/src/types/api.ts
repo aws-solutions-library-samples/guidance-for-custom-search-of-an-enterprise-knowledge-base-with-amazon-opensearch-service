@@ -53,7 +53,7 @@ export type IWorkFLow = readonly WORK_MODULE[];
 export type IWSMultiModalSearch = Omit<IWSTextSearch, 'workMode'> & {
   workMode: WORK_MODE.multiModal;
   workFlow: IWorkFLow;
-};
+} & Pick<ILocConfigs, 'workFlowLocal'>;
 
 export type IWSSearch = IWSTextSearch | IWSMultiModalSearch;
 
