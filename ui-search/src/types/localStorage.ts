@@ -1,11 +1,5 @@
+import { WSS_MESSAGE } from './api';
 import { ILocConfigs } from './localStorage-configs';
-
-export enum WSS_MESSAGE {
-  error = 'error',
-  streaming = 'streaming',
-  streaming_end = 'streaming_end',
-  success = 'success',
-}
 
 export type ILocConvoRobotSourceDatum = {
   id: GI_UUID;

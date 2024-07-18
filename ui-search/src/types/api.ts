@@ -57,22 +57,24 @@ export type IWSMultiModalSearch = Omit<IWSTextSearch, 'workMode'> & {
 
 export type IWSSearch = IWSTextSearch | IWSMultiModalSearch;
 
-export enum WS_MESSAGE_TYPE {
+export enum WSS_MESSAGE {
   streaming = 'streaming',
   streaming_end = 'streaming_end',
   error = 'error',
+  success = 'success',
 }
 
 export type IWSSourceDatum = ILocConvoRobotSourceDatum;
 
 export type IWSResponse =
   | {
-      message: WS_MESSAGE_TYPE.streaming;
+      message: WSS_MESSAGE.streaming;
       moduleCalled: WORK_MODULE;
       text: string;
+      timestamp: GI_Timestamp;
     }
   | {
-      message: WS_MESSAGE_TYPE.streaming_end;
+      message: WSS_MESSAGE.streaming_end | WSS_MESSAGE.success;
       moduleCalled: WORK_MODULE;
       modulesLeftToCall: WORK_MODULE[];
       timestamp: GI_Timestamp;
@@ -81,7 +83,7 @@ export type IWSResponse =
       scoreQueryAnswer: number | string;
     }
   | {
-      message: WS_MESSAGE_TYPE.error;
+      message: WSS_MESSAGE.error;
       moduleCalled: WORK_MODULE;
       timestamp: GI_Timestamp;
       // the value of these two following keys are the same

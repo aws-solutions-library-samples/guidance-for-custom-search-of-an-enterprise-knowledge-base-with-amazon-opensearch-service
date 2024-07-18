@@ -9,6 +9,7 @@ import {
   IQuestion,
   IWSMultiModalSearch,
   IWSTextSearch,
+  IWorkFLow,
   WORK_MODE,
   WORK_MODULE,
 } from 'src/types';
@@ -17,12 +18,8 @@ import useWss from './useWss';
 const useApiOrchestration = (sessionId, resetQuery) => {
   const navigate = useNavigate();
   const answerTimer = useRef(Date.now());
-  const {
-    lsSessionList,
-    lsGetOneSession,
-    lsAddContentToOneSession,
-    setLsSessionList,
-  } = useLsSessionList();
+  const { lsSessionList, lsGetOneSession, lsAddContentToOneSession } =
+    useLsSessionList();
 
   const [configs, setConfigs] = useState<ILocConfigs>();
   const [loading, setLoading] = useState(false);
@@ -98,31 +95,35 @@ const useApiOrchestration = (sessionId, resetQuery) => {
         vecDocsScoreThresholds,
         llmData,
       } = configs;
-      const commonApiConfigs = { query, question, streaming: true };
+      const commonApiConfigs = {
+        query,
+        question,
+        streaming: true,
+        sessionId,
+        contextRounds,
+        indexName,
+        isCheckedKnowledgeBase,
+        isCheckedScoreAD,
+        isCheckedScoreQA,
+        language,
+        responseIfNoDocsFound,
+        searchEngine,
+        searchMethod,
+        vecTopK,
+        txtTopK,
+        txtDocsScoreThresholds,
+        vecDocsScoreThresholds,
+        ...llmData,
+      };
 
       switch (workMode) {
         case WORK_MODE.text: {
           // CALL Module: RAG - with text search config format
           const apiConfigs: IWSTextSearch = {
+            ...commonApiConfigs,
             workMode,
             module: WORK_MODULE.RAG,
             systemPrompt: getSystemPrompt(WORK_MODULE.RAG, workFlowLocal),
-            sessionId,
-            contextRounds,
-            indexName,
-            isCheckedKnowledgeBase,
-            isCheckedScoreAD,
-            isCheckedScoreQA,
-            language,
-            responseIfNoDocsFound,
-            searchEngine,
-            searchMethod,
-            vecTopK,
-            txtTopK,
-            txtDocsScoreThresholds,
-            vecDocsScoreThresholds,
-            ...llmData,
-            ...commonApiConfigs,
           };
 
           if (!configs.isCheckedKnowledgeBase) {
@@ -134,26 +135,26 @@ const useApiOrchestration = (sessionId, resetQuery) => {
         }
 
         case WORK_MODE.multiModal: {
-          // const apiConfigs: IWSMultiModalSearch = {};
-
-          /**
-           * Firstly, call CHAT module, then RAG module
-           * @reused in 2 places on multi-modal search
-           */
-          const callChatThenRAG = () => {
-            // CALL module: CHAT
-            // pre-process the query/question into {query: 'xxx'} format
+          const apiConfigs: IWSMultiModalSearch = {
+            ...commonApiConfigs,
+            workMode,
+            module: WORK_MODULE.RAG,
+            workFlow: convertLocFlow(workFlowLocal),
+            systemPrompt: getSystemPrompt(WORK_MODULE.RAG, workFlowLocal),
           };
 
           const isMultiModalQuery = question.some((q) => q.type === 'image');
           if (isMultiModalQuery) {
-            // query contains images
-            callChatThenRAG();
+            // query contains images: firstly, call CHAT module, then RAG module
+            socketSendSearch(apiConfigs, newSessionList);
           } else {
             // text search only
             if (configs.isCheckedTextRAGOnlyOnMultiModal) {
               if (configs.isCheckedKnowledgeBase) {
+                // Bypassing CHAT module
                 // CALL Module: RAG - with multi-modal search config format
+                apiConfigs.workFlow = [WORK_MODULE.RAG];
+                socketSendSearch(apiConfigs, newSessionList);
               } else {
                 // This condition should never be matched unless errors in store
                 toast(
@@ -171,7 +172,7 @@ const useApiOrchestration = (sessionId, resetQuery) => {
               }
             } else {
               // Call CHAT module, then RAG module
-              callChatThenRAG();
+              socketSendSearch(apiConfigs, newSessionList);
             }
           }
           break;
@@ -180,48 +181,6 @@ const useApiOrchestration = (sessionId, resetQuery) => {
         default:
           break;
       }
-
-      // // TESTING: bypassing multi-modal process by checking if there's any image in the question
-      // const isMultiModalQuery = question.some((q) => q.type === 'image');
-      // // if (!isMultiModalQuery) {
-      // //   return socketSendSearch(query, question, configs, newSessionList);
-      // // }
-
-      // let newQuery = '';
-
-      // const goThroughChatModule = () => {
-      //   if (!configs) return false;
-      //   const {
-      //     workFlow,
-      //     isCheckedTextRAGOnlyOnMultiModal: bypassChat = true,
-      //   } = configs;
-      //   // @ts-ignore
-      //   // TODO: change this to check 'CHAT' in new 4.0 api
-      //   const hasChatInWorkFlow = workFlow?.length > 1;
-      //   if (!hasChatInWorkFlow) return false;
-      //   // if do NOT bypass, always go through chat module
-      //   if (!bypassChat) return true;
-      //   // if bypass, only go through chat module if it's a multi-modal query
-      //   if (isMultiModalQuery) return true;
-      //   return false;
-      // };
-
-      // // TODO: dynamic work flow
-      // if (goThroughChatModule()) {
-      //   newQuery = await getChatModuleResult({ configs, question });
-      //   if (newQuery) {
-      //     // TODO: add newQuery text to existing user query text
-      //     newSessionList = newSessionList.map((s) => {
-      //       if (s.sessionId === sessionId) {
-      //         s.conversations[s.conversations.length - 2].content.text =
-      //           `${query}\n\nQuery processed by CHAT Module:\n${newQuery}`;
-      //       }
-      //       return s;
-      //     });
-      //     setLsSessionList(newSessionList);
-      //   }
-      // }
-      // socketSendSearch(newQuery || query, question, configs, newSessionList);
     },
     [
       lsAddContentToOneSession,
@@ -229,7 +188,6 @@ const useApiOrchestration = (sessionId, resetQuery) => {
       lsSessionList,
       configs,
       socketSendSearch,
-      setLsSessionList,
     ]
   );
 
@@ -251,4 +209,10 @@ function getSystemPrompt(
       `LocalStorage data corrupted! Can NOT find work flow with module: ${module}`
     );
   return flow?.systemPrompt;
+}
+
+function convertLocFlow(
+  workFlowLocal: ILocConfigs['workFlowLocal']
+): IWorkFLow {
+  return workFlowLocal.map((flow) => flow.module);
 }

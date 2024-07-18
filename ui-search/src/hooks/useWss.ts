@@ -4,7 +4,13 @@ import { StreamingContext } from 'src/components/Session';
 import useLsAppConfigs from './useLsAppConfigs';
 import useLsSessionList from './useLsSessionList';
 import { useParams } from 'react-router-dom';
-import { ILocSession, IWSSearch, WSS_MESSAGE } from 'src/types';
+import {
+  CONVO_TYPE,
+  ILocSession,
+  IWSResponse,
+  IWSSearch,
+  WSS_MESSAGE,
+} from 'src/types';
 
 const GENERAL_WSS_ERROR_MSG = 'Error on receiving Websocket data';
 
@@ -13,7 +19,8 @@ const useWSS = (resetQuery, setLoading, answerTimer) => {
   const socket = useRef(null);
   const [isWssConnected, setIsWssConnected] = useState(false);
   const { sessionId } = useParams();
-  const { lsUpdateContentOfLastConvoInOneSession } = useLsSessionList();
+  const { lsUpdateContentOfLastConvoInOneSession, lsAddContentToOneSession } =
+    useLsSessionList();
 
   // NOTE: what to do when websocket connection is established
   const onSocketOpen = useCallback(() => {
@@ -32,11 +39,12 @@ const useWSS = (resetQuery, setLoading, answerTimer) => {
 
   // NOTE: what to do when web receives a message from websocket connection
   const onSocketMessage = useCallback(
-    (dataStr, newSessionList) => {
+    (dataStr: string, apiConfigs: IWSSearch, newSessionList: ILocSession[]) => {
       try {
-        const data = JSON.parse(dataStr);
+        const data: IWSResponse = JSON.parse(dataStr);
 
         if (data.message === WSS_MESSAGE.streaming) {
+          // TESTING: delete this ls update and update on streaming_end
           lsUpdateContentOfLastConvoInOneSession(
             sessionId,
             newSessionList,
@@ -47,10 +55,14 @@ const useWSS = (resetQuery, setLoading, answerTimer) => {
           return;
         }
 
-        lsUpdateContentOfLastConvoInOneSession(sessionId, newSessionList, {
-          ...data,
-          answerTook: Date.now() - answerTimer.current,
-        });
+        newSessionList = lsUpdateContentOfLastConvoInOneSession(
+          sessionId,
+          newSessionList,
+          {
+            ...data,
+            answerTook: Date.now() - answerTimer.current,
+          }
+        );
         setLoading(false);
 
         switch (data.message) {
@@ -58,6 +70,23 @@ const useWSS = (resetQuery, setLoading, answerTimer) => {
             resetQuery();
             setStreamingText(data.text);
             setStreaming(false);
+            if (data.modulesLeftToCall.length) {
+              const newConvos = [
+                {
+                  type: CONVO_TYPE.robot,
+                  content: {
+                    text: 'Processing your query...',
+                    timestamp: Date.now(),
+                  },
+                },
+              ];
+              const nextSessionList = lsAddContentToOneSession(
+                sessionId,
+                newSessionList,
+                newConvos
+              );
+              socketSendSearch(apiConfigs, nextSessionList);
+            }
             return;
           case WSS_MESSAGE.success:
             resetQuery();
@@ -107,9 +136,7 @@ const useWSS = (resetQuery, setLoading, answerTimer) => {
 
   useEffect(() => {
     // create websocket connection
-    if (socket.current?.readyState !== WebSocket.OPEN) {
-      initSocket();
-    }
+    if (socket.current?.readyState !== WebSocket.OPEN) initSocket();
     return () => {
       console.info('WSS closed');
       socket.current?.close();
@@ -127,7 +154,7 @@ const useWSS = (resetQuery, setLoading, answerTimer) => {
         }
 
         socket.current.addEventListener('message', (event) =>
-          onSocketMessage(event.data, newSessionList)
+          onSocketMessage(event.data, apiConfigs, newSessionList)
         );
         // eslint-disable-next-line react-hooks/exhaustive-deps
         // answerTimer = Date.now();
@@ -139,6 +166,7 @@ const useWSS = (resetQuery, setLoading, answerTimer) => {
         toast.error(error?.message);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [sessionId, initSocket, onSocketMessage]
   );
 
