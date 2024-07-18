@@ -85,14 +85,6 @@ const AppConfigs = () => {
             />
 
             <FormInputWithDebounceAndToast
-              label="S3 Bucket Name"
-              description="Where files can be uploaded to"
-              placeholder="Please provide S3 bucket name"
-              initValue={appConfigs.s3FileUpload}
-              handleChange={(v) => setAConfig('s3FileUpload', v)}
-            />
-
-            <FormInputWithDebounceAndToast
               label="Response text when no doc is found"
               description="Please provide a sample text"
               placeholder="Please provide a sample text"

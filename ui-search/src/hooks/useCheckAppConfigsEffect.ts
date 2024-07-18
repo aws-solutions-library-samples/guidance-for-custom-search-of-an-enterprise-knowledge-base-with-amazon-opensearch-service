@@ -18,11 +18,7 @@ const useCheckAppConfigsEffect = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (
-      !appConfigs.urlWss ||
-      !appConfigs.urlApiGateway ||
-      !appConfigs.s3FileUpload
-    ) {
+    if (!appConfigs.urlWss || !appConfigs.urlApiGateway) {
       if (location.pathname !== '/app-configs') navigate('/app-configs');
     }
   }, []);
@@ -35,9 +31,6 @@ const useCheckAppConfigsEffect = () => {
     if (!appConfigs.urlApiGateway) pleaseProvide('API Gateway URL');
   }, [appConfigs.urlApiGateway]);
 
-  useEffect(() => {
-    if (!appConfigs.s3FileUpload) pleaseProvide('S3 Bucket Name');
-  }, [appConfigs.s3FileUpload]);
 };
 
 export default useCheckAppConfigsEffect;

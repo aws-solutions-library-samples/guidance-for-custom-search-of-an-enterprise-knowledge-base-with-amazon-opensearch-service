@@ -8,7 +8,6 @@ export const INIT_APP_CONFIGS = {
   urlApiGateway: JSON.parse(process.env.REACT_APP_DEMO)
     ? process.env.REACT_APP_URL_APIGATEWAY
     : '',
-  s3FileUpload: '',
   responseIfNoDocsFound: 'Cannot find the answer',
   mode: 'light',
   density: 'comfortable',
@@ -24,7 +23,6 @@ const useLsAppConfigs = () => {
   return {
     urlWss: appConfigs.urlWss,
     urlApiGateway: appConfigs.urlApiGateway,
-    s3FileUpload: appConfigs.s3FileUpload,
     setAConfig: (key, value) =>
       setAppConfigs((prev) => ({ ...prev, [key]: value })),
     appConfigs,
