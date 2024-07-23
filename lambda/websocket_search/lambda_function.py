@@ -14,9 +14,23 @@ lam = boto3.client('lambda')
 
 def lambda_handler(event, context):
     logger.debug("sendmessage: %s" % event)
-    evt_body = json.loads(event.get('body', '{}'))
-    # _function_name = evt_body['process_function_name']
+    print('event:',event)
+        
+
     _function_name = 'langchain_processor_qa:prod'
+    
+    if 'body' in event.keys():
+        body = json.loads(event['body'])
+        if 'workMode' in body.keys():
+            if body['workMode'] == 'text':
+                _function_name = 'text_qa:prod'
+            elif body['workMode'] == 'multi-modal':
+                _function_name = 'multi_modal_qa:prod'
+    
+    print('_function_name:',_function_name)      
+    
+    
+    
     try:
         lam.invoke(
             FunctionName=_function_name,

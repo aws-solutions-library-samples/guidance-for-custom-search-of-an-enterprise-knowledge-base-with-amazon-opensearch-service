@@ -34,7 +34,7 @@ master_user = sm_client.get_secret_value(SecretId='opensearch-master-user')['Sec
 
 port = 443
 
-TOP_K = 2
+TOP_K = 3
 
 domain_name = os.environ.get('api_gw')
 stage = 'prod'
@@ -87,8 +87,6 @@ def lambda_handler(event, context):
         query = "hello"
         if "query" in evt_body.keys():
             query = evt_body['query'].strip()
-        elif "q" in evt_body.keys():
-            query = evt_body['q'].strip()
         print('query:', query)
         
         question = []
@@ -99,48 +97,27 @@ def lambda_handler(event, context):
                 question = evt_body['question']
         print('question:',question)
             
-        task = "qa"
-        if "task" in evt_body.keys():
-            task = evt_body['task']
-        elif "action" in evt_body.keys():
-            task = evt_body['action'].lower()
-        print('task:',task)
+        module = "RAG"
+        if "module" in evt_body.keys():
+            module = evt_body['module']
+        print('module:',module)
         
-        if httpMethod == 'POST':
-            task = "chat"
-            question = [{"type": "text", "text": "<user inputs>"}] + question + [{"type": "text", "text": "</user inputs>"}]
-        print('task:', task)
-        
-        if 'body' in event.keys() and requestType == 'websocket':
-            evt_body = evt_body['configs']
-        elif requestType == 'restful':
-                evt_body = evt_body['configs']
-            
-        chatSystemPrompt = ""
-        if "chatSystemPrompt" in evt_body.keys():
-            chatSystemPrompt = evt_body['chatSystemPrompt'].strip()
-        if httpMethod == 'GET':
-            chatSystemPrompt = evt_body['prompt']
-        print('chatSystemPrompt:',chatSystemPrompt)
+        systemPrompt = ""
+        if "systemPrompt" in evt_body.keys():
+            systemPrompt = evt_body['systemPrompt'].strip()
+        print('systemPrompt:',systemPrompt)
 
-        workMode = "text-modal"
-        #workMode = 'multi-modal'
+        workMode = "text"
         if "workMode" in evt_body.keys():
             workMode = evt_body['workMode']
         print('workMode:',workMode)
-        
-        if workMode == 'multi-modal' and len(question) == 0 and len(query) > 0:
-            question = [{'type': 'text', 'text': query}]
-            print('trans question:',question)
 
-        index = INDEX
+        indexName = INDEX
         if "index" in evt_body.keys():
-            index = evt_body['index']
-        elif "ind" in evt_body.keys():
-            index = evt_body['ind']
+            indexName = evt_body['index']
         elif "indexName" in evt_body.keys():
-            index = evt_body['indexName']
-        print('index:', index)
+            indexName = evt_body['indexName']
+        print('indexName:', indexName)
 
         isCheckedContext = False
         if "isCheckedContext" in evt_body.keys():
@@ -168,16 +145,6 @@ def lambda_handler(event, context):
             sessionId = str(evt_body['sessionId'])
         print('sessionId:', sessionId)
 
-        sessionTemplateId = ""
-        if "sessionTemplateId" in evt_body.keys():
-            sessionTemplateId = str(evt_body['sessionTemplateId'])
-        print('sessionTemplateId:', sessionTemplateId)
-
-        taskDefinition = ""
-        if "taskDefinition" in evt_body.keys():
-            taskDefinition = str(evt_body['taskDefinition'])
-        print('taskDefinition:', taskDefinition)
-
         temperature = 0.01
         if "temperature" in evt_body.keys():
             temperature = float(evt_body['temperature'])
@@ -190,7 +157,7 @@ def lambda_handler(event, context):
         if "sagemakerEndpoint" in evt_body.keys():
             sagemakerEndpoint = evt_body['sagemakerEndpoint']
 
-        modelType = 'normal'
+        modelType = 'bedrock'
         if "modelType" in evt_body.keys():
             modelType = evt_body['modelType']
 
@@ -206,17 +173,13 @@ def lambda_handler(event, context):
         if "secretKey" in evt_body.keys():
             secretKey = evt_body['secretKey']
 
-        modelName = 'anthropic.claude-v2'
+        modelName = 'anthropic.claude-3-sonnet-20240229-v1:0'
         if "modelName" in evt_body.keys():
             modelName = evt_body['modelName']
 
         maxTokens = 512
         if "maxTokens" in evt_body.keys():
             maxTokens = int(evt_body['maxTokens'])
-
-        name = ''
-        if "name" in evt_body.keys():
-            name = evt_body['name']
 
         # add para: streaming output
         streaming = True
@@ -226,47 +189,10 @@ def lambda_handler(event, context):
             streaming = False
         print('streaming:',streaming)
         
-        contextRounds = 3
+        contextRounds = 0
         if "contextRounds" in evt_body.keys():
             contextRounds = int(evt_body['contextRounds'])
         print('contextRounds:', contextRounds)
-
-        isCheckedTitanEmbedding = False
-        if "llmData" in evt_body.keys():
-            print('in the llmData')
-            llmData = dict(evt_body['llmData'])
-            if "embeddingEndpoint" in llmData.keys():
-                embeddingEndpoint = llmData['embeddingEndpoint']
-            if "sagemakerEndpoint" in llmData.keys():
-                sagemakerEndpoint = llmData['sagemakerEndpoint']
-            if "modelName" in llmData.keys():
-                modelName = llmData['modelName']
-            if "modelType" in llmData.keys():
-                modelType = llmData['modelType']
-            recordId = ''
-            if "recordId" in llmData.keys():
-                recordId = llmData['recordId']
-            if "apiUrl" in llmData.keys():
-                apiUrl = llmData['apiUrl']
-            if "apiKey" in llmData.keys():
-                apiKey = llmData['apiKey']
-            if "secretKey" in llmData.keys():
-                secretKey = llmData['secretKey']
-            if "isCheckedTitanEmbedding" in llmData.keys():
-                isCheckedTitanEmbedding = ast.literal_eval(str(llmData['isCheckedTitanEmbedding']).title())
-            print('isCheckedTitanEmbedding:', isCheckedTitanEmbedding)
-
-            if "temperature" in llmData.keys():
-                temperature = float(llmData['temperature'])
-            
-            if "maxTokens" in llmData.keys():
-                maxTokens = int(llmData['maxTokens'])
-            print('temperature:',temperature)
-            print('maxTokens:',maxTokens)
-                
-        if isCheckedTitanEmbedding or embeddingEndpoint == "bedrock-titan-embed":
-            embeddingEndpoint = "amazon.titan-embed-text-v1"
-        print('embeddingEndpoint:', embeddingEndpoint)
 
         searchEngine = "opensearch"
         if not search_engine_opensearch and search_engine_kendra:
@@ -302,7 +228,7 @@ def lambda_handler(event, context):
         printTime("before init_cfg")
         connectionId = str(event.get('requestContext', {}).get('connectionId'))
         search_qa = SmartSearchQA()
-        search_qa.init_cfg(index,
+        search_qa.init_cfg(indexName,
                            username,
                            password,
                            host,
@@ -359,8 +285,11 @@ def lambda_handler(event, context):
             contentCheckLabel = "Pass"
             contentCheckSuggestion = "Pass"
 
-            if httpMethod == 'POST' or task == "chat" or not isCheckedKnowledgeBase:
-
+            print('module:',module)
+            print('isCheckedKnowledgeBase:',isCheckedKnowledgeBase)
+            if httpMethod == 'POST' or module == "CHAT" or not isCheckedKnowledgeBase:
+                print('in the chat module')
+                
                 if workMode == 'multi-modal':
                     if language == "chinese":
                         prompt_template = CLAUDE3_MULTIMODEL_CN
@@ -385,36 +314,30 @@ def lambda_handler(event, context):
                             prompt_template = ENGLISH_CHAT_PROMPT_TEMPLATE
                             if modelType == 'llama2':
                                 prompt_template = EN_CHAT_PROMPT_LLAMA2
-                if "prompt" in evt_body.keys() and len(evt_body['prompt']) > 0:
-                    prompt_template = evt_body['prompt']
+                # if "prompt" in evt_body.keys() and len(evt_body['prompt']) > 0:
+                #     prompt_template = evt_body['prompt']
+                
+                if len(systemPrompt) > 0: 
+                    prompt_template = systemPrompt
 
                 if modelType == 'llama2':
                     result = search_qa.get_answer_from_chat_llama2(query, prompt_template, table_name, sessionId)
                 else:
-                    if workMode == 'multi-modal':
-                        result = search_qa.get_answer_from_multimodel(query,
-                                                                      question,
-                                                                      task,
-                                                                      isCheckedKnowledgeBase,
-                                                                      chatSystemPrompt,
-                                                                      sessionId,
-                                                                      table_name,
-                                                                      context_rounds=contextRounds,
-                                                                      )
-                    else:
-                        result = search_qa.get_chat(query,
-                                                    language,
-                                                    prompt_template,
-                                                    table_name,
-                                                    sessionId,
-                                                    modelType
-                                                    )
+                   
+                    result = search_qa.get_chat(query,
+                                                language,
+                                                prompt_template,
+                                                table_name,
+                                                sessionId,
+                                                modelType
+                                                )
 
                 # print('chat result:',result)
 
                 response['body'] = json.dumps(
                     {
                         'timestamp': time.time() * 1000,
+                        'moduleCalled':module,
                         'sourceData': [],
                         'text': result,
                         'contentCheckLabel': contentCheckLabel,
@@ -422,7 +345,8 @@ def lambda_handler(event, context):
                         'message':'success'
                     })
 
-            elif task == "qa" or task == "rag" or isCheckedKnowledgeBase:
+            elif module == "RAG" or isCheckedKnowledgeBase:
+                print('in the rag module')
 
                 if language == "chinese":
                     prompt_template = CHINESE_PROMPT_TEMPLATE
@@ -439,23 +363,26 @@ def lambda_handler(event, context):
                         prompt_template = EN_CHAT_PROMPT_LLAMA2
                         condense_question_prompt = EN_CONDENSE_PROMPT_LLAMA2
                     responseIfNoDocsFound = "Can't find answer"
-                if "prompt" in evt_body.keys() and len(evt_body['prompt']) > 0:
-                    prompt_template = evt_body['prompt']
+                    
+                if len(systemPrompt) > 0: 
+                    prompt_template = systemPrompt
+                # if "prompt" in evt_body.keys() and len(evt_body['prompt']) > 0:
+                    # prompt_template = evt_body['prompt']
 
-                topK = TOP_K
-                if "topK" in evt_body.keys():
-                    topK = int(evt_body['topK'])
-                print('topK:', topK)
+                vecTopK = TOP_K
+                if "vecTopK" in evt_body.keys():
+                    vecTopK = int(evt_body['vecTopK'])
+                print('vecTopK:', vecTopK)
 
                 searchMethod = 'vector'  # vector/text/mix
                 if "searchMethod" in evt_body.keys():
                     searchMethod = evt_body['searchMethod']
                 print('searchMethod:', searchMethod)
 
-                txtDocsNum = 0
-                if "txtDocsNum" in evt_body.keys() and evt_body['txtDocsNum'] is not None:
-                    txtDocsNum = int(evt_body['txtDocsNum'])
-                print('txtDocsNum:', txtDocsNum)
+                txtTopK = 0
+                if "txtTopK" in evt_body.keys() and evt_body['txtTopK'] is not None:
+                    txtTopK = int(evt_body['txtTopK'])
+                print('txtTopK:', txtTopK)
 
                 if "responseIfNoDocsFound" in evt_body.keys():
                     responseIfNoDocsFound = evt_body['responseIfNoDocsFound']
@@ -492,8 +419,8 @@ def lambda_handler(event, context):
                                                                              table_name,
                                                                              prompt_template=prompt_template,
                                                                              condense_question_prompt=condense_question_prompt,
-                                                                             top_k=topK,
-                                                                             txt_docs_num=txtDocsNum,
+                                                                             top_k=vecTopK,
+                                                                             txt_docs_num=txtTopK,
                                                                              response_if_no_docs_found=responseIfNoDocsFound,
                                                                              vec_docs_score_thresholds=vecDocsScoreThresholds,
                                                                              txt_docs_score_thresholds=txtDocsScoreThresholds,
@@ -505,42 +432,21 @@ def lambda_handler(event, context):
                     _moderation_reason = "NOT APPLICABLE"
 
                 else:
-                    printTime("before search_qa.get_answer_from_conversational")
-                    if workMode == 'multi-modal':
-                        result = search_qa.get_answer_from_multimodel(query,
-                                                                      question,
-                                                                      task,
-                                                                      isCheckedKnowledgeBase,
-                                                                      chatSystemPrompt,
+                    result = search_qa.get_answer_from_conversational(query,
                                                                       sessionId,
                                                                       table_name,
-                                                                      top_k=topK,
+                                                                      prompt_template=prompt_template,
+                                                                      condense_question_prompt=condense_question_prompt,
                                                                       search_method=searchMethod,
-                                                                      txt_docs_num=txtDocsNum,
+                                                                      top_k=vecTopK,
+                                                                      txt_docs_num=txtTopK,
                                                                       response_if_no_docs_found=responseIfNoDocsFound,
                                                                       vec_docs_score_thresholds=vecDocsScoreThresholds,
                                                                       txt_docs_score_thresholds=txtDocsScoreThresholds,
                                                                       context_rounds=contextRounds,
                                                                       text_field=textField,
                                                                       vector_field=vectorField,
-                                                                      image_field=imageField,
                                                                       )
-                    else:
-                        result = search_qa.get_answer_from_conversational(query,
-                                                                          sessionId,
-                                                                          table_name,
-                                                                          prompt_template=prompt_template,
-                                                                          condense_question_prompt=condense_question_prompt,
-                                                                          search_method=searchMethod,
-                                                                          top_k=topK,
-                                                                          txt_docs_num=txtDocsNum,
-                                                                          response_if_no_docs_found=responseIfNoDocsFound,
-                                                                          vec_docs_score_thresholds=vecDocsScoreThresholds,
-                                                                          txt_docs_score_thresholds=txtDocsScoreThresholds,
-                                                                          context_rounds=contextRounds,
-                                                                          text_field=textField,
-                                                                          vector_field=vectorField,
-                                                                          )
 
                 print('result:', result)
                 if len(result) > 0 and 'answer' in result.keys():
@@ -551,14 +457,11 @@ def lambda_handler(event, context):
 
                 source_docs = []
                 query_docs_scores = []
-                images = ''
                 if len(result) > 0 and 'source_documents' in result.keys():
                     source_documents = result['source_documents']
                     if searchEngine == "opensearch":
                         source_docs = [doc[0] for doc in source_documents]
                         query_docs_scores = [doc[1] for doc in source_documents]
-                        if len(source_documents) > 0 and len(source_documents[0]) == 3:
-                            images = source_documents[0][2]
                         # sentences = [doc[2] for doc in source_documents]
                     elif searchEngine == "kendra":
                         source_docs = source_documents
@@ -569,10 +472,11 @@ def lambda_handler(event, context):
 
                 #if enable streaming， return the souce docs before caculating the scores
                 if streaming and requestType == 'websocket':
-                    source_list=buildSourceList(searchEngine, source_docs, images, [], [])
+                    source_list=buildSourceList(searchEngine, source_docs, [], [])
                     response['body'] = json.dumps(
                         {
                             'message': 'streaming',
+                            'moduleCalled':module,
                             'timestamp': time.time() * 1000,
                             'sourceData': source_list,
                             'text': answer,
@@ -629,11 +533,12 @@ def lambda_handler(event, context):
                 print('2.answer_docs_scores:', answer_docs_scores)
 
                 #update the source list according the query_docs_scores and answer_docs_scores
-                source_list = buildSourceList(searchEngine, source_docs, images, query_docs_scores, answer_docs_scores)
+                source_list = buildSourceList(searchEngine, source_docs, query_docs_scores, answer_docs_scores)
 
                 response['body'] = json.dumps(
                     {
                         'message': 'streaming_end',
+                        'moduleCalled':module,
                         'timestamp': time.time() * 1000,
                         'sourceData': source_list,
                         'text': answer,
@@ -643,36 +548,12 @@ def lambda_handler(event, context):
 
                     })
 
-            elif task == "summarize":
-
-                prompt_template = SUMMARIZE_PROMPT_TEMPLATE
-                if "prompt" in evt_body.keys():
-                    prompt_template = evt_body['prompt']
-
-                chain_type = "stuff"
-                combine_prompt_template = COMBINE_SUMMARIZE_PROMPT_TEMPLATE
-
-                if "chain_type" in evt_body.keys():
-                    chain_type = evt_body['chain_type']
-                    if chain_type == "map_reduce":
-                        if "combine_prompt" in evt_body.keys():
-                            combine_prompt_template = evt_body['combine_prompt']
-
-                result = search_qa.get_summarize(query, chain_type, prompt_template, combine_prompt_template)
-
-                response['body'] = json.dumps(
-                    {
-                        'datetime': time.time() * 1000,
-                        'summarize': result,
-                        'contentCheckLabel': contentCheckLabel,
-                        'contentCheckSuggestion': contentCheckSuggestion,
-                    })
-
     except Exception as e:
         traceback.print_exc()
         response['body'] = json.dumps(
             {
                 'timestamp': time.time() * 1000,
+                'moduleCalled':module,
                 'text': str(e),
                 'errorMessage': str(e),
                 'sourceData': [],
@@ -721,7 +602,7 @@ def sendWebSocket(msgbody,event):
     api_res = apigw_management.post_to_connection(ConnectionId=connectionId, Data=msgbody)
     print('api_res', api_res)
 
-def buildSourceList(searchEngine, source_docs, images,query_docs_scores, answer_docs_scores):
+def buildSourceList(searchEngine, source_docs,query_docs_scores, answer_docs_scores):
     source_list=[]
     if not query_docs_scores or len(query_docs_scores) == 0:
         query_docs_scores = [-1] * len(source_docs)
@@ -731,7 +612,7 @@ def buildSourceList(searchEngine, source_docs, images,query_docs_scores, answer_
         source = {}
         source["id"] = i
         source["title"] = ''
-        # source["source"] = source_docs[i].metadata
+        source["source"] = source_docs[i].metadata
         if searchEngine == "opensearch" or searchEngine == "zilliz":
             if 'source' in source_docs[i].metadata.keys():
                 source["title"] = os.path.split(source_docs[i].metadata['source'])[-1]
@@ -739,12 +620,9 @@ def buildSourceList(searchEngine, source_docs, images,query_docs_scores, answer_
                 source["title"] = os.path.split(source_docs[i].metadata['sources'])[-1]
             elif 'title' in source_docs[i].metadata.keys():
                 source["title"] = source_docs[i].metadata['title']
-                
-        if len(images) > 0 and i == 0:
-            source['image'] = images
             
         source["titleLink"] = "http://#"
-        source["paragraph"] = source_docs[i].page_content.replace("\n", "")[:1000]
+        source["paragraph"] = source_docs[i].page_content.replace("\n", "")
         source["sentence"] = source_docs[i].metadata['sentence'] if (searchEngine == "opensearch" or searchEngine == "zilliz") and 'sentence' in source_docs[i].metadata.keys() \
             else source_docs[i].page_content.replace("\n", "")
         if (searchEngine == "opensearch" or searchEngine == "zilliz") and len(query_docs_scores) > 0:
