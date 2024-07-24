@@ -1,22 +1,23 @@
 import {
   Box,
   Button,
-  ColumnLayout,
-  Grid,
   Container,
+  ExpandableSection,
+  Grid,
   Header,
   Popover,
   SpaceBetween,
   StatusIndicator,
-  ExpandableSection,
 } from '@cloudscape-design/components';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { DEFAULT_WORK_MODE } from 'src/constants';
+import { getSystemPrompt } from 'src/hooks/useApiOrchestration';
 import { useSessionStore } from 'src/stores/session';
+import { WORK_MODE, WORK_MODULE } from 'src/types';
+import Divider from '../Divider';
 import StateLoading from '../StateLoading';
 import ValueWithLabel from '../ValueWithLabel';
-import Divider from '../Divider';
-import { DEFAULT_WORK_FLOW, DEFAULT_WORK_MODE } from 'src/constants';
 
 const SIZE = 'l';
 const SessionBrief = ({ configs }) => {
@@ -31,19 +32,12 @@ const SessionBrief = ({ configs }) => {
     searchEngine,
     llmData,
     workMode = DEFAULT_WORK_MODE,
-    workFlow = DEFAULT_WORK_FLOW,
-    chatSystemPrompt,
-    role,
+    isCheckedTextRAGOnlyOnMultiModal,
+    workFlowLocal,
     language,
-    taskDefinition,
-    outputFormat,
     contextRounds,
-    isCheckedGenerateReport,
-    isCheckedContext,
     isCheckedKnowledgeBase,
-    isCheckedMapReduce,
     indexName,
-    kendraIndexId,
     vecTopK,
     searchMethod,
     txtTopK,
@@ -53,10 +47,10 @@ const SessionBrief = ({ configs }) => {
     isCheckedScoreQD,
     isCheckedScoreAD,
     sessionId,
-    prompt,
   } = configs;
 
-  const isKendra = searchEngine === 'kendra';
+  const chatSystemPrompt = getSystemPrompt(WORK_MODULE.CHAT, workFlowLocal);
+  const ragSystemPrompt = getSystemPrompt(WORK_MODULE.RAG, workFlowLocal);
 
   return (
     <Container
@@ -120,18 +114,11 @@ const SessionBrief = ({ configs }) => {
               {llmData?.strategyName}
             </ValueWithLabel>
             <ValueWithLabel label="Language">{language}</ValueWithLabel>
-            {isKendra ? (
-              <ValueWithLabel label="Kendra Index ID">
-                {kendraIndexId}
-              </ValueWithLabel>
-            ) : (
-              <ValueWithLabel label="Index Name">{indexName}</ValueWithLabel>
-            )}
-            {isKendra ? null : (
-              <ValueWithLabel label="Search Method">
-                {searchMethod}
-              </ValueWithLabel>
-            )}
+
+            <ValueWithLabel label="Index Name">{indexName}</ValueWithLabel>
+            <ValueWithLabel label="Search Method">
+              {searchMethod}
+            </ValueWithLabel>
             <ValueWithLabel label="Context Rounds">
               {contextRounds ?? 3}
             </ValueWithLabel>
@@ -147,40 +134,35 @@ const SessionBrief = ({ configs }) => {
             ) : null}
             <ValueWithLabel label="RAG System Prompt">
               <ExpandableSection defaultExpanded headerText="view details">
-                {prompt}
+                {ragSystemPrompt}
               </ExpandableSection>
             </ValueWithLabel>
           </SpaceBetween>
 
           <SpaceBetween size="xs">
-            {!isKendra && (
-              <>
-                <ValueWithLabel label="Number of doc for vector search">
-                  {vecTopK}
-                </ValueWithLabel>
-                <ValueWithLabel label="Number of doc for text search">
-                  {txtTopK}
-                </ValueWithLabel>
-                <ValueWithLabel label="Threshold for vector search">
-                  {vecDocsScoreThresholds}
-                </ValueWithLabel>
-                <ValueWithLabel label="Threshold for text search">
-                  {txtDocsScoreThresholds}
-                </ValueWithLabel>
-              </>
-            )}
+            <ValueWithLabel label="Number of doc for vector search">
+              {vecTopK}
+            </ValueWithLabel>
+            <ValueWithLabel label="Number of doc for text search">
+              {txtTopK}
+            </ValueWithLabel>
+            <ValueWithLabel label="Threshold for vector search">
+              {vecDocsScoreThresholds}
+            </ValueWithLabel>
+            <ValueWithLabel label="Threshold for text search">
+              {txtDocsScoreThresholds}
+            </ValueWithLabel>
             <Divider />
-            <BoolState bool={isCheckedKnowledgeBase} text="Knowledge Base" />
-            {!isKendra && (
-              <>
-                <BoolState
-                  bool={isCheckedScoreQA}
-                  text="Score Question-Answer"
-                />
-                <BoolState bool={isCheckedScoreQD} text="Score Question-Doc" />
-                <BoolState bool={isCheckedScoreAD} text="Score Answer-Doc" />
-              </>
+            {workMode === WORK_MODE.multiModal && (
+              <BoolState
+                bool={isCheckedTextRAGOnlyOnMultiModal}
+                text="Bypass CHAT"
+              />
             )}
+            <BoolState bool={isCheckedKnowledgeBase} text="Knowledge Base" />
+            <BoolState bool={isCheckedScoreQA} text="Score Question-Answer" />
+            <BoolState bool={isCheckedScoreQD} text="Score Question-Doc" />
+            <BoolState bool={isCheckedScoreAD} text="Score Answer-Doc" />
           </SpaceBetween>
         </Grid>
       )}

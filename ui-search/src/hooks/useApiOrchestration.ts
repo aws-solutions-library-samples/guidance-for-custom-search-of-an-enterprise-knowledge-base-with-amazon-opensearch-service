@@ -138,10 +138,10 @@ const useApiOrchestration = (sessionId, resetQuery) => {
           const apiConfigs: IWSMultiModalSearch = {
             ...commonApiConfigs,
             workMode,
-            module: WORK_MODULE.RAG,
+            module: WORK_MODULE.CHAT,
             workFlow: convertLocFlow(workFlowLocal),
             workFlowLocal,
-            systemPrompt: getSystemPrompt(WORK_MODULE.RAG, workFlowLocal),
+            systemPrompt: getSystemPrompt(WORK_MODULE.CHAT, workFlowLocal),
           };
 
           const isMultiModalQuery = question.some((q) => q.type === 'image');
@@ -155,6 +155,11 @@ const useApiOrchestration = (sessionId, resetQuery) => {
                 // Bypassing CHAT module
                 // CALL Module: RAG - with multi-modal search config format
                 apiConfigs.workFlow = [WORK_MODULE.RAG];
+                apiConfigs.module = WORK_MODULE.RAG;
+                apiConfigs.systemPrompt = getSystemPrompt(
+                  WORK_MODULE.RAG,
+                  workFlowLocal
+                );
                 socketSendSearch(apiConfigs, newSessionList);
               } else {
                 // This condition should never be matched unless errors in store
@@ -204,12 +209,21 @@ export function getSystemPrompt(
   module: WORK_MODULE,
   workFlowLocal: ILocConfigs['workFlowLocal']
 ) {
+  if (!workFlowLocal || !workFlowLocal[0]?.module) {
+    toast(`LocalStorage data ERROR, 'workFlowLocal': ${workFlowLocal}`, {
+      icon: '😕',
+    });
+    return '';
+  }
   const flow = workFlowLocal.find((flow) => flow.module === module);
-  if (!flow)
-    toast(
-      `LocalStorage data corrupted! Can NOT find work flow with module: ${module}`
-    );
-  return flow?.systemPrompt;
+  if (!flow) {
+    // toast(
+    //   `LocalStorage data corrupted! Can NOT find work flow with module: ${module}`,
+    //   { icon: '😕' }
+    // );
+    return '';
+  }
+  return flow.systemPrompt;
 }
 
 function convertLocFlow(
