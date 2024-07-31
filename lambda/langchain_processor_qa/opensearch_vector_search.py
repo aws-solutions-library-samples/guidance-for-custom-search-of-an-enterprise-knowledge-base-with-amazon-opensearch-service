@@ -327,7 +327,7 @@ def _get_aos_docs(question,
     
     num_output = 10
     source_includes = [text_field,metadata_field]
-    fields = [text_field]
+    fields = ["sentence"]
     headers = { "Content-Type": "application/json" }
     url = f'https://{host}/{index}/_search'
     print("url:",url)
@@ -349,15 +349,16 @@ def _get_aos_docs(question,
     clean = []
     aos_docs = []
     for hit in r['hits']['hits']:
-        document_score = float(hit['_score'])/10
+        document_score = float(hit['_score'])
         document_paragraph = hit['_source'][text_field]
         document_metadata = hit['_source'][metadata_field]
         if  document_paragraph  not in clean:
            #Remove duplicate paragraph
             clean.append(document_paragraph)
-            document_paragraph = "\n".join(document_paragraph)
             if work_mode == 'multi-modal':
-                image = hit['_source'][image_field]
+                image = ''
+                if image_field in hit['_source'].keys():
+                    image = hit['_source'][image_field]
                 aos_docs.append(
                     (Document(page_content=document_paragraph,metadata=document_metadata),
                      document_score,

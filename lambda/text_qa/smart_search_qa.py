@@ -67,15 +67,17 @@ class SmartSearchQA:
             }       
             self.llm.model_kwargs = parameters
         elif model_type == "bedrock":
-            if streaming:
-                self.llm = init_model_bedrock_withstreaming(model_name,callbackHandler)
-                self.condense_question_llm=init_model_bedrock(model_name)
-            else:
-                self.llm = init_model_bedrock(model_name)
             parameters={
                 "temperature":temperature,
                 "max_tokens":max_tokens
             }
+            if streaming:
+                self.llm = init_model_bedrock_withstreaming(model_name,callbackHandler)
+                self.condense_question_llm=init_model_bedrock(model_name)
+                self.condense_question_llm.model_kwargs = parameters
+            else:
+                self.llm = init_model_bedrock(model_name)
+            
             self.llm.model_kwargs = parameters
         elif model_type == 'llm_api':
             if model_name.find('Baichuan2') >= 0:
@@ -320,29 +322,6 @@ class SmartSearchQA:
 
         
         answer=result['answer']
-        
-        # print('answer:',answer)
-        # print('response_if_no_docs_found:',response_if_no_docs_found)
-        # if answer == response_if_no_docs_found:
-        #     vec_docs_score_thresholds = 0
-        #     txt_docs_score_thresholds = 0
-        #     retriever = self.get_retriever(top_k,search_method,txt_docs_num,vec_docs_score_thresholds,txt_docs_score_thresholds,text_field,vector_field)
-        #     docs = retriever.get_relevant_documents(query)
-        #     print('docs:',docs)
-        #     if len(docs) > 0:
-        #         answer = '找不到这个问题的答案，您可以问以下问题：'
-        #         title_set = set()
-        #         for doc in docs:
-        #             title = doc[0].metadata['sentence']
-        #             if title.find('标题') >=0 and title.find('内容') >=0:
-        #                 title = title.split(':')[1][:-3]
-        #             elif title.find('标题') >=0:
-        #                 title = title.split(':')[1]
-        #             title_set.add(title.strip())
-        #         for title in iter(title_set):
-        #             answer += ('\n' + title)
-        #     print('new answer:',answer)
-        #     result['answer'] = answer
 
         if len(session_id) > 0:
             new_query=result['generated_question']
@@ -452,7 +431,7 @@ class SmartSearchQA:
 
     def get_answer_from_multimodel(self,query,
                                         question: list=[],
-                                        task: str='qa',
+                                        module: str='qa',
                                         isCheckedKnowledgeBase: bool=True,
                                         system_prompt: str='',
                                         session_id: str='',
@@ -506,7 +485,7 @@ class SmartSearchQA:
             self.llm.model_kwargs['history'] = history
         
         result = {}
-        if (task == 'qa' or task == 'search') and isCheckedKnowledgeBase:
+        if module == 'RAG' and isCheckedKnowledgeBase:
             work_mode = "multi-modal"
             retriever = self.get_retriever(top_k,search_method,txt_docs_num,vec_docs_score_thresholds,txt_docs_score_thresholds,text_field,vector_field,image_field,work_mode)
             docs = retriever.get_relevant_documents(query)
@@ -536,8 +515,11 @@ class SmartSearchQA:
             else:
                 result['answer'] = response_if_no_docs_found
                 
-        elif task == 'chat' or not isCheckedKnowledgeBase:
+        elif module == 'Chat' or not isCheckedKnowledgeBase:
             result = self.llm(prompt='')
+            
+        if len(session_id) > 0 and len(table_name) > 0 and context_rounds > 0:
+            update_session_info(table_name, session_id, query, str(result), module)
             
         print('result:',result)
         return result

@@ -120,7 +120,7 @@ def lambda_handler(event, context):
 
         workFlow = []
         if "workFlow" in evt_body.keys():
-            workFlow = ast.literal_eval(evt_body['workFlow'])
+            workFlow = evt_body['workFlow']
         print('workFlow:',workFlow)
         modulesLeftToCall = []
         if len(workFlow) >1 :
@@ -311,16 +311,30 @@ def lambda_handler(event, context):
                                                               context_rounds=contextRounds,
                                                               )
 
+                if streaming and requestType == 'websocket':
+                    response['body'] = json.dumps(
+                        {
+                            'timestamp': time.time() * 1000,
+                            'moduleCalled':module,
+                            'modulesLeftToCall':modulesLeftToCall,
+                            'sourceData': [],
+                            'text': str(result),
+                            'contentCheckLabel': contentCheckLabel,
+                            'contentCheckSuggestion': contentCheckSuggestion,
+                            'message':'streaming'
+                        })
+                    sendWebSocket(response['body'],event)
+                    
                 response['body'] = json.dumps(
                     {
-                        'timestamp': time.time() * 1000,
+                        'message': 'streaming_end',
                         'moduleCalled':module,
                         'modulesLeftToCall':modulesLeftToCall,
+                        'timestamp': time.time() * 1000,
                         'sourceData': [],
-                        'text': result,
+                        'text': str(result),
                         'contentCheckLabel': contentCheckLabel,
-                        'contentCheckSuggestion': contentCheckSuggestion,
-                        'message':'success'
+                        'contentCheckSuggestion': contentCheckSuggestion
                     })
 
             elif module == "RAG" or isCheckedKnowledgeBase:
