@@ -53,9 +53,6 @@ class LambdaStack(Stack):
         )
 
         print("These functions are selected (configuration is in cdk.json context 'selection'):  ", func_selection)
-
-        if 'langchain_processor_qa' in func_selection:
-            langchain_qa_func = self.create_langchain_qa_func(search_engine_key=search_engine_key)
         
         if 'text_qa' in func_selection:
             text_qa_func = self.create_text_qa_func(search_engine_key=search_engine_key)
@@ -190,14 +187,6 @@ class LambdaStack(Stack):
         cdk.CfnOutput(self, 'web_socket_api', value=web_socket_url, export_name='WebSocketApi')
 
         chat_table = self.create_chat_talbe()
-        if 'langchain_processor_qa' in func_selection and langchain_qa_func is not None:
-            # langchain_qa_func加wss gw 环境变量
-            langchain_qa_func.add_environment("api_gw", web_socket_api.api_id)
-            self.create_apigw_resource_method_for_langchain_qa(
-                api=api,
-                langchain_processor_qa_function=langchain_qa_func,
-                chat_table=chat_table
-            )
             
         if 'text_qa' in func_selection and text_qa_func is not None:
             text_qa_func.add_environment("api_gw", web_socket_api.api_id)
@@ -298,119 +287,6 @@ class LambdaStack(Stack):
             reserved_concurrent_executions=20
         )
         return lambda_function
-
-    def create_langchain_qa_func(self, search_engine_key):
-
-        index = self.node.try_get_context("index")
-        embedding_endpoint_name = self.node.try_get_context("embedding_endpoint_name")
-        llm_endpoint_name = self.node.try_get_context("llm_endpoint_name")
-        language = self.node.try_get_context("language")
-        search_engine_opensearch = self.node.try_get_context("search_engine_opensearch")
-        search_engine_kendra = self.node.try_get_context("search_engine_kendra")
-        search_engine_zilliz = self.node.try_get_context("search_engine_zilliz")
-        zilliz_endpoint = self.node.try_get_context("zilliz_endpoint")
-        zilliz_token = self.node.try_get_context("zilliz_token")
-        bedrock_aws_region = self.node.try_get_context('bedrock_aws_region')
-
-        # configure the lambda role
-        if search_engine_kendra:
-            _langchain_processor_role_policy = _iam.PolicyStatement(
-                actions=[
-                    'sagemaker:InvokeEndpointAsync',
-                    'sagemaker:InvokeEndpoint',
-                    'lambda:AWSLambdaBasicExecutionRole',
-                    'secretsmanager:SecretsManagerReadWrite',
-                    'kendra:DescribeIndex',
-                    'kendra:Query',
-                    'execute-api:*',  ##############
-                    'bedrock:*'
-                ],
-                resources=['*']  # 可根据需求进行更改
-            )
-        else:
-            _langchain_processor_role_policy = _iam.PolicyStatement(
-                actions=[
-                    'sagemaker:InvokeEndpointAsync',
-                    'sagemaker:InvokeEndpoint',
-                    'lambda:AWSLambdaBasicExecutionRole',
-                    'secretsmanager:SecretsManagerReadWrite',
-                    'es:ESHttpPost',
-                    'bedrock:*',
-                    'execute-api:*'  ##############
-
-                ],
-                resources=['*']  # 可同时使用opensearch、kendra和zilliz
-            )
-        langchain_processor_role = _iam.Role(
-            self, 'langchain_processor_role',
-            assumed_by=_iam.ServicePrincipal('lambda.amazonaws.com')
-        )
-        langchain_processor_role.add_to_policy(_langchain_processor_role_policy)
-
-        langchain_processor_role.add_managed_policy(
-            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaRole")
-        )
-
-        langchain_processor_role.add_managed_policy(
-            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
-        )
-
-        langchain_processor_role.add_managed_policy(
-            _iam.ManagedPolicy.from_aws_managed_policy_name("SecretsManagerReadWrite")
-        )
-
-        langchain_processor_role.add_managed_policy(
-            _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonDynamoDBFullAccess")
-        )
-        if self.node.try_get_context('search_engine_kendra'):
-            langchain_processor_role.add_managed_policy(
-                _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonKendraFullAccess")
-            )
-
-        # add langchain processor for smart query and answer
-        function_name_qa = 'langchain_processor_qa'
-        langchain_processor_qa_function = _lambda.Function(
-            self, function_name_qa,
-            function_name=function_name_qa,
-            runtime=_lambda.Runtime.PYTHON_3_9,
-            role=langchain_processor_role,
-            layers=[self.langchain_processor_qa_layer],
-            code=_lambda.Code.from_asset('../lambda/' + function_name_qa),
-            handler='lambda_function' + '.lambda_handler',
-            memory_size=256,
-            timeout=Duration.minutes(10),
-            reserved_concurrent_executions=50
-        )
-        langchain_processor_qa_function.add_environment("host", search_engine_key) 
-        langchain_processor_qa_function.add_environment("index", index)
-        langchain_processor_qa_function.add_environment("language", language)
-        langchain_processor_qa_function.add_environment("embedding_endpoint_name", embedding_endpoint_name)
-        langchain_processor_qa_function.add_environment("llm_endpoint_name", llm_endpoint_name)
-        langchain_processor_qa_function.add_environment("search_engine_opensearch", str(search_engine_opensearch))
-        langchain_processor_qa_function.add_environment("search_engine_kendra", str(search_engine_kendra))
-        langchain_processor_qa_function.add_environment("search_engine_zilliz", str(search_engine_zilliz))
-        langchain_processor_qa_function.add_environment("zilliz_endpoint", str(zilliz_endpoint))
-        langchain_processor_qa_function.add_environment("zilliz_token", str(zilliz_token))
-        if bedrock_aws_region:
-            langchain_processor_qa_function.add_environment("bedrock_aws_region", str(bedrock_aws_region))
-
-        #publish a new version
-        version = _lambda.Version(
-            self, "LangChainProcessorVersion",
-            lambda_=langchain_processor_qa_function,
-            description="v1"
-        )
-
-        # create an alias and provision concurrency=1
-        alias = _lambda.Alias(
-            self, "LangChainProcessorQAAlias",
-            alias_name="prod",
-            version=version,
-            provisioned_concurrent_executions=1
-        )
-        
-
-        return langchain_processor_qa_function
         
 
     def create_text_qa_func(self, search_engine_key):
@@ -637,57 +513,6 @@ class LambdaStack(Stack):
 
         return multi_modal_qa_function
 
-
-    def create_apigw_resource_method_for_langchain_qa(self, api, langchain_processor_qa_function, chat_table):
-
-        langchain_processor_qa_resource = api.root.add_resource(
-            'langchain_processor_qa',
-            default_cors_preflight_options=apigw.CorsOptions(
-                allow_methods=['GET', 'OPTIONS'],
-                allow_origins=apigw.Cors.ALL_ORIGINS)
-        )
-
-        langchain_processor_qa_integration = apigw.LambdaIntegration(
-            langchain_processor_qa_function,
-            proxy=True,
-            integration_responses=[
-                apigw.IntegrationResponse(
-                    status_code="200",
-                    response_parameters={
-                        'method.response.header.Access-Control-Allow-Origin': "'*'"
-                    }
-                )
-            ]
-        )
-
-        langchain_processor_qa_resource.add_method(
-            'GET',
-            langchain_processor_qa_integration,
-            method_responses=[
-                apigw.MethodResponse(
-                    status_code="200",
-                    response_parameters={
-                        'method.response.header.Access-Control-Allow-Origin': True
-                    }
-                )
-            ]
-        )
-        
-        langchain_processor_qa_resource.add_method(
-            'POST',
-            langchain_processor_qa_integration,
-            method_responses=[
-                apigw.MethodResponse(
-                    status_code="200",
-                    response_parameters={
-                        'method.response.header.Access-Control-Allow-Origin': True
-                    }
-                )
-            ]
-        )
-
-        langchain_processor_qa_function.add_environment("dynamodb_table_name", chat_table.table_name)
-        cdk.CfnOutput(self, 'chat_table_name', value=chat_table.table_name, export_name='ChatTableName')
 
 
     def create_apigw_resource_method_for_text_qa(self, api, text_qa_function, chat_table):

@@ -69,9 +69,11 @@ class LambdaVPCStack(Stack):
 
         print("These functions are slected( configuration is in cdk.json context 'selection'):  ", func_selection)
 
-        if 'langchain_processor_qa' in func_selection:
-            langchain_qa_func = self.create_langchain_qa_func(search_engine_key=search_engine_key, vpc=vpc,
-                                                              vpc_subnets=vpc_subnets_selection)
+        if 'text_qa' in func_selection:
+            text_qa_func = self.create_text_qa_func(search_engine_key=search_engine_key)
+            
+        if 'multi_modal_qa' in func_selection:
+            multi_modal_qa_func = self.create_multi_modal_qa_func(search_engine_key=search_engine_key)
 
         content_moderation_func = self.create_content_moderation_func(vpc=vpc,
                                                                       vpc_subnets=vpc_subnets_selection)
@@ -223,19 +225,24 @@ class LambdaVPCStack(Stack):
         web_socket_api.add_route("$default",
                                  integration=WebSocketLambdaIntegration("SearchIntegration", websocketdefault)
                                  )
-
-        # langchain_qa_func加wss gw 环境变量
-        langchain_qa_func.add_environment("api_gw", web_socket_api.api_id)
+            
         # cfn output
         CN_SUFFIX = ".cn" if "cn-" in os.getenv('AWS_REGION') else ""
         web_socket_url = f"wss://{web_socket_api.api_id}.execute-api.{os.getenv('AWS_REGION')}.amazonaws.com{CN_SUFFIX}/prod"
         cdk.CfnOutput(self, 'web_socket_api', value=web_socket_url, export_name='WebSocketApi')
-
-
-        if 'langchain_processor_qa' in func_selection and langchain_qa_func is not None:
-            self.create_apigw_resource_method_for_langchain_qa(
+            
+        if 'text_qa' in func_selection and text_qa_func is not None:
+            text_qa_func.add_environment("api_gw", web_socket_api.api_id)
+            self.create_apigw_resource_method_for_text_qa(
                 api=api,
-                langchain_processor_qa_function=langchain_qa_func
+                text_qa_function=text_qa_func
+            )
+
+        if 'multi_modal_qa' in func_selection and multi_modal_qa_func is not None:
+            multi_modal_qa_func.add_environment("api_gw", web_socket_api.api_id)
+            self.create_apigw_resource_method_for_multi_modal_qa(
+                api=api,
+                multi_modal_qa_function=multi_modal_qa_func
             )
 
         self.create_file_upload_prerequisites(api, search_engine_key, vpc, vpc_subnets_selection)
@@ -299,7 +306,8 @@ class LambdaVPCStack(Stack):
         )
         return lambda_function
 
-    def create_langchain_qa_func(self, search_engine_key, vpc=None, vpc_subnets=None):
+    
+    def create_text_qa_func(self, search_engine_key):
 
         index = self.node.try_get_context("index")
         embedding_endpoint_name = self.node.try_get_context("embedding_endpoint_name")
@@ -310,10 +318,12 @@ class LambdaVPCStack(Stack):
         search_engine_zilliz = self.node.try_get_context("search_engine_zilliz")
         zilliz_endpoint = self.node.try_get_context("zilliz_endpoint")
         zilliz_token = self.node.try_get_context("zilliz_token")
+        bedrock_aws_region = self.node.try_get_context('bedrock_aws_region')
+
         # configure the lambda role
         if search_engine_kendra:
-            _langchain_processor_role_policy = _iam.PolicyStatement(
-                actions=[
+            _text_role_policy = _iam.PolicyStatement(
+                 actions=[
                     'sagemaker:InvokeEndpointAsync',
                     'sagemaker:InvokeEndpoint',
                     'lambda:*',
@@ -329,7 +339,126 @@ class LambdaVPCStack(Stack):
                 resources=['*']  # 可根据需求进行更改
             )
         else:
-            _langchain_processor_role_policy = _iam.PolicyStatement(
+            _text_role_policy = _iam.PolicyStatement(
+                  actions=[
+                    'sagemaker:InvokeEndpointAsync',
+                    'sagemaker:InvokeEndpoint',
+                    'lambda:*',
+                    'secretsmanager:*',
+                    'ec2:CreateNetworkInterface',
+                    'ec2:DescribeNetworkInterfaces',
+                    'ec2:DeleteNetworkInterface',
+                    'es:*',
+                    'bedrock:*',
+                    'execute-api:*'  ##############
+
+                ],
+                resources=['*']  # 可同时使用opensearch和kendra
+            )
+        text_role = _iam.Role(
+            self, 'text_role',
+            assumed_by=_iam.ServicePrincipal('lambda.amazonaws.com')
+        )
+        text_role.add_to_policy(_text_role_policy)
+
+        text_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaRole")
+        )
+
+        text_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
+        )
+
+        text_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("SecretsManagerReadWrite")
+        )
+
+        text_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonDynamoDBFullAccess")
+        )
+        if self.node.try_get_context('search_engine_kendra'):
+            text_role.add_managed_policy(
+                _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonKendraFullAccess")
+            )
+
+        # add langchain processor for smart query and answer
+        function_name_qa = 'text_qa'
+        text_qa_function = _lambda.Function(
+            self, function_name_qa,
+            function_name=function_name_qa,
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            role=text_role,
+            layers=[self.langchain_processor_qa_layer],
+            code=_lambda.Code.from_asset('../lambda/' + function_name_qa),
+            handler='lambda_function' + '.lambda_handler',
+            memory_size=256,
+            timeout=Duration.minutes(10),
+            reserved_concurrent_executions=50
+        )
+        text_qa_function.add_environment("host", search_engine_key) 
+        text_qa_function.add_environment("index", index)
+        text_qa_function.add_environment("language", language)
+        text_qa_function.add_environment("embedding_endpoint_name", embedding_endpoint_name)
+        text_qa_function.add_environment("llm_endpoint_name", llm_endpoint_name)
+        text_qa_function.add_environment("search_engine_opensearch", str(search_engine_opensearch))
+        text_qa_function.add_environment("search_engine_kendra", str(search_engine_kendra))
+        text_qa_function.add_environment("search_engine_zilliz", str(search_engine_zilliz))
+        text_qa_function.add_environment("zilliz_endpoint", str(zilliz_endpoint))
+        text_qa_function.add_environment("zilliz_token", str(zilliz_token))
+        if bedrock_aws_region:
+            text_qa_function.add_environment("bedrock_aws_region", str(bedrock_aws_region))
+
+
+        #publish a new version
+        version = _lambda.Version(
+            self, "TextQAVersion",
+            lambda_=text_qa_function,
+            description="v1"
+        )
+
+        # create an alias and provision concurrency=1
+        alias = _lambda.Alias(
+            self, "TextQAAlias",
+            alias_name="prod",
+            version=version,
+            provisioned_concurrent_executions=1
+        )
+
+        return text_qa_function
+
+    def create_multi_modal_qa_func(self, search_engine_key):
+
+        index = self.node.try_get_context("index")
+        embedding_endpoint_name = self.node.try_get_context("embedding_endpoint_name")
+        llm_endpoint_name = self.node.try_get_context("llm_endpoint_name")
+        language = self.node.try_get_context("language")
+        search_engine_opensearch = self.node.try_get_context("search_engine_opensearch")
+        search_engine_kendra = self.node.try_get_context("search_engine_kendra")
+        search_engine_zilliz = self.node.try_get_context("search_engine_zilliz")
+        zilliz_endpoint = self.node.try_get_context("zilliz_endpoint")
+        zilliz_token = self.node.try_get_context("zilliz_token")
+        bedrock_aws_region = self.node.try_get_context('bedrock_aws_region')
+
+        # configure the lambda role
+        if search_engine_kendra:
+            _multi_modal_role_policy = _iam.PolicyStatement(
+                 actions=[
+                    'sagemaker:InvokeEndpointAsync',
+                    'sagemaker:InvokeEndpoint',
+                    'lambda:*',
+                    'secretsmanager:*',
+                    'ec2:CreateNetworkInterface',
+                    'ec2:DescribeNetworkInterfaces',
+                    'ec2:DeleteNetworkInterface',
+                    'kendra:DescribeIndex',
+                    'kendra:Query',
+                    'execute-api:*',  ##############
+                    'bedrock:*'
+                ],
+                resources=['*']  # 可根据需求进行更改
+            )
+        else:
+            _multi_modal_role_policy = _iam.PolicyStatement(
                 actions=[
                     'sagemaker:InvokeEndpointAsync',
                     'sagemaker:InvokeEndpoint',
@@ -345,71 +474,76 @@ class LambdaVPCStack(Stack):
                 ],
                 resources=['*']  # 可同时使用opensearch和kendra
             )
-
-        langchain_processor_role = _iam.Role(
-            self, 'langchain_processor_role',
+        multi_modal_role = _iam.Role(
+            self, 'multi_modal_role',
             assumed_by=_iam.ServicePrincipal('lambda.amazonaws.com')
         )
-        langchain_processor_role.add_to_policy(_langchain_processor_role_policy)
+        multi_modal_role.add_to_policy(_multi_modal_role_policy)
 
-        langchain_processor_role.add_managed_policy(
+        multi_modal_role.add_managed_policy(
             _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaRole")
         )
 
-        langchain_processor_role.add_managed_policy(
+        multi_modal_role.add_managed_policy(
+            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
+        )
+
+        multi_modal_role.add_managed_policy(
             _iam.ManagedPolicy.from_aws_managed_policy_name("SecretsManagerReadWrite")
         )
 
-        langchain_processor_role.add_managed_policy(
+        multi_modal_role.add_managed_policy(
             _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonDynamoDBFullAccess")
         )
         if self.node.try_get_context('search_engine_kendra'):
-            langchain_processor_role.add_managed_policy(
+            multi_modal_role.add_managed_policy(
                 _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonKendraFullAccess")
             )
 
         # add langchain processor for smart query and answer
-        function_name_qa = 'langchain_processor_qa'
-        langchain_processor_qa_function = _lambda.Function(
+        function_name_qa = 'multi_modal_qa'
+        multi_modal_qa_function = _lambda.Function(
             self, function_name_qa,
             function_name=function_name_qa,
             runtime=_lambda.Runtime.PYTHON_3_9,
-            role=langchain_processor_role,
+            role=multi_modal_role,
             layers=[self.langchain_processor_qa_layer],
             code=_lambda.Code.from_asset('../lambda/' + function_name_qa),
             handler='lambda_function' + '.lambda_handler',
+            memory_size=256,
             timeout=Duration.minutes(10),
-            vpc=vpc,
-            vpc_subnets=vpc_subnets,
-            reserved_concurrent_executions=10
+            reserved_concurrent_executions=50
         )
-        langchain_processor_qa_function.add_environment("host", search_engine_key)
-        langchain_processor_qa_function.add_environment("index", index)
-        langchain_processor_qa_function.add_environment("language", language)
-        langchain_processor_qa_function.add_environment("embedding_endpoint_name", embedding_endpoint_name)
-        langchain_processor_qa_function.add_environment("llm_endpoint_name", llm_endpoint_name)
-        langchain_processor_qa_function.add_environment("search_engine_opensearch", str(search_engine_opensearch))
-        langchain_processor_qa_function.add_environment("search_engine_kendra", str(search_engine_kendra))
-        langchain_processor_qa_function.add_environment("search_engine_zilliz", str(search_engine_zilliz))
-        langchain_processor_qa_function.add_environment("zilliz_endpoint", str(zilliz_endpoint))
-        langchain_processor_qa_function.add_environment("zilliz_token", str(zilliz_token))
+        multi_modal_qa_function.add_environment("host", search_engine_key) 
+        multi_modal_qa_function.add_environment("index", index)
+        multi_modal_qa_function.add_environment("language", language)
+        multi_modal_qa_function.add_environment("embedding_endpoint_name", embedding_endpoint_name)
+        multi_modal_qa_function.add_environment("llm_endpoint_name", llm_endpoint_name)
+        multi_modal_qa_function.add_environment("search_engine_opensearch", str(search_engine_opensearch))
+        multi_modal_qa_function.add_environment("search_engine_kendra", str(search_engine_kendra))
+        multi_modal_qa_function.add_environment("search_engine_zilliz", str(search_engine_zilliz))
+        multi_modal_qa_function.add_environment("zilliz_endpoint", str(zilliz_endpoint))
+        multi_modal_qa_function.add_environment("zilliz_token", str(zilliz_token))
+        if bedrock_aws_region:
+            multi_modal_qa_function.add_environment("bedrock_aws_region", str(bedrock_aws_region))
 
         #publish a new version
         version = _lambda.Version(
-            self, "LangChainProcessorVersion",
-            lambda_=langchain_processor_qa_function,
+            self, "MultiModalQAVersion",
+            lambda_=multi_modal_qa_function,
             description="v1"
         )
 
         # create an alias and provision concurrency=1
         alias = _lambda.Alias(
-            self, "LangChainProcessorQAAlias",
+            self, "MultiModalQAAlias",
             alias_name="prod",
             version=version,
             provisioned_concurrent_executions=1
         )
 
-        return langchain_processor_qa_function
+        return multi_modal_qa_function
+
 
     def create_apigw_resource_method_for_langchain_qa(self, api, langchain_processor_qa_function):
 
@@ -483,6 +617,161 @@ class LambdaVPCStack(Stack):
         chat_table.grant_read_write_data(dynamodb_role)
         langchain_processor_qa_function.add_environment("dynamodb_table_name", chat_table.table_name)
         cdk.CfnOutput(self, 'chat_table_name', value=chat_table.table_name, export_name='ChatTableName')
+        
+        
+
+
+    def create_apigw_resource_method_for_text_qa(self, api, text_qa_function, chat_table):
+
+        text_qa_resource = api.root.add_resource(
+            'text_qa',
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_methods=['GET', 'OPTIONS'],
+                allow_origins=apigw.Cors.ALL_ORIGINS)
+        )
+
+        text_qa_integration = apigw.LambdaIntegration(
+            text_qa_function,
+            proxy=True,
+            integration_responses=[
+                apigw.IntegrationResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': "'*'"
+                    }
+                )
+            ]
+        )
+
+        text_qa_resource.add_method(
+            'GET',
+            text_qa_integration,
+            method_responses=[
+                apigw.MethodResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': True
+                    }
+                )
+            ]
+        )
+        
+        text_qa_resource.add_method(
+            'POST',
+            text_qa_integration,
+            method_responses=[
+                apigw.MethodResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': True
+                    }
+                )
+            ]
+        )
+
+        chat_table = dynamodb.Table(self, "ChatSessionRecord",
+                                    partition_key=dynamodb.Attribute(name="session-id",
+                                                                     type=dynamodb.AttributeType.STRING),
+                                    removal_policy=RemovalPolicy.DESTROY
+                                    )
+
+        dynamodb_role = _iam.Role(
+            self, 'dynamodb_role',
+            assumed_by=_iam.ServicePrincipal('dynamodb.amazonaws.com')
+        )
+        dynamodb_role_policy = _iam.PolicyStatement(
+            actions=[
+                'sagemaker:InvokeEndpointAsync',
+                'sagemaker:InvokeEndpoint',
+                's3:AmazonS3FullAccess',
+                'lambda:AWSLambdaBasicExecutionRole',
+            ],
+            effect=_iam.Effect.ALLOW,
+            resources=['*']
+        )
+        dynamodb_role.add_to_policy(dynamodb_role_policy)
+        chat_table.grant_read_write_data(dynamodb_role)
+        text_qa_function.add_environment("dynamodb_table_name", chat_table.table_name)
+        cdk.CfnOutput(self, 'text_chat_table_name', value=chat_table.table_name, export_name='TextChatTableName')
+
+
+    def create_apigw_resource_method_for_multi_modal_qa(self, api, multi_modal_qa_function, chat_table):
+
+        multi_modal_qa_resource = api.root.add_resource(
+            'multi_modal_qa',
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_methods=['GET', 'OPTIONS'],
+                allow_origins=apigw.Cors.ALL_ORIGINS)
+        )
+
+        multi_modal_qa_integration = apigw.LambdaIntegration(
+            multi_modal_qa_function,
+            proxy=True,
+            integration_responses=[
+                apigw.IntegrationResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': "'*'"
+                    }
+                )
+            ]
+        )
+
+        multi_modal_qa_resource.add_method(
+            'GET',
+            multi_modal_qa_integration,
+            method_responses=[
+                apigw.MethodResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': True
+                    }
+                )
+            ]
+        )
+        
+        multi_modal_qa_resource.add_method(
+            'POST',
+            multi_modal_qa_integration,
+            method_responses=[
+                apigw.MethodResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': True
+                    }
+                )
+            ]
+        )
+
+        multi_modal_qa_function.add_environment("dynamodb_table_name", chat_table.table_name)
+        cdk.CfnOutput(self, 'multi_modal_chat_table_name', value=chat_table.table_name, export_name='MultiModalChatTableName')
+        
+        chat_table = dynamodb.Table(self, "ChatSessionRecord",
+                                    partition_key=dynamodb.Attribute(name="session-id",
+                                                                     type=dynamodb.AttributeType.STRING),
+                                    removal_policy=RemovalPolicy.DESTROY
+                                    )
+
+        dynamodb_role = _iam.Role(
+            self, 'dynamodb_role',
+            assumed_by=_iam.ServicePrincipal('dynamodb.amazonaws.com')
+        )
+        dynamodb_role_policy = _iam.PolicyStatement(
+            actions=[
+                'sagemaker:InvokeEndpointAsync',
+                'sagemaker:InvokeEndpoint',
+                's3:AmazonS3FullAccess',
+                'lambda:AWSLambdaBasicExecutionRole',
+            ],
+            effect=_iam.Effect.ALLOW,
+            resources=['*']
+        )
+        dynamodb_role.add_to_policy(dynamodb_role_policy)
+        chat_table.grant_read_write_data(dynamodb_role)
+        multi_modal_qa_function.add_environment("dynamodb_table_name", chat_table.table_name)
+        cdk.CfnOutput(self, 'multi_modal_chat_table_name', value=chat_table.table_name, export_name='MultiModalChatTableName')
+
+
 
     def create_apigw_resource_method_for_endpoint_list(self, api, endpoint_list_function):
 
