@@ -134,3 +134,25 @@ npm run build
 serve build/ -s
 
 ```
+
+---
+
+# Demo environment configs
+
+Please create a `.env.local` file in `ui-search` directory, in which the following variables must be correctly configured:
+
+```bash
+# set this to true for demo
+REACT_APP_DEMO=true
+# endpoint for websocket connections (ends without a slash)
+REACT_APP_URL_WSS=wss://xxxx/prod
+# endpoint for api gateway (ends without a slash)
+REACT_APP_URL_APIGATEWAY=https://xxx/prod
+```
+
+And the rest of the deployment and local dev should follow the previous instructions
+
+## NOTES
+
+- App Configuration page and Upload files page are unavailable to demo deployments/sites
+- One can NOT delete `claude3_bge_strategy` the first record of LLM strategy, for it is required for the default demo sessions

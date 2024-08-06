@@ -14,7 +14,8 @@ code {
 
 .divider-subtle {
   border: none;
-  border-top: 1px solid rgb(125, 125, 125);
+  border-top: 1px solid silver;
+  border-top: 1px solid var(--color-border-divider-default-d3adp9);
 }
 
 /* footer */
