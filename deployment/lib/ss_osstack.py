@@ -27,7 +27,7 @@ class OpenSearchStack(Stack):
         # one lowercase letter, one number, and one special character.
         password_length=12
       ),
-      secret_name = "opensearch-master-user"
+      secret_name = "opensearch-master-user1"
     )
 
     #XXX: aws cdk elastsearch example - https://github.com/aws/aws-cdk/issues/2873
@@ -90,5 +90,5 @@ class OpenSearchStack(Stack):
     self.search_domain_endpoint = ops_domain.domain_endpoint
     self.search_domain_arn = ops_domain.domain_arn
 
-    cdk.CfnOutput(self, 'OPSDomainEndpoint', value=self.search_domain_endpoint, export_name='OPSDomainEndpoint')
-    cdk.CfnOutput(self, 'OPSDashboardsURL', value=f"{self.search_domain_endpoint}/_dashboards/", export_name='OPSDashboardsURL')
+    cdk.CfnOutput(self, 'OPSDomainEndpoint1', value=self.search_domain_endpoint, export_name='OPSDomainEndpoint1')
+    cdk.CfnOutput(self, 'OPSDashboardsURL1', value=f"{self.search_domain_endpoint}/_dashboards/", export_name='OPSDashboardsURL1')

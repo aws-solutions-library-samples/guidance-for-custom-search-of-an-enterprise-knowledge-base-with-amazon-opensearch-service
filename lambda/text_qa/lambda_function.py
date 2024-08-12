@@ -303,19 +303,34 @@ def lambda_handler(event, context):
             print('module:',module)
             print('isCheckedKnowledgeBase:',isCheckedKnowledgeBase)
             if httpMethod == 'POST' or module == "CHAT" or not isCheckedKnowledgeBase:
-                print('in the chat module')
-
- 
-                result = search_qa.get_answer_from_multimodel(query,
-                                                              question,
-                                                              module,
-                                                              isCheckedKnowledgeBase,
-                                                              systemPrompt,
-                                                              sessionId,
-                                                              table_name,
-                                                              work_mode = workMode,
-                                                              context_rounds=contextRounds,
-                                                              )
+                
+                
+                if modelName.find("anthropic") >= 0:
+                    if language == "chinese":
+                        prompt_template = CLAUDE_CHAT_PROMPT_CN
+                    elif language == "chinese-tc":
+                        prompt_template = CLAUDE_CHAT_PROMPT_TC
+                    elif language == "english":
+                        prompt_template = CLAUDE_CHAT_PROMPT_EN
+                else:
+                    if language == "chinese":
+                        prompt_template = CHINESE_CHAT_PROMPT_TEMPLATE
+                    elif language == "chinese-tc":
+                        prompt_template = CHINESE_TC_CHAT_PROMPT_TEMPLATE
+                    elif language == "english":
+                        prompt_template = ENGLISH_CHAT_PROMPT_TEMPLATE
+                        if modelType == 'llama2':
+                            prompt_template = EN_CHAT_PROMPT_LLAMA2
+                            
+                if len(systemPrompt) > 0: 
+                    prompt_template = systemPrompt
+                
+                result = search_qa.get_chat(query,
+                                            prompt_template,
+                                            table_name,
+                                            sessionId,
+                                            contextRounds,
+                                            )
 
                 if streaming and requestType == 'websocket':
                     response['body'] = json.dumps(
@@ -380,41 +395,43 @@ def lambda_handler(event, context):
                 if "textField" in evt_body.keys():
                     textField = evt_body['textField']
                 print('textField:', textField)
-                
-                imageField = "image_base64"
-                if "imageField" in evt_body.keys():
-                    imageField = evt_body['imageField']
-                print('imageField:', imageField)
 
                 vectorField = "sentence_vector"
                 if "vectorField" in evt_body.keys():
                     vectorField = evt_body['vectorField']
                 print('vectorField:', vectorField)
                 
-                rerankerEndpoint = ""
-                rewrite_prompt = ""
-
-                result = search_qa.get_answer_from_multimodel(query,
-                                                              question,
-                                                              module,
-                                                              isCheckedKnowledgeBase,
-                                                              systemPrompt,
-                                                              sessionId,
-                                                              table_name,
-                                                              work_mode = workMode,
-                                                              reranker_endpoint = rerankerEndpoint,
-                                                              top_k=vecTopK,
-                                                              search_method=searchMethod,
-                                                              txt_docs_num=txtTopK,
-                                                              response_if_no_docs_found=responseIfNoDocsFound,
-                                                              vec_docs_score_thresholds=vecDocsScoreThresholds,
-                                                              txt_docs_score_thresholds=txtDocsScoreThresholds,
-                                                              context_rounds=contextRounds,
-                                                              text_field=textField,
-                                                              vector_field=vectorField,
-                                                              image_field=imageField,
-                                                              rewrite_system_prompt=rewrite_prompt,
-                                                              )
+                if language == "chinese":
+                    prompt_template = CHINESE_PROMPT_TEMPLATE
+                    condense_question_prompt = CN_CONDENSE_QUESTION_PROMPT
+                elif language == "chinese-tc":
+                    prompt_template = CHINESE_TC_PROMPT_TEMPLATE
+                    condense_question_prompt = TC_CONDENSE_QUESTION_PROMPT
+                elif language == "english":
+                    prompt_template = ENGLISH_PROMPT_TEMPLATE
+                    condense_question_prompt = EN_CONDENSE_QUESTION_PROMPT
+                    if modelType == 'llama2':
+                        prompt_template = EN_CHAT_PROMPT_LLAMA2
+                        condense_question_prompt = EN_CONDENSE_PROMPT_LLAMA2
+                    
+                if len(systemPrompt) > 0: 
+                    prompt_template = systemPrompt
+                
+                result = search_qa.get_answer_from_conversational(query,
+                                                  sessionId,
+                                                  table_name,
+                                                  prompt_template=prompt_template,
+                                                  condense_question_prompt=condense_question_prompt,
+                                                  search_method=searchMethod,
+                                                  top_k=vecTopK,
+                                                  txt_docs_num=txtTopK,
+                                                  response_if_no_docs_found=responseIfNoDocsFound,
+                                                  vec_docs_score_thresholds=vecDocsScoreThresholds,
+                                                  txt_docs_score_thresholds=txtDocsScoreThresholds,
+                                                  context_rounds=contextRounds,
+                                                  text_field=textField,
+                                                  vector_field=vectorField,
+                                                  )
 
                 print('result:', result)
                 if len(result) > 0 and 'answer' in result.keys():
@@ -425,25 +442,21 @@ def lambda_handler(event, context):
 
                 source_docs = []
                 query_docs_scores = []
-                images = ''
                 if len(result) > 0 and 'source_documents' in result.keys():
                     source_documents = result['source_documents']
                     if searchEngine == "opensearch":
                         source_docs = [doc[0] for doc in source_documents]
                         query_docs_scores = [doc[1] for doc in source_documents]
-                        if len(source_documents) > 0 and len(source_documents[0]) == 3 and workMode == 'multi-modal':
-                            images = source_documents[0][2]
-                        # sentences = [doc[2] for doc in source_documents]
+
                     elif searchEngine == "kendra":
                         source_docs = source_documents
                     elif searchEngine == "zilliz":
                         source_docs = [doc[0] for doc in source_documents]
                         query_docs_scores = [doc[1] for doc in source_documents]
-                    # sentences = [doc[2] for doc in source_documents]
 
                 #if enable streaming， return the souce docs before caculating the scores
                 if streaming and requestType == 'websocket':
-                    source_list=buildSourceList(searchEngine, source_docs, images, [], [])
+                    source_list=buildSourceList(searchEngine, source_docs, [], [])
                     response['body'] = json.dumps(
                         {
                             'message': 'streaming',
@@ -505,7 +518,7 @@ def lambda_handler(event, context):
                 print('2.answer_docs_scores:', answer_docs_scores)
 
                 #update the source list according the query_docs_scores and answer_docs_scores
-                source_list = buildSourceList(searchEngine, source_docs, images, query_docs_scores, answer_docs_scores)
+                source_list = buildSourceList(searchEngine, source_docs, query_docs_scores, answer_docs_scores)
 
                 response['body'] = json.dumps(
                     {
@@ -576,7 +589,7 @@ def sendWebSocket(msgbody,event):
     api_res = apigw_management.post_to_connection(ConnectionId=connectionId, Data=msgbody)
     print('api_res', api_res)
 
-def buildSourceList(searchEngine, source_docs, images,query_docs_scores, answer_docs_scores):
+def buildSourceList(searchEngine, source_docs,query_docs_scores, answer_docs_scores):
     source_list=[]
     if not query_docs_scores or len(query_docs_scores) == 0:
         query_docs_scores = [-1] * len(source_docs)
@@ -594,9 +607,6 @@ def buildSourceList(searchEngine, source_docs, images,query_docs_scores, answer_
                 source["title"] = os.path.split(source_docs[i].metadata['sources'])[-1]
             elif 'title' in source_docs[i].metadata.keys():
                 source["title"] = source_docs[i].metadata['title']
-                
-        if len(images) > 0 and i == 0:
-            source['image'] = images
             
         source["titleLink"] = "http://#"
         source["paragraph"] = source_docs[i].page_content.replace("\n", "")

@@ -147,19 +147,19 @@ class LambdaStack(Stack):
         websocketsearch.add_environment("DIR_NAME", "search")
 
         #publish a new version
-        version = _lambda.Version(
-            self, "websocketsearchVersion",
-            lambda_=websocketsearch,
-            description="v1"
-        )
+        # version = _lambda.Version(
+        #     self, "websocketsearchVersion",
+        #     lambda_=websocketsearch,
+        #     description="v1"
+        # )
 
         # create an alias and provision concurrency=1
-        websocketsearchAlias = _lambda.Alias(
-            self, "websocketsearchAlias",
-            alias_name="prod",
-            version=version,
-            provisioned_concurrent_executions=1
-        )
+        # websocketsearchAlias = _lambda.Alias(
+        #     self, "websocketsearchAlias",
+        #     alias_name="prod",
+        #     version=version,
+        #     provisioned_concurrent_executions=1
+        # )
 
         web_socket_api = apigwv2.WebSocketApi(self, "websocketapi")
         apigwv2.WebSocketStage(self, "prod",
@@ -168,7 +168,7 @@ class LambdaStack(Stack):
                                auto_deploy=True
                                )
         web_socket_api.add_route("search",
-                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketsearchAlias)
+                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketsearch)
                                  )
         web_socket_api.add_route("$connect",
                                  integration=WebSocketLambdaIntegration("SearchIntegration", websocketconnect)
@@ -392,12 +392,12 @@ class LambdaStack(Stack):
         )
 
         # create an alias and provision concurrency=1
-        alias = _lambda.Alias(
-            self, "TextQAAlias",
-            alias_name="prod",
-            version=version,
-            provisioned_concurrent_executions=1
-        )
+        # alias = _lambda.Alias(
+        #     self, "TextQAAlias",
+        #     alias_name="prod",
+        #     version=version,
+        #     provisioned_concurrent_executions=1
+        # )
 
         return text_qa_function
 
@@ -504,12 +504,12 @@ class LambdaStack(Stack):
         )
 
         # create an alias and provision concurrency=1
-        alias = _lambda.Alias(
-            self, "MultiModalQAAlias",
-            alias_name="prod",
-            version=version,
-            provisioned_concurrent_executions=1
-        )
+        # alias = _lambda.Alias(
+        #     self, "MultiModalQAAlias",
+        #     alias_name="prod",
+        #     version=version,
+        #     provisioned_concurrent_executions=1
+        # )
 
         return multi_modal_qa_function
 

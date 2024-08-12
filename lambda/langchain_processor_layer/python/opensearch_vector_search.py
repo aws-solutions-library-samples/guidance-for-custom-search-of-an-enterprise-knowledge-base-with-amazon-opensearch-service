@@ -768,7 +768,7 @@ class OpenSearchVectorSearch(VectorStore):
                     pairs.append(pair)
                 print('pairs:',pairs)
      
-                scores = get_reranker_scores(pairs,rerankerEndpoint)
+                scores = get_reranker_scores(pairs,reranker_endpoint)
                 scores = scores['rerank_scores']
                 print('rerank_scores:',scores)
                 new_docs_with_scores=[]

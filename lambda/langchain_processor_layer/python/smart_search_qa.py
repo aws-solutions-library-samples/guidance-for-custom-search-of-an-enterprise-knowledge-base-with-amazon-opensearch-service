@@ -1,8 +1,11 @@
 import os
 import shutil
 from langchain.retrievers import AmazonKendraRetriever
-# from langchain.llms import AmazonAPIGateway
 from amazon_api_gateway import AmazonAPIGateway
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import LLMChain
+from langchain.chains import ConversationalRetrievalChain
+from langchain.prompts.prompt import PromptTemplate
 import json
 import numpy as np
 from model import *
@@ -136,6 +139,39 @@ class SmartSearchQA:
         return cos
 
 
+    def get_chat(self,query,prompt_template,table_name,session_id,context_rounds: int = 3):
+            
+        prompt = PromptTemplate(
+            input_variables=["history", "human_input"], 
+            template=prompt_template
+        )
+        
+        memory = ConversationBufferMemory(return_messages=True)
+        session_info = ""
+        if len(session_id) > 0 and len(table_name) > 0 and context_rounds > 0:
+            session_info = get_session_info(table_name,session_id)
+            if len(session_info) > 0:
+                session_info = session_info[-context_rounds:]
+                for item in session_info:
+                    print("session info:",item[0]," ; ",item[1]," ; ",item[2])
+                    if item[2] == "chat":
+                        memory.chat_memory.add_user_message(item[0])
+                        memory.chat_memory.add_ai_message(item[1])
+            
+        chat_chain = LLMChain(
+            llm=self.llm,
+            prompt=prompt, 
+            # verbose=True, 
+            memory=memory,
+        )
+            
+        output = chat_chain.predict(human_input=query)
+
+        if len(session_id) > 0:
+            update_session_info(table_name, session_id, query, output, "chat")
+        
+        return output
+
     def get_retriever(self,top_k,
                            search_method: str="vector",
                            txt_docs_num: int=0,
@@ -180,6 +216,73 @@ class SmartSearchQA:
                                                        )
             
         return retriever
+        
+        
+    def get_answer_from_conversational(self,query,
+                                        session_id: str='',
+                                        table_name: str='',
+                                        prompt_template: str = "请根据{context}，回答{question}",
+                                        condense_question_prompt: str="",
+                                        top_k: int = 3,
+                                        chain_type: str="stuff",
+                                        search_method: str="vector",
+                                        txt_docs_num: int=0,
+                                        response_if_no_docs_found: str="",
+                                        vec_docs_score_thresholds: float =0,
+                                        txt_docs_score_thresholds: float =0,
+                                        context_rounds: int = 3,
+                                        text_field: str="text",
+                                        vector_field: str="vector_field",
+                                        ):
+        
+        prompt = PromptTemplate(template=prompt_template,
+                                input_variables=["context", "question"])
+        combine_docs_chain_kwargs={"prompt":prompt}
+        
+        history = []
+        session_info = ""
+        if len(session_id) > 0 and len(table_name) > 0 and context_rounds > 0:
+            session_info = get_session_info(table_name,session_id)
+            if len(session_info) > 0:
+                session_info = session_info[-context_rounds:]
+                for item in session_info:
+                    print("session info:",item[0]," ; ",item[1]," ; ",item[2])
+                    if item[2] == "qa":
+                        history.append((item[0],item[1]))
+        
+        print('history:',history)
+        if len(history) > 0:
+            self.llm.model_kwargs['history'] = history
+        
+        retriever = self.get_retriever(top_k,search_method,txt_docs_num,vec_docs_score_thresholds,txt_docs_score_thresholds,text_field,vector_field)
+        
+        ConversationalRetrievalChain._call = new_conversational_call
+        chain = ConversationalRetrievalChain.from_llm(
+                    llm = self.llm,
+                    condense_question_llm=self.condense_question_llm or self.llm,
+                    chain_type=chain_type,
+                    retriever=retriever,
+                    condense_question_prompt = condense_question_prompt,
+                    combine_docs_chain_kwargs = combine_docs_chain_kwargs,
+                    return_source_documents = True,
+                    return_generated_question = True,
+                    response_if_no_docs_found = response_if_no_docs_found
+                )
+
+        result = chain({
+            "question": query, 
+            "chat_history": history,
+            "search_engine": self.search_engine
+        })
+
+        
+        answer=result['answer']
+
+        if len(session_id) > 0:
+            new_query=result['generated_question']
+            update_session_info(table_name, session_id, new_query, answer, "qa")
+        
+        return result
          
 
     def get_answer_from_multimodel(self,query,
