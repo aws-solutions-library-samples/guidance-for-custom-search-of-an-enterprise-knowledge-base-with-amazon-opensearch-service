@@ -91,6 +91,7 @@ def _bulk_ingest_embeddings(
                 text_field: text,
                 image_field: images[i],
                 "metadata": metadata,
+                "sentence": metadata['sentence'],
             }
         else:
             request = {
@@ -99,6 +100,7 @@ def _bulk_ingest_embeddings(
                 vector_field: embeddings[i],
                 text_field: text,
                 "metadata": metadata,
+                "sentence": metadata['sentence'],
             }
 
         request["_id"] = _id
