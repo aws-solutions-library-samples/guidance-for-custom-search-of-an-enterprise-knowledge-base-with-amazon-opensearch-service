@@ -37,7 +37,7 @@
     "subnet_id": "subnet-1234",
     "zone_id": "use1-az4",
     "selection": [
-      "langchain_processor_qa","text_qa","multi_modal_qa"
+      "text_qa","multi_modal_qa"
     ],
     "extension": [
       "nobot"   

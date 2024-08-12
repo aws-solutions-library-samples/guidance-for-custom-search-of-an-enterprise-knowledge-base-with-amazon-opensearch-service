@@ -102,6 +102,11 @@ def lambda_handler(event, context):
             module = evt_body['module']
         print('module:',module)
         
+        workMode = 'text'
+        if 'workMode' in evt_body.keys():
+            workMode = evt_body['workMode']
+        print('workMode:',workMode)
+        
         language = LANGUAGE
         if "language" in evt_body.keys():
             language = evt_body['language']        
@@ -308,6 +313,7 @@ def lambda_handler(event, context):
                                                               systemPrompt,
                                                               sessionId,
                                                               table_name,
+                                                              work_mode = workMode,
                                                               context_rounds=contextRounds,
                                                               )
 
@@ -384,6 +390,41 @@ def lambda_handler(event, context):
                 if "vectorField" in evt_body.keys():
                     vectorField = evt_body['vectorField']
                 print('vectorField:', vectorField)
+                
+                rerankerEndpoint = ""
+                rewrite_prompt = """
+                You are a customer service representative of an insurance company. 
+                Your main task is to rewrite the customer's questions according to the following rules:
+                
+                <rules>
+                1.If the user's question is not an insurance product question, add "not insurance question" after the question.
+                <examples>
+                <example>
+                question: 台灣是什麼
+                output: 台灣是什麼not insurance question
+                </example>
+
+                <example>
+                question: 如何在開設新強積金帳戶
+                output: 如何在開設新強積金帳戶not insurance question
+                </example>
+      
+                <example>
+                question: 我的客戶帶來了很差的體驗，我該如何提出投訴
+                output: 我的客戶帶來了很差的體驗，我該如何提出投訴not insurance question
+                </example>
+
+                </examples>
+                2. use '接受' instead of '買'
+                3. use '住院入息保障' instead of 'HI'
+                4. use '體檢' instead of '驗身'
+                5.If the question is about a physical examination, add "输出推理步骤" after the question.
+                6.If the user input is not a question, add "是什麼" after the user input.
+                7.If the question include "獨立風險基本計劃", add "产品" after "獨立風險基本計劃".
+                </rules>
+                
+                There is no need for a preface, output the rewrite query directly.
+                """
 
                 result = search_qa.get_answer_from_multimodel(query,
                                                               question,
@@ -392,6 +433,8 @@ def lambda_handler(event, context):
                                                               systemPrompt,
                                                               sessionId,
                                                               table_name,
+                                                              work_mode = workMode,
+                                                              reranker_endpoint = rerankerEndpoint,
                                                               top_k=vecTopK,
                                                               search_method=searchMethod,
                                                               txt_docs_num=txtTopK,
@@ -402,6 +445,7 @@ def lambda_handler(event, context):
                                                               text_field=textField,
                                                               vector_field=vectorField,
                                                               image_field=imageField,
+                                                              rewrite_system_prompt=rewrite_prompt,
                                                               )
 
                 print('result:', result)
@@ -419,7 +463,7 @@ def lambda_handler(event, context):
                     if searchEngine == "opensearch":
                         source_docs = [doc[0] for doc in source_documents]
                         query_docs_scores = [doc[1] for doc in source_documents]
-                        if len(source_documents) > 0 and len(source_documents[0]) == 3:
+                        if len(source_documents) > 0 and len(source_documents[0]) == 3 and workMode == 'multi-modal':
                             images = source_documents[0][2]
                         # sentences = [doc[2] for doc in source_documents]
                     elif searchEngine == "kendra":
