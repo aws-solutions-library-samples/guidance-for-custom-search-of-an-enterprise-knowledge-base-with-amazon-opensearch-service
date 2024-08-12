@@ -106,20 +106,20 @@ class BedrockAdapter:
                     text_dic = {"type":"text"}
                     text_dic["text"] = prompt
                     messages['content'].append(text_dic)
-                if 'related_docs' in model_kwargs.keys():
+                if 'image' not in model_kwargs.keys() and 'related_docs' in model_kwargs.keys():
                     docs = model_kwargs['related_docs']
                     for doc in docs:
                         if 'text' in doc.keys():
-                            doc_str = '相关文档信息为：'
-                            if language == 'english':
-                                doc_str = 'Related documentation information are:'
                             text_dic = {"type":"text"}
-                            text_dic["text"] = doc_str + doc['text']
+                            text_dic["text"] = '<related documents>' + doc['text'] + '</related documents>' 
                             messages['content'].append(text_dic)
                         if 'image' in doc.keys() and len(doc['image']) > 0:
+                            image = doc['image']
+                            if image.find(',') >=0:
+                                image = image.split(',')[1]
                             image_dic = {"type": "image"}
                             source = {"type": "base64","media_type": "image/jpeg"}
-                            source["data"] = doc['image']
+                            source["data"] = image
                             image_dic["source"] = source
                             messages['content'].append(image_dic)
     
@@ -132,22 +132,16 @@ class BedrockAdapter:
                         elif language == 'english':
                             history_str += ( 'question:' + str(item[0]) + ',answer:' + str(item[1]) + ';' )
                             
-                    history_prefix = '历史记录为：'
-                    if language == 'english':
-                        history_prefix = 'history records are:'
                     text_dic = {"type":"text"}
-                    text_dic["text"] = history_prefix +  history_str
+                    text_dic["text"] = '<conversation records>' +  history_str + '</conversation records>'
                     messages['content'].append(text_dic)
     
                 if 'input_docs' in model_kwargs.keys():
                     docs = model_kwargs['input_docs']
                     for doc in docs:
                         if 'text' in doc.keys():
-                            # doc_str = '用户输入为：'
-                            # if language == 'english':
-                            #     doc_str = 'User input are:'
                             text_dic = {"type":"text"}
-                            text_dic["text"] = doc['text']
+                            text_dic["text"] = '<user question>' +  doc['text'] + '</user question>'
                             messages['content'].append(text_dic)
                         if 'image' in doc.keys():
                             image_dic = {"type": "image"}

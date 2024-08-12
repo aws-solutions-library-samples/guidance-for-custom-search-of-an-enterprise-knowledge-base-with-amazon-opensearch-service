@@ -17,17 +17,15 @@ def lambda_handler(event, context):
     print('event:',event)
         
 
-    _function_name = 'langchain_processor_qa:prod'
+    _function_name = 'multi_modal_qa'
     
     if 'body' in event.keys():
         body = json.loads(event['body'])
         if 'workMode' in body.keys():
             if body['workMode'] == 'text':
-                _function_name = 'text_qa:prod'
-            elif body['workMode'] == 'multi-modal':
-                _function_name = 'multi_modal_qa:prod'
+                _function_name = 'text_qa'
     
-    print('_function_name:',_function_name)      
+    print('_function_name:',_function_name)   
     
     
     

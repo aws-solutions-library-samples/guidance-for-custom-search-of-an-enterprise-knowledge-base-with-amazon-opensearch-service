@@ -62,8 +62,8 @@ else:
         search_engine_key = searchstack.kendra_index_id
     lambdastack = LambdaStack(app, "LambdaStack", search_engine_key=search_engine_key, env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
     lambdastack.add_dependency(searchstack)
-    if REGION.find('cn') == -1: 
-        bedrockstack = BedrockStack( app, "BedrockStack", env=env)
+    # if REGION.find('cn') == -1: 
+    #     bedrockstack = BedrockStack( app, "BedrockStack", env=env)
 notebookstack = NotebookStack(app, "NotebookStack", search_engine_key=search_engine_key, env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
 
 if('bot' in app.node.try_get_context("extension")):

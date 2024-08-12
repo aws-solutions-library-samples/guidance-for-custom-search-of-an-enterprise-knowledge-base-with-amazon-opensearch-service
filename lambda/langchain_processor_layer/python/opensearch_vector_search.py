@@ -11,6 +11,8 @@ from langchain.schema.vectorstore import VectorStore
 from langchain.utils import get_from_dict_or_env
 from langchain.vectorstores.utils import maximal_marginal_relevance
 import ast
+import boto3
+import json
 
 IMPORT_OPENSEARCH_PY_ERROR = (
     "Could not import OpenSearch. Please install it with `pip install opensearch-py`."
@@ -19,6 +21,19 @@ SCRIPT_SCORING_SEARCH = "script_scoring"
 PAINLESS_SCRIPTING_SEARCH = "painless_scripting"
 MATCH_ALL_QUERY = {"match_all": {}}  # type: Dict
 
+def get_reranker_scores(pairs, endpoint_name):
+    smr_client = boto3.client("sagemaker-runtime")
+    response_model = smr_client.invoke_endpoint(
+        EndpointName=endpoint_name,
+        Body=json.dumps(
+            {
+                "inputs": pairs
+            }
+        ),
+        ContentType="application/json",
+    )
+    output = json.loads(response_model['Body'].read().decode('utf8'))
+    return output
 
 def _import_opensearch() -> Any:
     """Import OpenSearch if available, otherwise raise error."""
@@ -326,8 +341,8 @@ def _get_aos_docs(question,
     import requests
     
     num_output = 10
-    source_includes = [text_field,metadata_field]
-    fields = [text_field]
+    source_includes = [text_field,metadata_field,image_field]
+    fields = ["sentence"]
     headers = { "Content-Type": "application/json" }
     url = f'https://{host}/{index}/_search'
     print("url:",url)
@@ -349,27 +364,29 @@ def _get_aos_docs(question,
     clean = []
     aos_docs = []
     for hit in r['hits']['hits']:
-        document_score = float(hit['_score'])/10
+        document_score = float(hit['_score'])
         document_paragraph = hit['_source'][text_field]
         document_metadata = hit['_source'][metadata_field]
         if  document_paragraph  not in clean:
            #Remove duplicate paragraph
             clean.append(document_paragraph)
-            document_paragraph = "\n".join(document_paragraph)
             if work_mode == 'multi-modal':
-                image = hit['_source'][image_field]
+                image = ''
+                if image_field in hit['_source'].keys():
+                    image = hit['_source'][image_field]
+                
                 aos_docs.append(
-                    (Document(page_content=document_paragraph,metadata=document_metadata),
+                    [Document(page_content=document_paragraph,metadata=document_metadata),
                      document_score,
                      image
-                    )
+                    ]
                    )
             
             else:
                 aos_docs.append(
-                                (Document(page_content=document_paragraph,metadata=document_metadata),
+                                [Document(page_content=document_paragraph,metadata=document_metadata),
                                  document_score
-                                )
+                                ]
                                )
     aos_docs = sorted(aos_docs, key=lambda x: x[1], reverse=True)
     aos_docs = aos_docs[:docs_num]
@@ -574,17 +591,20 @@ class OpenSearchVectorSearch(VectorStore):
         source_set = set()
         new_docs = []
         for doc in docs:
-            if 'source' in doc[0].metadata.keys() and doc[0].metadata['source'] not in source_set:
-                source_set.add(doc[0].metadata['source'])
-                new_docs.append(doc)
-                if len(new_docs) >= k:
-                    break
+            if 'sources' in doc[0].metadata.keys() and 'page' in doc[0].metadata.keys():
+                source_string = doc[0].metadata['sources'] + "_" + str(doc[0].metadata['page'])
+                if source_string not in source_set:
+                    source_set.add(source_string)
+                    new_docs.append(doc)
+                    if len(new_docs) >= k:
+                        break
         return new_docs
 
     def doc_filter_by_content(self, docs:List[Document],k:int = 4)-> List[Document]:
         source_set = set()
         new_docs = []
         for doc in docs:
+            # print('filter doc:',doc)
             if doc[0].page_content not in source_set:
                 source_set.add(doc[0].page_content)
                 new_docs.append(doc)
@@ -656,7 +676,7 @@ class OpenSearchVectorSearch(VectorStore):
         vec_docs_score_thresholds = float(kwargs.get("vec_docs_score_thresholds", "0"))
         txt_docs_score_thresholds = float(kwargs.get("txt_docs_score_thresholds", "0"))
         
-        work_mode = kwargs.get("work_mode", "text-modal")
+        work_mode = kwargs.get("work_mode", "text")
         image_field = kwargs.get("image_field", "image_base64")
         
         source_filter = kwargs.get("source_filter", False)
@@ -665,14 +685,16 @@ class OpenSearchVectorSearch(VectorStore):
         content_filter = kwargs.get("content_filter", True)
         content_filter = ast.literal_eval(str(content_filter).title())
         
+        reranker_endpoint = kwargs.get("reranker_endpoint", "")
+        
         print('open search source_filter:',source_filter)
         print('open search content_filter:',content_filter)        
         
         if source_filter or content_filter:
             ori_k = k
             ori_txt_docs_num = txt_docs_num
-            k = 10*k
-            txt_docs_num = 10*txt_docs_num
+            k = 20*k
+            txt_docs_num = 20*txt_docs_num
         else:
             ori_k = k
             ori_txt_docs_num = txt_docs_num
@@ -688,7 +710,7 @@ class OpenSearchVectorSearch(VectorStore):
             text_field = kwargs.get("text_field", "text")
             metadata_field = kwargs.get("metadata_field", "metadata")
             aos_docs = _get_aos_docs(query,self.index_name,self.http_auth,aos_host,txt_docs_num,text_field,image_field,work_mode,metadata_field)
-     
+        
         if len(vec_docs+aos_docs) > 0:
             new_vec_docs = []
             new_aos_docs = []
@@ -707,10 +729,12 @@ class OpenSearchVectorSearch(VectorStore):
             else:
                 new_aos_docs = aos_docs
             
+            print('search_method:',search_method)
             if search_method == "text":
                 if source_filter:
                     docs_with_scores = self.doc_filter_by_source(new_aos_docs,ori_txt_docs_num) 
                 elif content_filter:
+                    print('in the text content_filter')
                     docs_with_scores = self.doc_filter_by_content(new_aos_docs,ori_txt_docs_num) 
                 else:
                     docs_with_scores = new_aos_docs
@@ -719,27 +743,51 @@ class OpenSearchVectorSearch(VectorStore):
                     docs_with_scores = self.doc_filter_by_source(new_vec_docs + new_aos_docs,ori_k + ori_txt_docs_num)
                     print('source_filter docs_with_scores len:',len(docs_with_scores))
                 elif content_filter:
-                    filter_vec_docs = self.doc_filter_by_content(new_vec_docs, ori_k)
-                    filter_aos_docs = self.doc_filter_by_content(new_aos_docs, ori_txt_docs_num)
-                    docs_with_scores = self.doc_filter_by_content(filter_vec_docs + filter_aos_docs,ori_k + ori_txt_docs_num)
+                    filter_vec_docs = self.doc_filter_by_content(new_vec_docs, k)
+                    filter_aos_docs = self.doc_filter_by_content(new_aos_docs, txt_docs_num)
+                    docs_with_scores = self.doc_filter_by_content(filter_vec_docs + filter_aos_docs,k + txt_docs_num)
                     print('content_filter docs_with_scores len:',len(docs_with_scores))
                 else:
                     docs_with_scores = new_vec_docs + new_aos_docs
                     print('docs_with_scores len:',len(docs_with_scores))
             else:
                 if source_filter:
-                    docs_with_scores = self.doc_filter_by_source(new_vec_docs,ori_k)
+                    docs_with_scores = self.doc_filter_by_source(new_vec_docs,k)
                 elif content_filter:
-                    docs_with_scores = self.doc_filter_by_content(new_vec_docs,ori_k) 
+                    docs_with_scores = self.doc_filter_by_content(new_vec_docs,k) 
                 else:
                     docs_with_scores = new_vec_docs     
                     
-                print('docs_with_scores:',docs_with_scores)
+
         
-        return docs_with_scores        
-        # return [doc[0] for doc in docs_with_scores]
+            if len(reranker_endpoint) > 0:
+                pairs = []
+                for doc in docs_with_scores:
+                    sentence = doc[0].metadata['sentence']
+                    pair = [query,sentence]
+                    pairs.append(pair)
+                print('pairs:',pairs)
+     
+                scores = get_reranker_scores(pairs,reranker_endpoint)
+                scores = scores['rerank_scores']
+                print('rerank_scores:',scores)
+                new_docs_with_scores=[]
+                for i in range(len(docs_with_scores)):
+                    new_doc = docs_with_scores[i]
+                    new_doc.append(scores[i])
+                    new_docs_with_scores.append(new_doc)
+                new_docs_with_scores = sorted(new_docs_with_scores,key=lambda new_doc:new_doc[3],reverse=True)
+                
+                docs_with_scores_rerank = []
+                for doc in new_docs_with_scores:
+                    docs_with_scores_rerank.append(doc[:3])
+                docs_with_scores = docs_with_scores_rerank
+                
+        # print('docs_with_scores:',docs_with_scores)
+           
+        return docs_with_scores[:ori_k+ori_txt_docs_num]
 
-
+        
     def similarity_search_with_score(
         self, query: str, k: int = 4, **kwargs: Any
     ) -> List[Tuple[Document, float]]:
@@ -762,7 +810,7 @@ class OpenSearchVectorSearch(VectorStore):
         text_field = kwargs.get("text_field", "text")
         metadata_field = kwargs.get("metadata_field", "metadata")
         embedding_type = kwargs.get("embedding_type", "sagemaker")
-        work_mode = kwargs.get("work_mode", "text-modal")
+        work_mode = kwargs.get("work_mode", "text")
         image_field = kwargs.get("image_field", "image_base64")
 
         hits = self._raw_similarity_search_with_score(query=query, k=k, **kwargs)
