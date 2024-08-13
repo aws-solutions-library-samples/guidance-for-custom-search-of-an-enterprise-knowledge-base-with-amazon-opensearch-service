@@ -317,7 +317,10 @@ class SmartSearchQA:
                 if 'type' in item.keys():
                     input_type = item['type']
                 if input_type == 'text':
-                    input_doc['text'] = item['text']
+                    if len(rewrite_system_prompt) > 0:
+                        input_doc['text'] = query
+                    else:
+                        input_doc['text'] = item['text']
                 if len(input_doc) > 0:
                     input_docs.append(input_doc)
             self.condense_question_llm.model_kwargs['input_docs'] = input_docs
