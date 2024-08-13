@@ -54,16 +54,18 @@ if app.node.try_get_context('vpc_deployment'):
     if REGION.find('cn') == -1: 
         bedrockstack = BedrockStack( app, "BedrockStack", env=env)
 else:
-    if app.node.try_get_context('search_engine_opensearch'):
-        searchstack = OpenSearchStack(app, "OpenSearchStack", env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
-        search_engine_key = searchstack.search_domain_endpoint
-    else:
-        searchstack = KendraStack(app, "KendraStack", env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
-        search_engine_key = searchstack.kendra_index_id
+    # if app.node.try_get_context('search_engine_opensearch'):
+    #     searchstack = OpenSearchStack(app, "OpenSearchStack", env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
+    #     search_engine_key = searchstack.search_domain_endpoint
+    # else:
+    #     searchstack = KendraStack(app, "KendraStack", env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
+    #     search_engine_key = searchstack.kendra_index_id
+    
+    search_engine_key = "search-smartsearch-7jyefxtpxjfdqyodpseeaq3zym.us-east-1.es.amazonaws.com"
     lambdastack = LambdaStack(app, "LambdaStack", search_engine_key=search_engine_key, env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
-    lambdastack.add_dependency(searchstack)
-    if REGION.find('cn') == -1: 
-        bedrockstack = BedrockStack( app, "BedrockStack", env=env)
+    # lambdastack.add_dependency(searchstack)
+    # if REGION.find('cn') == -1: 
+    #     bedrockstack = BedrockStack( app, "BedrockStack", env=env)
 notebookstack = NotebookStack(app, "NotebookStack", search_engine_key=search_engine_key, env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
 
 if('bot' in app.node.try_get_context("extension")):
