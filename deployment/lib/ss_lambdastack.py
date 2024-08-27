@@ -21,10 +21,19 @@ from aws_cdk import (
     ContextProvider,
     RemovalPolicy
 )
-from aws_cdk.aws_apigatewayv2_integrations_alpha import WebSocketLambdaIntegration
-from aws_cdk import aws_apigatewayv2_alpha as apigwv2
+# from aws_cdk.aws_apigatewayv2_integrations_alpha import WebSocketLambdaIntegration
+# from aws_cdk import aws_apigatewayv2_alpha as apigwv2
+from aws_cdk import (
+    aws_lambda as _lambda,
+    aws_apigatewayv2 as apigwv2,
+    aws_apigatewayv2_authorizers as authorizers,
+    aws_apigatewayv2_integrations as integrations
+)
+
+
 from aws_cdk.aws_lambda_event_sources import DynamoEventSource
 from aws_cdk.aws_lambda_event_sources import SqsEventSource
+
 import os
 
 binary_media_types = ["multipart/form-data"]
@@ -134,6 +143,8 @@ class LambdaStack(Stack):
         )
         websocketdefault.add_environment("TABLE_NAME", table_name)
 
+
+
         search_function_name = 'websocket_search'
         websocketsearch = _lambda.Function(
             self, search_function_name,
@@ -145,6 +156,17 @@ class LambdaStack(Stack):
         )
         websocketsearch.add_environment("TABLE_NAME", table_name)
         websocketsearch.add_environment("DIR_NAME", "search")
+
+        websocket_auth_function_name = 'websocket_auth'
+        websocket_auth = _lambda.Function(
+            self, websocket_auth_function_name,
+            function_name=websocket_auth_function_name,
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            role=websocket_role,
+            code=_lambda.Code.from_asset('../lambda/' + websocket_auth_function_name),
+            handler='lambda_function' + '.lambda_handler',
+        )
+
 
         #publish a new version
         # version = _lambda.Version(
@@ -167,18 +189,30 @@ class LambdaStack(Stack):
                                stage_name="prod",
                                auto_deploy=True
                                )
+        authorizer = authorizers.WebSocketLambdaAuthorizer(
+            "WebSocketAuthorizer",
+            handler=websocket_auth
+        )
         web_socket_api.add_route("search",
-                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketsearch)
+                                 integration=integrations.WebSocketLambdaIntegration("SearchIntegration", handler = websocketsearch)
                                  )
-        web_socket_api.add_route("$connect",
-                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketconnect)
-                                 )
+        # web_socket_api.add_route("$connect",
+        #                          integration=WebSocketLambdaIntegration("SearchIntegration", websocketconnect)
+        #                          )
+        web_socket_api.add_route("$connect", 
+                                 integration=integrations.WebSocketLambdaIntegration("SearchIntegration",handler =  websocketconnect), 
+                                 authorizer=authorizer
+        )
+
         web_socket_api.add_route("$disconnect",
-                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketdisconnect)
+                                 integration=integrations.WebSocketLambdaIntegration("SearchIntegration", handler = websocketdisconnect)
                                  )
         web_socket_api.add_route("$default",
-                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketdefault)
+                                 integration=integrations.WebSocketLambdaIntegration("SearchIntegration", handler = websocketdefault)
                                  )
+
+
+
 
         
         # cfn output
