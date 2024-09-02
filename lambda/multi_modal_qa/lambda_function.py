@@ -68,17 +68,19 @@ def lambda_handler(event, context):
         if 'queryStringParameters' in event.keys():
             evt_para = event['queryStringParameters']
 
-        requestType = 'websocket'
+        # requestType = 'websocket'
+        requestType = 'http'
         if isinstance(evt_para, dict) and "requestType" in evt_para.keys():
             requestType = evt_para['requestType']
         
         evt_body = {}
-        if 'body' in event.keys() and (requestType == 'websocket' or httpMethod == 'POST'):
-            if event['body'] != 'None':
-                evt_body = json.loads(event['body'])
-        else:
-            evt_body = json.loads(event['body'])
-            # evt_body = evt_para
+        # if 'body' in event.keys() and (requestType == 'websocket' or httpMethod == 'POST'):
+        #     if event['body'] != 'None':
+        #         evt_body = json.loads(event['body'])
+        # else:
+        #     evt_body = evt_para
+        
+        evt_body = evt_para
 
         if httpMethod == 'POST' and "requestType" in evt_body.keys():
             requestType = evt_body['requestType']
@@ -137,6 +139,11 @@ def lambda_handler(event, context):
         elif "indexName" in evt_body.keys():
             indexName = evt_body['indexName']
         print('indexName:', indexName)
+        
+        indexNameWTS = ""
+        if "indexWTS" in evt_body.keys():
+            indexNameWTS = evt_body['indexWTS']
+        print('indexNameWTS:', indexNameWTS)
 
         isCheckedContext = False
         if "isCheckedContext" in evt_body.keys():
@@ -244,6 +251,7 @@ def lambda_handler(event, context):
         connectionId = str(event.get('requestContext', {}).get('connectionId'))
         search_qa = SmartSearchQA()
         search_qa.init_cfg(indexName,
+                           indexNameWTS,
                            username,
                            password,
                            host,
@@ -393,7 +401,7 @@ def lambda_handler(event, context):
                 
                 rerankerEndpoint = ""
                 rewrite_prompt = ""
-
+                
                 result = search_qa.get_answer_from_multimodel(query,
                                                               question,
                                                               module,

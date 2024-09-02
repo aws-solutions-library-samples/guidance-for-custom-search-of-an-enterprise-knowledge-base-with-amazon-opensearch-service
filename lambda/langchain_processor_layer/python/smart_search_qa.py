@@ -16,6 +16,7 @@ class SmartSearchQA:
 
     def init_cfg(self,
              opensearch_index_name,
+             indexNameWTS,
              opensearch_user_name,
              opensearch_user_password,
              opensearch_or_kendra_host,
@@ -116,6 +117,14 @@ class SmartSearchQA:
                                                   opensearch_port,
                                                   opensearch_user_name,
                                                   opensearch_user_password)
+                                                  
+            self.vector_store_wts = init_vector_store(self.embeddings,
+                                                  indexNameWTS,
+                                                  opensearch_or_kendra_host,
+                                                  opensearch_port,
+                                                  opensearch_user_name,
+                                                  opensearch_user_password)
+                                                
         elif self.search_engine == "kendra":
             self.vector_store = None
             self.kendra_host = opensearch_or_kendra_host
@@ -172,7 +181,7 @@ class SmartSearchQA:
         
         return output
 
-    def get_retriever(self,top_k,
+    def get_retriever(self,vector_store,top_k,
                            search_method: str="vector",
                            txt_docs_num: int=0,
                            vec_docs_score_thresholds: float=0,
@@ -185,7 +194,7 @@ class SmartSearchQA:
                      ):
         
         if self.search_engine == "opensearch":
-            retriever = self.vector_store.as_retriever(search_kwargs={"k": top_k,
+            retriever = vector_store.as_retriever(search_kwargs={"k": top_k,
                                                                       "search_method":search_method,
                                                                       "txt_docs_num":txt_docs_num,
                                                                       "vec_docs_score_thresholds":vec_docs_score_thresholds,
@@ -201,7 +210,7 @@ class SmartSearchQA:
         elif self.search_engine == "kendra":
             retriever = AmazonKendraRetriever(index_id=self.kendra_host,top_k=top_k)
         elif self.search_engine == "zilliz":
-            retriever = self.vector_store.as_retriever(search_kwargs={"k": top_k,
+            retriever = vector_store.as_retriever(search_kwargs={"k": top_k,
                                                                       "search_method":search_method,
                                                                       "txt_docs_num":txt_docs_num,
                                                                       "vec_docs_score_thresholds":vec_docs_score_thresholds,
@@ -254,7 +263,7 @@ class SmartSearchQA:
         if len(history) > 0:
             self.llm.model_kwargs['history'] = history
         
-        retriever = self.get_retriever(top_k,search_method,txt_docs_num,vec_docs_score_thresholds,txt_docs_score_thresholds,text_field,vector_field)
+        retriever = self.get_retriever(self.vector_store,top_k,search_method,txt_docs_num,vec_docs_score_thresholds,txt_docs_score_thresholds,text_field,vector_field)
         
         ConversationalRetrievalChain._call = new_conversational_call
         chain = ConversationalRetrievalChain.from_llm(
@@ -324,81 +333,87 @@ class SmartSearchQA:
             query = self.condense_question_llm(prompt='')
             print('rewrite_query:',query)
 
-
-        self.llm.model_kwargs['language'] = self.language
-        if len(system_prompt) > 0:
-            self.llm.model_kwargs['system'] = system_prompt
-        
-        input_docs = []
-        for item in question:
-            input_doc = {}
-            #item = json.loads(item)
-            input_type = ''
-            if 'type' in item.keys():
-                input_type = item['type']
-            if input_type == 'text':
-                if len(rewrite_system_prompt) > 0:
-                    input_doc['text'] = query
-                else:
-                    input_doc['text'] = item['text']
-            elif input_type == 'image':
-                input_doc['image'] =  item['base64']
-            if len(input_doc) > 0:
-                input_docs.append(input_doc)
-        print('input_docs:',input_docs)
-        if len(input_docs) > 0:
-            self.llm.model_kwargs['input_docs'] = input_docs
-        
-        history = []
-        session_info = ""
-        if len(session_id) > 0 and len(table_name) > 0 and context_rounds > 0:
-            session_info = get_session_info(table_name,session_id)
-            if len(session_info) > 0:
-                session_info = session_info[-context_rounds:]
-                for item in session_info:
-                    print("session info:",item[0]," ; ",item[1]," ; ",item[2])
-                    if item[2] == module:
-                        history.append((item[0],item[1]))
-        
-        print('history:',history)
-        if len(history) > 0:
-            self.llm.model_kwargs['history'] = history
-        
         result = {}
-        if module == 'RAG' and isCheckedKnowledgeBase:
-            retriever = self.get_retriever(top_k,search_method,txt_docs_num,vec_docs_score_thresholds,txt_docs_score_thresholds,text_field,vector_field,image_field,work_mode,reranker_endpoint)
-            docs = retriever.get_relevant_documents(query)
+        if query.find('not insurance question') >= 0:
+            result['answer'] = response_if_no_docs_found
+        else:
+            self.llm.model_kwargs['language'] = self.language
+            if len(system_prompt) > 0:
+                self.llm.model_kwargs['system'] = system_prompt
             
-            print('docs:',docs)
-
-            result['source_documents'] = docs
-            if len(docs) > 0:
-                related_docs = []
-                for doc in docs:
-                    related_doc = {}
-                    related_doc['text'] = doc[0].page_content
-                    if 'sources' in  doc[0].metadata.keys():
-                        related_doc['title'] = doc[0].metadata['sources'].split('/')[-1]
-                    elif 'source' in  doc[0].metadata.keys():
-                        related_doc['title'] = doc[0].metadata['source'].split('/')[-1]
-                    if len(doc) == 3:
-                        related_doc['image'] = doc[2]
-                    if len(related_doc) > 0:
-                        related_docs.append(related_doc)
-                    
-                if len(related_docs) > 0:
-                    self.llm.model_kwargs['related_docs'] = related_docs
-    
-                response = self.llm(prompt='')
-                result['answer'] = response
-            else:
-                result['answer'] = response_if_no_docs_found
+            input_docs = []
+            for item in question:
+                input_doc = {}
+                #item = json.loads(item)
+                input_type = ''
+                print('item:',item)
+                if 'type' in item.keys():
+                    input_type = item['type']
+                if input_type == 'text':
+                    print('rewrite_system_prompt len:',len(rewrite_system_prompt))
+                    if len(rewrite_system_prompt) > 0:
+                        input_doc['text'] = query
+                    else:
+                        input_doc['text'] = item['text']
+                elif input_type == 'image':
+                    input_doc['image'] =  item['base64']
+                if len(input_doc) > 0:
+                    input_docs.append(input_doc)
+            print('input_docs:',input_docs)
+            if len(input_docs) > 0:
+                self.llm.model_kwargs['input_docs'] = input_docs
+            
+            history = []
+            session_info = ""
+            if len(session_id) > 0 and len(table_name) > 0 and context_rounds > 0:
+                session_info = get_session_info(table_name,session_id)
+                if len(session_info) > 0:
+                    session_info = session_info[-context_rounds:]
+                    for item in session_info:
+                        print("session info:",item[0]," ; ",item[1]," ; ",item[2])
+                        if item[2] == module:
+                            history.append((item[0],item[1]))
+            
+            print('history:',history)
+            if len(history) > 0:
+                self.llm.model_kwargs['history'] = history
+            
+            if module == 'RAG' and isCheckedKnowledgeBase:
+                excel_retriever = self.get_retriever(self.vector_store,top_k,search_method,txt_docs_num,vec_docs_score_thresholds,txt_docs_score_thresholds,text_field,vector_field,image_field,work_mode,reranker_endpoint)
+                excel_docs = excel_retriever.get_relevant_documents(query)
+                print('excel_docs:',excel_docs)
                 
-        elif module == 'Chat' or not isCheckedKnowledgeBase:
-            result = self.llm(prompt='')
+                wts_retriever = self.get_retriever(self.vector_store_wts,top_k,search_method,txt_docs_num,vec_docs_score_thresholds,txt_docs_score_thresholds,text_field,vector_field,image_field,work_mode,reranker_endpoint)
+                wts_docs = wts_retriever.get_relevant_documents(query)
+                print('wts_docs:',wts_docs)
+    
+                result['source_documents'] = excel_docs+wts_docs
+                if len(excel_docs) > 0:
+                    related_docs = []
+                    for doc in excel_docs:
+                        related_doc = {}
+                        related_doc['text'] = doc[0].page_content
+                        if 'sources' in  doc[0].metadata.keys():
+                            related_doc['title'] = doc[0].metadata['sources'].split('/')[-1]
+                        elif 'source' in  doc[0].metadata.keys():
+                            related_doc['title'] = doc[0].metadata['source'].split('/')[-1]
+                        if len(doc) == 3:
+                            related_doc['image'] = doc[2]
+                        if len(related_doc) > 0:
+                            related_docs.append(related_doc)
+                        
+                    if len(related_docs) > 0:
+                        self.llm.model_kwargs['related_docs'] = related_docs
+        
+                    response = self.llm(prompt='')
+                    result['answer'] = response
+                else:
+                    result['answer'] = response_if_no_docs_found
+                    
+            elif module == 'Chat' or not isCheckedKnowledgeBase:
+                result = self.llm(prompt='')
             
         if len(session_id) > 0 and len(table_name) > 0 and context_rounds > 0:
             update_session_info(table_name, session_id, query, str(result), module)
-            
-        print('result:',result)
+    
         return result
