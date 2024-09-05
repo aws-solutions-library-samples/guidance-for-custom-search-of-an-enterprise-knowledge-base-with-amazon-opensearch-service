@@ -355,7 +355,6 @@ def _get_aos_docs(question,
         if  document_paragraph  not in clean:
            #Remove duplicate paragraph
             clean.append(document_paragraph)
-            document_paragraph = "\n".join(document_paragraph)
             if work_mode == 'multi-modal':
                 image = hit['_source'][image_field]
                 aos_docs.append(
