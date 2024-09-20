@@ -351,7 +351,7 @@ def lambda_handler(event, context):
                         'contentCheckSuggestion': contentCheckSuggestion
                     })
 
-            elif module == "RAG" or isCheckedKnowledgeBase:
+            elif module == "RAG" or module == "Image" or isCheckedKnowledgeBase:
                 print('in the rag module')
 
                 vecTopK = TOP_K
@@ -402,7 +402,20 @@ def lambda_handler(event, context):
                 rerankerEndpoint = ""
                 rewrite_prompt = ""
                 
-                result = search_qa.get_answer_from_multimodel(query,
+                if module == "Image":
+                    result = search_qa.get_image(query,
+                                                  top_k=vecTopK,
+                                                  search_method=searchMethod,
+                                                  txt_docs_num=txtTopK,
+                                                  response_if_no_docs_found=responseIfNoDocsFound,
+                                                  vec_docs_score_thresholds=vecDocsScoreThresholds,
+                                                  txt_docs_score_thresholds=txtDocsScoreThresholds,
+                                                  text_field=textField,
+                                                  vector_field=vectorField
+                                                  )
+                
+                else:
+                    result = search_qa.get_answer_from_multimodel(query,
                                                               question,
                                                               module,
                                                               isCheckedKnowledgeBase,
@@ -528,7 +541,7 @@ def lambda_handler(event, context):
                         'contentCheckSuggestion': contentCheckSuggestion
 
                     })
-
+                
     except Exception as e:
         traceback.print_exc()
         response['body'] = json.dumps(

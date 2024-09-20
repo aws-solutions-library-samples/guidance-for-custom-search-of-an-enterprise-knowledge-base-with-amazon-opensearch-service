@@ -417,3 +417,27 @@ class SmartSearchQA:
             update_session_info(table_name, session_id, query, str(result), module)
     
         return result
+        
+    def get_image(self,query,
+                        top_k: int = 3,
+                        search_method: str="vector",
+                        txt_docs_num: int=0,
+                        response_if_no_docs_found: str="can't find the answer",
+                        vec_docs_score_thresholds: float =0,
+                        txt_docs_score_thresholds: float =0,
+                        context_rounds: int = 3,
+                        text_field: str="text",
+                        vector_field: str="vector_field"
+                        ):
+                            
+        retriever = self.get_retriever(self.vector_store,top_k,search_method,txt_docs_num,vec_docs_score_thresholds,txt_docs_score_thresholds,text_field,vector_field)
+        docs = retriever.get_relevant_documents(query)
+        
+        result = {}
+        result['source_documents'] = docs
+        if len(docs) > 0:
+            result['answer'] = 'find the image'
+        else:
+            result['answer'] = response_if_no_docs_found
+            
+        return result

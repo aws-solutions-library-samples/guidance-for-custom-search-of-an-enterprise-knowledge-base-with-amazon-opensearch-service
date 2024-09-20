@@ -5,9 +5,9 @@ import json
 from datetime import datetime
 from PIL import Image
 import pandas as pd
+import io, base64
 
-
-invoke_url = 'https://orty4m4scj.execute-api.us-east-1.amazonaws.com/prod'
+invoke_url = 'https://oqjzlhql2l.execute-api.us-east-1.amazonaws.com/prod'
 api = invoke_url + '/multi_modal_qa?query='
 
 default_index = ""
@@ -15,6 +15,7 @@ chinese_index = ""
 english_index = ""
 excel_index = 'wy_demo_excel_0822'
 wts_index = 'wy_demo_wts_0822'
+image_index = 'wy_demo_image_2'
 
 cn_embedding_endpoint = ''
 cn_llm_endpoint = ''
@@ -22,6 +23,7 @@ en_embedding_endpoint = 'cohere.embed-multilingual-v3'
 en_llm_endpoint = ''
 
 modelName = "anthropic.claude-3-haiku-20240307-v1:0"
+#modelName = "meta.llama3-8b-instruct-v1:0"
 
 
 prompt_template = """
@@ -45,23 +47,25 @@ with st.sidebar:
     #task = st.radio("Choose a task",('chat', 'qa'))
     language = 'english'
     task = 'RAG'
-    excel_index = st.text_input(label="Input the excel index", value=excel_index)
-    wts_index = st.text_input(label="Input the wts index", value=wts_index)
+    mode = st.radio("mode",["Q&A","Image"])
 
-    #search_type  = st.radio("Search Type",["vector","text",'mix'])
-    search_type = "vector"
-    #topK = st.slider("Vector Search Number",min_value=1, max_value=10, value=1, step=1)
-    topK = 1
+    if mode == 'Q&A':
+        excel_index = st.text_input(label="Input the excel index", value=excel_index)
+        wts_index = st.text_input(label="Input the wts index", value=wts_index)
+        topK = 1
+        action_prompt = st.text_area("Action Prompt",prompt_template,height=300)
+    elif mode == 'Image':
+        image_index = st.text_input(label="Input the image index", value=image_index)
+        topK = st.slider("Vector Search Number",min_value=1, max_value=3, value=1, step=1)
+    
+    search_type  = "vector"
     vectorConfidence = st.slider("Vector score Threshold",min_value=0.0, max_value=1.0, value=0.0, step=0.01)
-    #textSearchNumber = st.slider("Text Search Number",min_value=1, max_value=10, value=3, step=1)
-    #textScoreThresholds = st.slider("Text Score Threshold",min_value=0.0, max_value=1.0, value=0.5, step=0.01)   
     textSearchNumber = 0
     textScoreThresholds = 0.0
 
     #contextRounds = st.slider("Input the context rounds",min_value=0, max_value=3, value=0, step=1)
     contextRounds = 0
 
-    action_prompt = st.text_area("Action Prompt",prompt_template,height=300)
 
 st.write("## Chatbot Demo")
 
@@ -131,15 +135,15 @@ def generate_response(prompt):
     if float(vectorConfidence) > 0:
         url += ('&vecDocsScoreThresholds='+str(vectorConfidence))
     
-    url += ('&responseIfNoDocsFound=找不到問題的答案，請試試其他問題吧!')
+    url += ('&responseIfNoDocsFound=找不到問題的答案，請試���其他問題吧!')
 
     print('url:',url)
     response = requests.get(url)
     result = response.text
     result = json.loads(result)
-    print('result:',result)
+    #print('result:',result)
     answer = result['text']
-    print('answer:',answer)
+    #print('answer:',answer)
     source_data = result['sourceData']
     if len(source_data) >=2:
         excel_source = source_data[0]['source']
@@ -149,10 +153,10 @@ def generate_response(prompt):
         wts_score = source_data[1]['scoreQueryDoc']
         wts_id = wts_source['id']
         project = wts_source['teamProject']
-        print('project:',project)
+        #print('project:',project)
         #answer = "id:" + str(wts_id) + ",System.TeamProject:" + str(project) + ',action:'+answer
         answer = str(wts_id) + "," + str(project) + "," + answer
-        print('answer:',answer)
+        #print('answer:',answer)
 
         source_data = [{"excel_source":excel_source,"Query-Doc-Score":excel_score},{"wts_source":wts_source,"Query-Doc-Score":wts_score}]
    
@@ -163,6 +167,41 @@ def generate_response(prompt):
 
 
     return answer,source_data
+
+
+def get_image(prompt):
+
+    url = api + prompt
+
+    url += ('&module=Image')
+    url += ('&sessionId='+st.session_state.sessionId)
+    url += ('&requestType=http')
+    url += ('&index='+image_index)
+    url += ('&embeddingEndpoint='+en_embedding_endpoint)
+
+    url += ('&searchMethod='+search_type)
+    if topK > 0:
+        url += ('&vecTopK='+str(topK))
+    if textSearchNumber > 0:
+        url += ('&txtTopK='+str(textSearchNumber))
+    if float(textScoreThresholds) > 0:
+        url += ('&txtDocsScoreThresholds='+str(textScoreThresholds))
+
+    if float(vectorConfidence) > 0:
+        url += ('&vecDocsScoreThresholds='+str(vectorConfidence))
+
+    url += ('&responseIfNoDocsFound=找不到問題的答案，請試試其他問題吧!')
+
+    print('url:',url)
+    response = requests.get(url)
+    result = response.text
+    result = json.loads(result)
+    #print('result:',result)
+    answer = result['text']
+    print('answer:',answer)
+    source_data = result['sourceData']
+
+    return source_data
 
 
 # User-provided prompt
@@ -179,13 +218,29 @@ if st.session_state.messages[-1]["role"] != "assistant":
             placeholder = st.empty()
             #try:
             if True:
-                
-                answer,source = generate_response(prompt)
-                print('answer:',answer)
-                st.write(answer)
-                with st.expander("Data Source"):
-                    st.write(source)
+                if mode == "Q&A":
+                    answer,source = generate_response(prompt)
+                    print('answer:',answer)
+                    st.write(answer)
+                    with st.expander("Data Source"):
+                        st.write(source)
+                elif mode == "Image":
+                    source_datas = get_image(prompt)
+                    for source_data in source_datas:
+                        image_base64 = source_data['source']['image_code'].split(',')[-1]
+                        img = Image.open(io.BytesIO(base64.decodebytes(bytes(image_base64, "utf-8"))))
+                        name = source_data['source']['id']+'.jpeg'
+                        img.save(name)
+                        st.image(name)
 
+                        #subject = source_data['source']['subject']
+                        description = source_data['source']['sentence']
+
+                        with st.expander("Description"):
+                            st.markdown(description)
+
+    
+                        os.remove(name)
 
                 #placeholder.markdown(answer)
             #except:
