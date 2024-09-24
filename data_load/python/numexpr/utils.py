@@ -13,7 +13,6 @@ log = logging.getLogger(__name__)
 
 import os
 import subprocess
-import platform
 
 from numexpr.interpreter import _set_num_threads, _get_num_threads, MAX_THREADS
 from numexpr import use_vml
@@ -134,7 +133,8 @@ def _init_num_threads():
 
     env_configured = False
     n_cores = detect_number_of_cores()
-    if 'NUMEXPR_MAX_THREADS' in os.environ:
+    if ('NUMEXPR_MAX_THREADS' in os.environ and os.environ['NUMEXPR_MAX_THREADS'] != '' or
+        'OMP_NUM_THREADS' in os.environ and os.environ['OMP_NUM_THREADS'] != ''):
         # The user has configured NumExpr in the expected way, so suppress logs.
         env_configured = True
         n_cores = MAX_THREADS
@@ -143,16 +143,17 @@ def _init_num_threads():
         # configured NumExpr as desired, so we emit info logs.
         if n_cores > MAX_THREADS:
             log.info('Note: detected %d virtual cores but NumExpr set to maximum of %d, check "NUMEXPR_MAX_THREADS" environment variable.'%(n_cores, MAX_THREADS))
-        if n_cores > 8:
-            # The historical 'safety' limit.
-            log.info('Note: NumExpr detected %d cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 8.'%n_cores)
-            n_cores = 8
+        if n_cores > 16:
+            # Back in 2019, 8 threads would be considered safe for performance. We are in 2024 now, so adjusting.
+            log.info('Note: NumExpr detected %d cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 16.'%n_cores)
+            n_cores = 16
 
     # Now we check for 'NUMEXPR_NUM_THREADS' or 'OMP_NUM_THREADS' to set the 
     # actual number of threads used.
-    if 'NUMEXPR_NUM_THREADS' in os.environ:
+    if 'NUMEXPR_NUM_THREADS' in os.environ and os.environ['NUMEXPR_NUM_THREADS'] != '':
         requested_threads = int(os.environ['NUMEXPR_NUM_THREADS'])
-    elif 'OMP_NUM_THREADS' in os.environ:
+    elif 'OMP_NUM_THREADS' in os.environ and os.environ['OMP_NUM_THREADS'] != '':
+        # Empty string is commonly used to unset the variable
         requested_threads = int(os.environ['OMP_NUM_THREADS'])
     else:
         requested_threads = n_cores
