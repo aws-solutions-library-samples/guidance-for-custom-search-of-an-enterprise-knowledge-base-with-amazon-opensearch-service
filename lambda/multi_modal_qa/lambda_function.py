@@ -365,11 +365,6 @@ def lambda_handler(event, context):
                 rewritePrompt = evt_body['rewritePrompt']
             print('rewritePrompt:', rewritePrompt)
             
-            userName = ''
-            if "userName" in evt_body.keys():
-                userName = evt_body['userName']
-            print('userName:', userName)
-            
             if modelName.find('anthropic.claude') >=0:
                 result = search_qa.get_answer_from_multimodel(query,
                                                               question,

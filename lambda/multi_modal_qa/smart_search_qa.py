@@ -170,7 +170,7 @@ class SmartSearchQA:
         
         return output
 
-    def get_retriever(self,top_k,
+    def get_retriever(self,vector_store,top_k,
                            search_method: str="vector",
                            txt_docs_num: int=0,
                            vec_docs_score_thresholds: float=0,
@@ -183,7 +183,7 @@ class SmartSearchQA:
                      ):
         
         if self.search_engine == "opensearch":
-            retriever = self.vector_store.as_retriever(search_kwargs={"k": top_k,
+            retriever = vector_store.as_retriever(search_kwargs={"k": top_k,
                                                                       "search_method":search_method,
                                                                       "txt_docs_num":txt_docs_num,
                                                                       "vec_docs_score_thresholds":vec_docs_score_thresholds,
@@ -198,6 +198,20 @@ class SmartSearchQA:
                                                        )
         elif self.search_engine == "kendra":
             retriever = AmazonKendraRetriever(index_id=self.kendra_host,top_k=top_k)
+        elif self.search_engine == "zilliz":
+            retriever = vector_store.as_retriever(search_kwargs={"k": top_k,
+                                                                      "search_method":search_method,
+                                                                      "txt_docs_num":txt_docs_num,
+                                                                      "vec_docs_score_thresholds":vec_docs_score_thresholds,
+                                                                      "txt_docs_score_thresholds":txt_docs_score_thresholds,
+                                                                      "text_field":text_field,
+                                                                      "vector_field":vector_field,
+                                                                      "embedding_type":self.embedding_type,
+                                                                      "image_field":image_field,
+                                                                      "work_mode":work_mode,
+                                                                      "reranker_endpoint":reranker_endpoint,
+                                                                      }
+                                                       )
             
         return retriever
         
@@ -238,7 +252,7 @@ class SmartSearchQA:
         if len(history) > 0:
             self.llm.model_kwargs['history'] = history
         
-        retriever = self.get_retriever(top_k,search_method,txt_docs_num,vec_docs_score_thresholds,txt_docs_score_thresholds,text_field,vector_field)
+        retriever = self.get_retriever(self.vector_store,top_k,search_method,txt_docs_num,vec_docs_score_thresholds,txt_docs_score_thresholds,text_field,vector_field)
         
         ConversationalRetrievalChain._call = new_conversational_call
         chain = ConversationalRetrievalChain.from_llm(
@@ -389,3 +403,123 @@ class SmartSearchQA:
             result['rewrite_query'] = query
         print('result:',result)
         return result
+        
+    def search_docs(self,query,
+                        work_mode: str="text-modal",
+                        top_k: int = 3,
+                        search_method: str="vector",
+                        txt_docs_num: int=0,
+                        vec_docs_score_thresholds: float =0,
+                        txt_docs_score_thresholds: float =0,
+                        text_field: str="text",
+                        vector_field: str="vector_field",
+                        image_field: str="image_base64",
+                        reranker_endpoint: str='',
+                        rewrite_system_prompt: str='',
+                        ):
+        rewrite_query = ''
+        if len(rewrite_system_prompt) > 0:
+            self.condense_question_llm.model_kwargs['language'] = self.language
+            self.condense_question_llm.model_kwargs['system'] = rewrite_system_prompt
+            rewrite_query = self.condense_question_llm(prompt=query)
+            print('rewrite_query:',rewrite_query)
+
+        result = {}
+        result['rewrite_query'] = ''
+        if len(rewrite_query) > 0 and rewrite_query.find('無需改寫') < 0:
+            result['rewrite_query'] = rewrite_query
+            query = rewrite_query
+        elif len(rewrite_query) > 0 and rewrite_query.find('無需改寫') >=0:
+            result['rewrite_query'] = query
+
+        if query.find('你的問題涉及不當用詞') >= 0:
+            result['source_documents'] = []
+        else:
+            retriever = self.get_retriever(self.vector_store,top_k,
+                                           search_method,
+                                           txt_docs_num,
+                                           vec_docs_score_thresholds,
+                                           txt_docs_score_thresholds,
+                                           text_field,
+                                           vector_field,
+                                           image_field,
+                                           work_mode,
+                                           reranker_endpoint)
+            docs = retriever.get_relevant_documents(query)
+            print('docs:',docs)
+            result['source_documents'] = docs
+            
+        print('result:',result)
+        return result
+
+    def generate_response(self, query,
+                                docs: list=[],
+                                question: list=[],
+                                system_prompt: str='',
+                                session_id: str='',
+                                table_name: str='',
+                                work_mode: str="multi-modal",
+                                context_rounds: int = 3
+                                ):
+
+        self.llm.model_kwargs['language'] = self.language
+        if len(system_prompt) > 0:
+            self.llm.model_kwargs['system'] = system_prompt
+        
+        input_docs = []
+        for item in question:
+            input_doc = {}
+            input_type = ''
+            if 'type' in item.keys():
+                input_type = item['type']
+            if input_type == 'text':
+                if len(rewrite_system_prompt) > 0:
+                    input_doc['text'] = query
+                else:
+                    input_doc['text'] = item['text']
+            elif input_type == 'image':
+                input_doc['image'] =  item['base64']
+            if len(input_doc) > 0:
+                input_docs.append(input_doc)
+        print('input_docs:',input_docs)
+        if len(input_docs) > 0:
+            self.llm.model_kwargs['input_docs'] = input_docs
+
+        history = []
+        session_info = ""
+        if len(session_id) > 0 and len(table_name) > 0 and context_rounds > 0:
+            session_info = get_session_info(table_name,session_id)
+            if len(session_info) > 0:
+                session_info = session_info[-context_rounds:]
+                for item in session_info:
+                    print("session info:",item[0]," ; ",item[1]," ; ",item[2])
+                    if item[2] == module:
+                        history.append((item[0],item[1]))
+        
+        print('history:',history)
+        if len(history) > 0:
+            self.llm.model_kwargs['history'] = history
+
+        result = {}
+        result['answer'] = ''
+        if len(docs) > 0:
+            related_docs = []
+            for doc in docs:
+                related_doc = {}
+                related_doc['text'] = doc
+                
+                if len(related_doc) > 0:
+                    related_docs.append(related_doc)
+                
+            if len(related_docs) > 0:
+                self.llm.model_kwargs['related_docs'] = related_docs
+            
+            if len(input_docs) > 0:
+                response = self.llm(prompt='')
+            else:
+                response = self.llm(prompt=query)
+            result['answer'] = response
+
+        return result
+    
+        
