@@ -72,7 +72,7 @@ class LLMInputOutputAdapter:
     provider_to_output_key_map = {
         "anthropic": "completion",
         "anthropic-v3": "text",
-        "amazon": "outputText",
+        "amazon": "text",
         "cohere": "text",
         "meta":"generation",
         "mistral":"text"
@@ -118,6 +118,8 @@ class LLMInputOutputAdapter:
             return response_body.get("generation")
         elif provider == "mistral":
             return response_body.get("outputs")[0].get("text")
+        elif provider == "amazon":
+            return response_body.get("output").get("message").get("content")[0].get("text")
         else:
             return response_body.get("results")[0].get("outputText")
 
@@ -152,6 +154,14 @@ class LLMInputOutputAdapter:
                     elif (provider == "anthropic-v3" and 'delta' not in chunk_obj.keys()) or \
                          'message' in chunk_obj.keys() or 'content_block' in chunk_obj.keys():
                         continue
+                elif provider == 'amazon':
+                    content_block_delta = chunk_obj.get("contentBlockDelta")
+                    # print('content_block_delta:',content_block_delta)
+                    if content_block_delta:
+                        chunk_obj = content_block_delta.get("delta")
+                    else:
+                        chunk_obj = None
+                        
                 elif provider == "cohere" and (
                     chunk_obj["is_finished"]
                     or chunk_obj[cls.provider_to_output_key_map[provider]]
@@ -160,10 +170,10 @@ class LLMInputOutputAdapter:
                     return
 
                 # chunk obj format varies with provider
-                yield GenerationChunk(
-                    text=chunk_obj[cls.provider_to_output_key_map[provider]]
-                )
-
+                if chunk_obj:
+                    yield GenerationChunk(
+                        text=chunk_obj[cls.provider_to_output_key_map[provider]]
+                    )              
 
 class BedrockBase(BaseModel, ABC):
     """Base class for Bedrock models."""
@@ -270,15 +280,26 @@ class BedrockBase(BaseModel, ABC):
         params = {**_model_kwargs, **kwargs}
         params["modelId"] = self.model_id
         input_body = BedrockAdapter.prepare_input(provider, prompt, params)
-        body = json.dumps(input_body)
-        accept = "*/*"
-        contentType = "application/json"
-
+        
+        # print('input_body:',input_body)
+        
         try:
-            response = self.client.invoke_model(
-                body=body, modelId=self.model_id, accept=accept, contentType=contentType
-            )
-            text = LLMInputOutputAdapter.prepare_output(provider, response)
+
+            if self.model_id.find('meta.llama3-2') >=0:
+                response = self.client.converse(
+                    modelId=self.model_id,
+                    messages=input_body,
+                )
+                text = response["output"]["message"]["content"][0]["text"]
+            else:
+                body = json.dumps(input_body)
+                accept = "application/json"
+                contentType = "application/json"
+                response = self.client.invoke_model(
+                    body=body, modelId=self.model_id, accept=accept, contentType=contentType
+                )
+            
+                text = LLMInputOutputAdapter.prepare_output(provider, response)
             
         except Exception as e:
             raise ValueError(f"Error raised by bedrock service: {e}")
