@@ -47,6 +47,21 @@ const THIRD_PARTY_API_MODEL_NAMES = [
   { label: 'Baichuan2-53B', value: 'Baichuan2-53B', modelType: ['llm_api'] },
   { label: 'Baichuan2-192k', value: 'Baichuan2-192k', modelType: ['llm_api'] },
   {
+    label: 'amazon.nova-lite-v1',
+    value: 'amazon.nova-lite-v1:0',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
+    label: 'amazon.nova-micro-v1',
+    value: 'amazon.nova-micro-v1:0',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
+    label: 'amazon.nova-pro-v1',
+    value: 'amazon.nova-pro-v1:0',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
     label: 'anthropic.claude-3-sonnet',
     value: 'anthropic.claude-3-sonnet-20240229-v1:0',
     modelType: ['bedrock', 'bedrock_api'],
