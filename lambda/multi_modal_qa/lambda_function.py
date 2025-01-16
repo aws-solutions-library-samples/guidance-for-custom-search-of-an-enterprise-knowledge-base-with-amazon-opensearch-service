@@ -531,6 +531,51 @@ def lambda_handler(event, context):
                     'contentCheckSuggestion': contentCheckSuggestion
 
                 })
+        elif module == "SEARCH":
+            result = search_qa.search_docs(query,    
+                                            work_mode = workMode,
+                                            top_k=vecTopK,
+                                            search_method=searchMethod,
+                                            txt_docs_num=txtTopK,
+                                            vec_docs_score_thresholds=vecDocsScoreThresholds,
+                                            txt_docs_score_thresholds=txtDocsScoreThresholds,
+                                            text_field=textField,
+                                            vector_field=vectorField,
+                                            image_field=imageField,
+                                            reranker_endpoint = rerankerEndpoint,
+                                            rewrite_system_prompt=rewritePrompt,
+                                            )
+            source_docs = [doc[0] for doc in result['source_documents']]
+            query_docs_scores = [doc[1] for doc in result['source_documents']]
+            images = ''
+            source_list = buildSourceList(searchEngine, source_docs, images, query_docs_scores)
+            print("source_list:",source_list)
+    
+            response['body'] = json.dumps(
+                {
+                    'sourceData': source_list,
+                    'rewriteQuery':result['rewrite_query']
+                })
+    
+        elif module == "GENERATE":
+            relatedDocs = []
+            if "relatedDocs" in evt_body.keys():
+                relatedDocs = evt_body['relatedDocs']
+            print('relatedDocs:', relatedDocs)
+    
+            result = search_qa.generate_response(query,
+                                                relatedDocs,
+                                                question,
+                                                systemPrompt,
+                                                sessionId,
+                                                table_name,
+                                                work_mode = workMode,
+                                                context_rounds=contextRounds
+                                                )
+            response['body'] = json.dumps(
+                {
+                    'answer': result['answer']
+                })
 
     except Exception as e:
         traceback.print_exc()
@@ -564,7 +609,7 @@ def sendWebSocket(msgbody,event):
     api_res = apigw_management.post_to_connection(ConnectionId=connectionId, Data=msgbody)
     print('api_res', api_res)
 
-def buildSourceList(searchEngine, source_docs, images,query_docs_scores, answer_docs_scores):
+def buildSourceList(searchEngine, source_docs, images : str='',query_docs_scores : list=[], answer_docs_scores : list=[]):
     source_list=[]
     if not query_docs_scores or len(query_docs_scores) == 0:
         query_docs_scores = [-1] * len(source_docs)
