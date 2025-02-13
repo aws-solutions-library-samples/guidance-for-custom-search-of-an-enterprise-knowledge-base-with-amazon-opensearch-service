@@ -19,5 +19,26 @@
         }
       }
     }
+  },
+  "env": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-uisearch-env-77abf-authRole",
+      "UnauthRoleArn": "arn:aws:iam::513489159680:role/amplify-uisearch-env-77abf-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::513489159680:role/amplify-uisearch-env-77abf-authRole",
+      "Region": "us-east-1",
+      "DeploymentBucketName": "amplify-uisearch-env-77abf-deployment",
+      "UnauthRoleName": "amplify-uisearch-env-77abf-unauthRole",
+      "StackName": "amplify-uisearch-env-77abf",
+      "StackId": "arn:aws:cloudformation:us-east-1:513489159680:stack/amplify-uisearch-env-77abf/22527f40-e4ff-11ef-bedf-129d68842e8f",
+      "AmplifyAppId": "dh6zmacuu5efn"
+    },
+    "categories": {
+      "hosting": {
+        "amplifyhosting": {
+          "appId": "dh6zmacuu5efn",
+          "type": "manual"
+        }
+      }
+    }
   }
 }

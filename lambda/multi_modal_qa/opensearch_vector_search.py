@@ -364,7 +364,7 @@ def _get_aos_docs(question,
     clean = []
     aos_docs = []
     for hit in r['hits']['hits']:
-        document_score = float(hit['_score'])
+        document_score = float(hit['_score']) / 12
         document_paragraph = hit['_source'][text_field]
         document_metadata = hit['_source'][metadata_field]
         if  document_paragraph  not in clean:
@@ -612,6 +612,25 @@ class OpenSearchVectorSearch(VectorStore):
                     break
         return new_docs
 
+    def merge_docs(self,vec_docs,text_docs):
+        m_docs = []
+        duplicate_text_docs = []
+        for vec_doc in vec_docs:
+            for txt_doc in text_docs:
+                if vec_doc[0].page_content == txt_doc[0].page_content:
+                    vec_doc[1] += txt_doc[1]
+                    duplicate_text_docs.append(txt_doc[0].page_content)
+                    break
+            m_docs.append(vec_doc)
+        
+        for txt_doc in text_docs:
+            if txt_doc[0].page_content not in duplicate_text_docs:
+                m_docs.append(txt_doc)
+        
+        return m_docs
+
+
+
     def similarity_search(
         self, query: str, k: int = 4, **kwargs: Any
     ) -> List[Document]:
@@ -728,6 +747,14 @@ class OpenSearchVectorSearch(VectorStore):
                         new_aos_docs.append(doc)
             else:
                 new_aos_docs = aos_docs
+
+            print('vectro recall')
+            for doc in new_vec_docs:
+                print('doc sentence:',doc[0].metadata['sentence'],'  ',doc[1])
+                
+            print('text recall')
+            for doc in new_aos_docs:
+                print('doc sentence:',doc[0].metadata['sentence'],'  ',doc[1])
             
             print('search_method:',search_method)
             if search_method == "text":
@@ -740,15 +767,16 @@ class OpenSearchVectorSearch(VectorStore):
                     docs_with_scores = new_aos_docs
             elif search_method == "mix":
                 if source_filter:
-                    docs_with_scores = self.doc_filter_by_source(new_vec_docs + new_aos_docs,ori_k + ori_txt_docs_num)
+                    docs_with_scores = self.merge_docs(new_vec_docs, new_aos_docs)
+                    docs_with_scores = self.doc_filter_by_source(docs_with_scores,k)
                     print('source_filter docs_with_scores len:',len(docs_with_scores))
                 elif content_filter:
                     filter_vec_docs = self.doc_filter_by_content(new_vec_docs, k)
                     filter_aos_docs = self.doc_filter_by_content(new_aos_docs, txt_docs_num)
-                    docs_with_scores = self.doc_filter_by_content(filter_vec_docs + filter_aos_docs,k + txt_docs_num)
+                    docs_with_scores = self.merge_docs(filter_vec_docs,filter_aos_docs)
                     print('content_filter docs_with_scores len:',len(docs_with_scores))
                 else:
-                    docs_with_scores = new_vec_docs + new_aos_docs
+                    docs_with_scores = elf.merge_docs(new_vec_docs,new_aos_docs)
                     print('docs_with_scores len:',len(docs_with_scores))
             else:
                 if source_filter:
@@ -758,8 +786,10 @@ class OpenSearchVectorSearch(VectorStore):
                 else:
                     docs_with_scores = new_vec_docs     
                     
+            print('before rerank docs:')
+            for doc in docs_with_scores:
+                print('doc sentence:',doc[0].metadata['sentence'],'  ',doc[1])
 
-        
             if len(reranker_endpoint) > 0:
                 pairs = []
                 for doc in docs_with_scores:
@@ -774,14 +804,22 @@ class OpenSearchVectorSearch(VectorStore):
                 new_docs_with_scores=[]
                 for i in range(len(docs_with_scores)):
                     new_doc = docs_with_scores[i]
-                    new_doc.append(scores[i])
+                    new_doc.append((scores[i]/2+new_doc[1])/2)
                     new_docs_with_scores.append(new_doc)
                 new_docs_with_scores = sorted(new_docs_with_scores,key=lambda new_doc:new_doc[-1],reverse=True)
+
+                print('after rerank docs:')
+                for doc in new_docs_with_scores:
+                    print('doc sentence:',doc[0].metadata['sentence'],'  ',doc[1],'  ',doc[-1])
                 
                 docs_with_scores_rerank = []
                 for doc in new_docs_with_scores:
-                    docs_with_scores_rerank.append(doc[:3])
+                    if doc[-1] > -1:
+                        docs_with_scores_rerank.append(doc[:3])
                 docs_with_scores = docs_with_scores_rerank
+
+            else:
+                docs_with_scores = sorted(docs_with_scores,key=lambda new_doc:new_doc[-1],reverse=True)
                 
         # print('docs_with_scores:',docs_with_scores)
            
@@ -825,7 +863,7 @@ class OpenSearchVectorSearch(VectorStore):
                         else hit["_source"][metadata_field],
                     ),
                     hit["_score"] * 100  if embedding_type == 'bedrock' else hit["_score"],
-                    hit["_source"][image_field][0] if image_field in hit["_source"].keys() and isinstance(hit["_source"][image_field],list)  else (hit["_source"][image_field] if image_field in hit["_source"].keys() else '') 
+                    hit["_source"][image_field] if image_field in hit["_source"].keys() and isinstance(hit["_source"][image_field],list)  else (hit["_source"][image_field] if image_field in hit["_source"].keys() else '') 
                 ]
                 for hit in hits
             ]

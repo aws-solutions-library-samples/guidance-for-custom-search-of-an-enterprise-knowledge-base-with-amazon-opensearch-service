@@ -398,30 +398,6 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
               />
             </FormField>
 
-            {workMode !== DEFAULT_WORK_MODE && (
-              <>
-                <FormField
-                  stretch
-                  label="System Prompt for CHAT module"
-                  description="Please provide your system prompt for CHAT module"
-                >
-                  <Textarea
-                    {...bindChatSystemPrompt}
-                    rows={4}
-                    placeholder="System prompt for CHAT module"
-                  />
-                </FormField>
-                <FormField
-                  stretch
-                  constraintText="Check to bypass CHAT module when it is NOT a multi-modal query"
-                >
-                  <Toggle {...bindTextRAGOnlyOnMultiModal}>
-                    Bypass Chat module
-                  </Toggle>
-                </FormField>
-              </>
-            )}
-
             <Divider />
 
             <FormField stretch label="Search Engine">

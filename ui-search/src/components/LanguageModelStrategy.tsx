@@ -47,44 +47,33 @@ const THIRD_PARTY_API_MODEL_NAMES = [
   { label: 'Baichuan2-53B', value: 'Baichuan2-53B', modelType: ['llm_api'] },
   { label: 'Baichuan2-192k', value: 'Baichuan2-192k', modelType: ['llm_api'] },
   {
-    label: 'anthropic.claude-3-sonnet',
-    value: 'anthropic.claude-3-sonnet-20240229-v1:0',
+    label: 'amazon.nova-lite-v1',
+    value: 'amazon.nova-lite-v1:0',
     modelType: ['bedrock', 'bedrock_api'],
   },
   {
-    label: 'anthropic.claude-3-haiku',
-    value: 'anthropic.claude-3-haiku-20240307-v1:0',
+    label: 'amazon.nova-micro-v1',
+    value: 'amazon.nova-micro-v1:0',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
+    label: 'amazon.nova-pro-v1',
+    value: 'amazon.nova-pro-v1:0',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
+    label: 'anthropic.claude-3-5-sonnet-v2',
+    value: 'us.anthropic.claude-3-5-sonnet-20241022-v2:0',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
+    label: 'anthropic.claude-3-5-haiku',
+    value: 'us.anthropic.claude-3-5-haiku-20241022-v1:0',
     modelType: ['bedrock', 'bedrock_api'],
   },
   {
     label: 'anthropic.claude-3.5-sonnet',
     value: 'anthropic.claude-3-5-sonnet-20240620-v1:0',
-    modelType: ['bedrock', 'bedrock_api'],
-  },
-  {
-    label: 'anthropic.claude-3-opus',
-    value: 'anthropic.claude-3-opus-20240229-v1:0',
-    modelType: ['bedrock', 'bedrock_api'],
-  },
-  {
-    label: 'meta.llama3-8b',
-    value: 'meta.llama3-8b-instruct-v1:0',
-    modelType: ['bedrock', 'bedrock_api'],
-  },
-  {
-    label: 'meta.llama3-70b',
-    value: 'meta.llama3-70b-instruct-v1:0',
-    modelType: ['bedrock', 'bedrock_api'],
-  },
-
-  {
-    label: 'mistral.mistral-small',
-    value: 'mistral.mistral-small-2402-v1:0',
-    modelType: ['bedrock', 'bedrock_api'],
-  },
-  {
-    label: 'mistral.mixtral-large',
-    value: 'mistral.mistral-large-2402-v1:0',
     modelType: ['bedrock', 'bedrock_api'],
   },
   {

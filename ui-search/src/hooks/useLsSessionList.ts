@@ -15,9 +15,7 @@ const useLsSessionList = () => {
     updateById: lsUpdateOneSession,
   } = useLsArray<ILocSession>(
     LSK.sessionList,
-    'sessionId',
-    // FIX ME LATER
-    PROMPT_TEMPLATES as unknown as ILocSession[]
+    'sessionId'
   );
 
   const lsAddContentToOneSession = useCallback(
