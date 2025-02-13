@@ -100,6 +100,13 @@ class BedrockAdapter:
                 source["data"] = model_kwargs['image']
                 image_dic["source"] = source
                 messages["content"].append(image_dic)
+            elif 'images' in model_kwargs.keys():
+                for image in model_kwargs['images']:
+                    image_dic = {"type": "image"}
+                    source = {"type": "base64","media_type": "image/jpeg"}
+                    source["data"] = image
+                    image_dic["source"] = source
+                    messages["content"].append(image_dic)
 
             if len(prompt) > 0:
                 text_dic = {"type":"text"}

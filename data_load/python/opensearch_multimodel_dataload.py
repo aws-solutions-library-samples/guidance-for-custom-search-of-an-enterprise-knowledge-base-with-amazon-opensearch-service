@@ -55,7 +55,7 @@ def _bulk_ingest_embeddings(
     index_name: str,
     embeddings: List[List[float]],
     texts: Iterable[str],
-    images: Iterable[str],
+    images: List[List[str]],
     metadatas: Optional[List[dict]] = None,
     ids: Optional[List[str]] = None,
     vector_field: str = "sentence_vector",
@@ -83,7 +83,8 @@ def _bulk_ingest_embeddings(
         metadata = metadatas[i] if metadatas else {}
         _id = ids[i] if ids else str(uuid.uuid4())
         request = {}
-        if images is not None and len(images) > 0:
+        if images[i] is not None and len(images[i]) > 0:
+            print('image len:',len(images[i]))
             request = {
                 "_op_type": "index",
                 "_index": index_name,
@@ -93,7 +94,7 @@ def _bulk_ingest_embeddings(
                 "metadata": metadata,
                 "sentence": metadata['sentence'],
             }
-        else:
+        elif 'sentence' in metadata.keys():
             request = {
                 "_op_type": "index",
                 "_index": index_name,
@@ -101,6 +102,14 @@ def _bulk_ingest_embeddings(
                 text_field: text,
                 "metadata": metadata,
                 "sentence": metadata['sentence'],
+            }
+        else:
+            request = {
+                "_op_type": "index",
+                "_index": index_name,
+                vector_field: embeddings[i],
+                text_field: text,
+                "metadata": metadata
             }
 
         request["_id"] = _id
@@ -156,7 +165,7 @@ def add_multimodel_documents(
         texts: Iterable[str],
         embeddings: List[List[float]],
         metadatas: Optional[List[dict]] = None,
-        images: Iterable[str] = None,
+        images: List[List[str]] = None,
         ids: Optional[List[str]] = None,
         bulk_size: int = 10000000,
         **kwargs: Any,
@@ -193,8 +202,5 @@ def add_multimodel_documents(
             mapping=mapping,
             max_chunk_bytes=max_chunk_bytes
         )
-
-
-
     
     

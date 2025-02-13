@@ -101,7 +101,7 @@ class LLMInputOutputAdapter:
 
     @classmethod
     def prepare_output(cls, provider: str, response: Any) -> str:
-        if provider == "anthropic":
+        if provider == "anthropic" or provider == "us":
             response_body = json.loads(response.get("body").read().decode())
             if 'content' in response_body.keys():
                 return response_body.get("content")[0].get("text")
@@ -283,8 +283,8 @@ class BedrockBase(BaseModel, ABC):
         
         # print('input_body:',input_body)
         
-        try:
-
+        # try:
+        if True:
             if self.model_id.find('meta.llama3-2') >=0:
                 response = self.client.converse(
                     modelId=self.model_id,
@@ -301,8 +301,8 @@ class BedrockBase(BaseModel, ABC):
             
                 text = LLMInputOutputAdapter.prepare_output(provider, response)
             
-        except Exception as e:
-            raise ValueError(f"Error raised by bedrock service: {e}")
+        # except Exception as e:
+        #     raise ValueError(f"Error raised by bedrock service: {e}")
 
         if stop is not None:
             text = enforce_stop_tokens(text, stop)
