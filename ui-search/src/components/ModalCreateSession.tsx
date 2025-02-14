@@ -86,7 +86,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
     bindTextRAGOnlyOnMultiModal,
     resetTextRAGOnlyOnMultiModal,
     setIsCheckedTextRAGOnlyOnMultiModal,
-  ] = useToggle(false, (checked) => checked && setIsCheckedKnowledgeBase(true));
+  ] = useToggle(true, (checked) => checked && setIsCheckedKnowledgeBase(true));
 
   const [searchEngine, bindSearchEngine, resetSearchEngine, setSearchEngine] =
     useInput<SEARCH_ENGINE>(SEARCH_ENGINE.opensearch);
