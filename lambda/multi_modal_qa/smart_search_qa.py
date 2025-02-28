@@ -393,13 +393,14 @@ class SmartSearchQA:
                     related_docs = []
                     for doc in docs:
                         related_doc = {}
-                        related_doc['text'] = doc[0].page_content
                         if 'sources' in  doc[0].metadata.keys():
                             related_doc['title'] = doc[0].metadata['sources'].split('/')[-1]
                         elif 'source' in  doc[0].metadata.keys():
                             related_doc['title'] = doc[0].metadata['source'].split('/')[-1]
-                        if len(doc) == 3 and len(doc[2]) > 0 and work_mode == "multi-modal":
+                        if work_mode == "multi-modal" and len(doc) == 3 and len(doc[2]) > 0:
                             related_doc['image'] = doc[2]
+                        else:
+                            related_doc['text'] = doc[0].page_content
                         if len(related_doc) > 0:
                             related_docs.append(related_doc)
                         

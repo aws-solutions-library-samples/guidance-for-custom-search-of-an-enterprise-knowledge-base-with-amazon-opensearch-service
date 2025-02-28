@@ -62,6 +62,11 @@ const THIRD_PARTY_API_MODEL_NAMES = [
     modelType: ['bedrock', 'bedrock_api'],
   },
   {
+    label: 'anthropic.claude-3-7',
+    value: 'us.anthropic.claude-3-7-sonnet-20250219-v1:0',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
     label: 'anthropic.claude-3-5-sonnet-v2',
     value: 'us.anthropic.claude-3-5-sonnet-20241022-v2:0',
     modelType: ['bedrock', 'bedrock_api'],
