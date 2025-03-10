@@ -67,129 +67,278 @@ class BedrockAdapter:
             temperature = float(kwargs['temperature'])
         print('temperature:',temperature)
         
-        language='chinese'
+        language='english'
         if "language" in kwargs.keys():
             language = kwargs['language']
         print('language:',language)
 
-        if modelId.find('claude-v2') >=0 or modelId.find('claude-instant') >=0:
-            prompt = cls._human_assistant_format(prompt)
-            input_body = {"prompt": prompt, "max_tokens_to_sample": max_tokens,"temperature": temperature}
-        elif modelId.find('claude-3') >=0:
+        if provider == "anthropic" or provider == "us":
+            if modelId.find('claude-v2') >=0 or modelId.find('claude-instant') >=0:
+                prompt = cls._human_assistant_format(prompt)
+                input_body = {"prompt": prompt, "max_tokens_to_sample": max_tokens,"temperature": temperature}
+            elif modelId.find('claude-3') >=0:
+    
+                input_body = {
+                    "anthropic_version": "bedrock-2023-05-31"
+                }
+                if int(max_tokens) > 0:
+                    input_body['max_tokens'] = max_tokens
+                if float(temperature) > 0:
+                    input_body['temperature'] = temperature
+    
+                if 'system' in model_kwargs.keys():
+                    input_body['system'] = model_kwargs['system']
+    
+                input_body['messages'] = []
+    
+                messages = {}
+                messages['role'] = 'user'
+                messages['content'] = []
+    
+                if 'image' in model_kwargs.keys():
+                    image_dic = {"type": "image"}
+                    source = {"type": "base64","media_type": "image/jpeg"}
+                    source["data"] = model_kwargs['image']
+                    image_dic["source"] = source
+                    messages["content"].append(image_dic)
+    
+                if len(prompt) > 0:
+                    text_dic = {"type":"text"}
+                    text_dic["text"] = '<user question>' + prompt + '</user question>'
+                    messages['content'].append(text_dic)
+                if 'image' not in model_kwargs.keys() and 'related_docs' in model_kwargs.keys():
+                    docs = model_kwargs['related_docs']
+                    for doc in docs:
+                        if 'text' in doc.keys():
+                            text_dic = {"type":"text"}
+                            text_dic["text"] = '<related documents>' + doc['text'] + '</related documents>' 
+                            messages['content'].append(text_dic)
+                        if 'image' in doc.keys() and len(doc['image']) > 0:
+                            if isinstance(doc['image'],list):
+                                print('images len:',len(doc['image']))
+                                for image in doc['image']:
+                                    image_dic = {"type": "image"}
+                                    source = {"type": "base64","media_type": "image/jpeg"}
+                                    source["data"] = image
+                                    image_dic["source"] = source
+                                    messages['content'].append(image_dic)
+                            else:
+                                image_dic = {"type": "image"}
+                                source = {"type": "base64","media_type": "image/jpeg"}
+                                source["data"] = doc['image']
+                                image_dic["source"] = source
+                                messages['content'].append(image_dic)
+    
+                if 'history' in model_kwargs.keys():
+                    history = list(model_kwargs['history'])
+                    history_str = ''
+                    for item in history:
+                        if language.find('chinese') >=0:
+                            history_str += ( '问题：' + str(item[0]) + '，回复：' + str(item[1]) + ';' )
+                        elif language == 'english':
+                            history_str += ( 'question:' + str(item[0]) + ',answer:' + str(item[1]) + ';' )
+                            
+                    text_dic = {"type":"text"}
+                    text_dic["text"] = '<conversation records>' +  history_str + '</conversation records>'
+                    messages['content'].append(text_dic)
+    
+                if 'input_docs' in model_kwargs.keys():
+                    docs = model_kwargs['input_docs']
+                    for doc in docs:
+                        if 'text' in doc.keys():
+                            text_dic = {"type":"text"}
+                            text_dic["text"] = '<user question>' +  doc['text'] + '</user question>'
+                            messages['content'].append(text_dic)
+                        if 'image' in doc.keys():
+                            if isinstance(doc['image'],list):
+                                print('images len:',len(doc['image']))
+                                for image in doc['image']:
+                                    image_dic = {"type": "image"}
+                                    source = {"type": "base64","media_type": "image/jpeg"}
+                                    source["data"] = image
+                                    image_dic["source"] = source
+                                    messages['content'].append(image_dic)
+                            else:
+                                image_dic = {"type": "image"}
+                                source = {"type": "base64","media_type": "image/jpeg"}
+                                source["data"] = doc['image']
+                                image_dic["source"] = source
+                                messages['content'].append(image_dic)
+    
+                input_body['messages'].append(messages)
+        elif provider == "amazon":
+            if modelId == 'amazon.titan-tg1-large':
+                input_body = {"inputText": prompt,
+                                         "textGenerationConfig" : {
+                                             "maxTokenCount": max_tokens,
+                                             "stopSequences": [],
+                                             "temperature":temperature,
+                                             "topP":0.9
+                                         }
+                                         }
+            elif modelId == 'amazon.titan-e1t-medium':
+                input_body = {"inputText": prompt}
 
+            elif modelId.find('amazon.nova') >=0:
+                input_body = {
+                    'schemaVersion': 'messages-v1',
+                    "inferenceConfig": {'top_p': 0.9, 'top_k': 20},
+                    "toolConfig": {}
+                }
+                
+                if int(max_tokens) > 0:
+                    input_body['inferenceConfig']['max_new_tokens'] = max_tokens
+                if float(temperature) > 0:
+                    input_body['inferenceConfig']['temperature'] = temperature
+
+                if 'system' in model_kwargs.keys():
+                    input_body['system'] = [{'text':model_kwargs['system']}]
+
+                input_body['messages'] = []
+
+                messages = {}
+                messages['role'] = 'user'
+                messages['content'] = []
+                
+
+                if 'image' in model_kwargs.keys():
+                    image_dic = {
+                        "format": model_kwargs['image_type'],
+                        "source": {"bytes": model_kwargs['image']},
+                    }
+                    messages["content"].append({"image":image_dic})
+
+                if len(prompt) > 0:
+                    text_dic = {}
+                    text_dic["text"] = prompt
+                    messages['content'].append(text_dic)
+                if 'related_docs' in model_kwargs.keys():
+                    docs = model_kwargs['related_docs']
+                    for doc in docs:
+                        if 'text' in doc.keys():
+                            text_dic = {}
+                            doc_str = '相关文档信息为：'
+                            if language == 'english':
+                                doc_str = 'Related documentation information are:'
+                            text_dic["text"] = doc_str + doc['text']
+                            messages['content'].append(text_dic)
+                        if 'image' in doc.keys():
+                            if isinstance(doc['image'],list):
+                                print('images len:',len(doc['image']))
+                                for image in doc['image']:
+                                    image_dic = {}
+                                    image_dic['image']= {
+                                        "format": doc['image_type'] if 'image_type' in doc.keys() else 'jpeg',
+                                        "source": {"bytes": image.strip()},
+                                    }
+                                    messages['content'].append(image_dic)
+                            else:
+                                image_dic = {}
+                                image_dic['image']= {
+                                    "format": doc['image_type'] if 'image_type' in doc.keys() else 'jpeg',
+                                    "source": {"bytes": doc['image'].strip()},
+                                }
+                                messages['content'].append(image_dic)
+
+                if 'history' in model_kwargs.keys():
+                    history = list(model_kwargs['history'])
+                    history_str = ''
+                    for item in history:
+                        if language.find('chinese') >=0:
+                            history_str += ( '问题：' + str(item[0]) + '，回复：' + str(item[1]) + ';' )
+                        elif language == 'english':
+                            history_str += ( 'question:' + str(item[0]) + ',answer:' + str(item[1]) + ';' )
+                    text_dic = {}
+                    text_dic["text"] =  '<conversation records>' +  history_str + '</conversation records>'
+                    messages['content'].append(text_dic)
+
+                if 'input_docs' in model_kwargs.keys():
+                    docs = model_kwargs['input_docs']
+                    for doc in docs:
+                        if 'text' in doc.keys():
+                            doc_str = '用户输入为：'
+                            if language == 'english':
+                                doc_str = 'User input are:'
+                            text_dic = {}
+                            text_dic["text"] = doc_str + doc['text']
+                            messages['content'].append(text_dic)
+                        if 'image' in doc.keys():
+                            image_dic = {
+                                "format": model_kwargs['image_type'],
+                                "source": {"bytes": model_kwargs['image']},
+                            }
+                            messages['content'].append(image_dic)
+
+                input_body['messages'].append(messages)
+
+            else:
+                input_body = dict()
+                input_body["inputText"] = prompt
+                input_body["textGenerationConfig"] = {**model_kwargs}
+        
+        elif provider == "meta":
+            formatted_prompt = f"""
+            <|begin_of_text|><|start_header_id|>user<|end_header_id|>
+            {prompt}
+            <|eot_id|>
+            <|start_header_id|>assistant<|end_header_id|>
+            """
             input_body = {
-                "anthropic_version": "bedrock-2023-05-31"
-            }
-            if int(max_tokens) > 0:
-                input_body['max_tokens'] = max_tokens
-            if float(temperature) > 0:
-                input_body['temperature'] = temperature
-
-            if 'system' in model_kwargs.keys():
-                input_body['system'] = model_kwargs['system']
-
-            input_body['messages'] = []
-
-            messages = {}
-            messages['role'] = 'user'
-            messages['content'] = []
-
-            if 'image' in model_kwargs.keys():
-                image_dic = {"type": "image"}
-                source = {"type": "base64","media_type": "image/jpeg"}
-                source["data"] = model_kwargs['image']
-                image_dic["source"] = source
-                messages["content"].append(image_dic)
-
-            if len(prompt) > 0:
-                text_dic = {"type":"text"}
-                text_dic["text"] = prompt
-                messages['content'].append(text_dic)
-            if 'related_docs' in model_kwargs.keys():
-                docs = model_kwargs['related_docs']
-                for doc in docs:
-                    if 'text' in doc.keys():
-                        doc_str = '相关文档信息为：'
-                        if language == 'english':
-                            doc_str = 'Related documentation information are:'
-                        text_dic = {"type":"text"}
-                        text_dic["text"] = doc_str + doc['text']
-                        messages['content'].append(text_dic)
-                    if 'image' in doc.keys() and len(doc['image']) > 0:
-                        image_dic = {"type": "image"}
-                        source = {"type": "base64","media_type": "image/jpeg"}
-                        source["data"] = doc['image']
-                        image_dic["source"] = source
-                        messages['content'].append(image_dic)
-
-            if 'history' in model_kwargs.keys():
-                history_str = '历史记录为：'
-                if language == 'english':
-                    history_str = 'history records are:'
-                text_dic = {"type":"text"}
-                text_dic["text"] = history_str +  model_kwargs['history']
-                messages['content'].append(text_dic)
-
-            if 'input_docs' in model_kwargs.keys():
-                docs = model_kwargs['input_docs']
-                for doc in docs:
-                    if 'text' in doc.keys():
-                        doc_str = '用户输入为：'
-                        if language == 'english':
-                            doc_str = 'User input are:'
-                        text_dic = {"type":"text"}
-                        text_dic["text"] = doc_str + doc['text']
-                        messages['content'].append(text_dic)
-                    if 'image' in doc.keys():
-                        image_dic = {"type": "image"}
-                        source = {"type": "base64","media_type": "image/jpeg"}
-                        source["data"] = doc['image']
-                        image_dic["source"] = source
-                        messages['content'].append(image_dic)
-
-            input_body['messages'].append(messages)
-
-        elif modelId == 'amazon.titan-tg1-large':
-            input_body = {"inputText": prompt,
-                                     "textGenerationConfig" : {
-                                         "maxTokenCount": max_tokens,
-                                         "stopSequences": [],
-                                         "temperature":temperature,
-                                         "topP":0.9
-                                     }
-                                     }
-        elif modelId == 'amazon.titan-e1t-medium':
-            input_body = {"inputText": prompt}
-        elif modelId == 'meta.llama2-13b-chat-v1':
-            input_body = {
-                "prompt": prompt,
+                "prompt": formatted_prompt,
                 "max_gen_len": max_tokens,
                 "temperature": temperature,
                 "top_p": 0.9
             }
-        elif modelId.find('mistral') >=0:
+        elif provider == "mistral":
             input_body = {
                 "prompt": prompt,
                 "max_tokens": max_tokens,
                 "temperature": temperature,
                 "top_p": 0.9
             }
+        elif provider == "cohere":
+            if 'input_docs' in model_kwargs.keys():
+                docs = model_kwargs['input_docs']
+                for doc in docs:
+                    if 'text' in doc.keys():
+                        input_body = {"message":doc['text']}
+                        break
+            elif len(prompt) > 0:
+                input_body = {"message":prompt}
+            
+            input_body['temperature'] = temperature
+            
+            if 'history' in model_kwargs.keys():
+                history_list = list(model_kwargs['history'])
+                chat_history = []
+                for history in history_list:
+                    history_user = {}
+                    history_user['role'] = 'USER'
+                    history_user['text'] = history[0]
+                    
+                    history_chatbot = {}
+                    history_chatbot['role'] = 'CHATBOT'
+                    history_chatbot['text'] = history[1]
+                    
+                    chat_history.append(history_user)
+                    chat_history.append(history_chatbot)
+                input_body['chat_history'] = chat_history 
+                
+            if 'related_docs' in model_kwargs.keys():
+                documents = []
+                docs = model_kwargs['related_docs']
+                for doc in docs:
+                    document = {}
+                    if 'title' in doc.keys():
+                        document['title'] = doc['title']
+                    if 'text' in doc.keys():
+                        document['snippet'] = doc['text']
+                    if len(document) > 0:
+                        documents.append(document)
+                if len(documents) > 0:
+                    input_body['documents'] = documents 
+            
         else:
-            input_body = {**model_kwargs}
-            if provider == "anthropic":
-                input_body["prompt"] = cls._human_assistant_format(prompt)
-            elif provider == "ai21" or provider == "cohere":
-                input_body["prompt"] = prompt
-            elif provider == "amazon":
-                input_body = dict()
-                input_body["inputText"] = prompt
-                input_body["textGenerationConfig"] = {**model_kwargs}
-            else:
-                input_body["prompt"] = prompt
-
-            if provider == "anthropic" and "max_tokens_to_sample" not in input_body:
-                input_body["max_tokens_to_sample"] = 256
-
-            if "prompt" in input_body.keys():
-                prompt = input_body['prompt']
+            input_body["prompt"] = prompt
+            
         return input_body

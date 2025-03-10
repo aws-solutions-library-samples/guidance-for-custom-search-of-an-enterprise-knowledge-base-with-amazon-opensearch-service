@@ -32,7 +32,7 @@ def lambda_handler(event, context):
         prompt = evt_para['prompt']
     print('prompt:',prompt)
     
-    max_tokens=512
+    max_tokens=4096
     if "max_tokens" in evt_para.keys():
         max_tokens = int(evt_para['max_tokens'])
     print('max_tokens:',max_tokens)
@@ -54,6 +54,11 @@ def lambda_handler(event, context):
     
     provider = modelId.split(".")[0]
     params = {"max_tokens": max_tokens,"temperature": temperature,"system":system}
+    if "input_docs" in evt_para.keys():
+        params['input_docs'] = evt_para['input_docs']
+    if "related_docs" in evt_para.keys():
+        params['related_docs'] = evt_para['related_docs']
+
     params["modelId"] = modelId
     input_body = BedrockAdapter.prepare_input(provider, prompt, params)
     body = json.dumps(input_body)
@@ -82,6 +87,8 @@ def lambda_handler(event, context):
         answer = result_body.get("results")[0].get("outputText")
     elif modelId == 'amazon.titan-e1t-medium' or modelId.find('amazon.titan-embed')>=0:
         embedding =result_body.get("embedding")
+    if modelId.find('nova') >=0:
+        answer = result_body.get("output").get("message").get("content")[0].get("text")
     print('answer:',answer)
     print('embedding:',embedding)
     
@@ -93,15 +100,14 @@ def lambda_handler(event, context):
         "isBase64Encoded": False
     }
     
-    if modelId.find('claude') >=0 or modelId.find('llama') >=0 or modelId == 'amazon.titan-tg1-large': 
-        response['body'] = json.dumps(
-                    {
-                        'answer':answer,
-                    })
-    elif modelId == 'amazon.titan-e1t-medium' or modelId.find('amazon.titan-embed')>=0:
+    if modelId == 'amazon.titan-e1t-medium' or modelId.find('amazon.titan-embed')>=0:
         response['body'] = json.dumps(
                 {
                     'embedding':embedding,
                 })      
-    
+    else:
+        response['body'] = json.dumps(
+            {
+                'answer':answer,
+            })
     return response

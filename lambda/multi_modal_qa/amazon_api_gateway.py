@@ -194,21 +194,9 @@ class AmazonAPIGateway(LLM):
         modelId = ''
         if 'modelId' in _model_kwargs.keys():
             modelId = _model_kwargs['modelId']
-        
-        if modelId.find('anthropic') >= 0 or modelId.find('meta') >= 0:
-            try:
-                headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
-                url = self.api_url + '/bedrock'
-                _model_kwargs['prompt'] = prompt
-                print('_model_kwargs:',_model_kwargs)
-                response = requests.post(url,json=_model_kwargs,headers=headers)
-                
-                text = self.content_handler.transform_output_bedrock(response)
-    
-            except Exception as error:
-                raise ValueError(f"Error raised by the service: {error}")            
             
-        elif modelId.find('Baichuan') >= 0:
+
+        if modelId.find('Baichuan') >= 0:
             payload = self.content_handler.transform_input_baichuan(prompt, _model_kwargs)
             api_key = _model_kwargs['api_key']
             secret_key = _model_kwargs['secret_key']
@@ -253,6 +241,16 @@ class AmazonAPIGateway(LLM):
                 
             except Exception as error:
                 raise ValueError(f"Error raised by the service: {error}")
+                
+        else:
+            headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
+            url = self.api_url + '/bedrock'
+            _model_kwargs['prompt'] = prompt
+            print('_model_kwargs:',_model_kwargs)
+            response = requests.post(url,json=_model_kwargs,headers=headers)
+            print('response:',response)
+            
+            text = self.content_handler.transform_output_bedrock(response)
 
         if stop is not None:
             text = enforce_stop_tokens(text, stop)
